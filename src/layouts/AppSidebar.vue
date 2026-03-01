@@ -34,10 +34,13 @@ import {
   User,
   ChevronsUpDown,
   LogOut,
-  Database,
   ChevronRight,
   HardDrive,
   Users,
+  UsersRound,
+  GraduationCap,
+  Upload,
+  FileText,
 } from 'lucide-vue-next'
 
 import { getImgInitials } from '@/lib/helpers'
@@ -74,29 +77,34 @@ const menuConfig: {
       routeName: ROUTE_NAMES.HOME,
       children: null,
     },
-
-    // ตัวอย่างการใช้ children - uncomment เมื่อต้องการใช้
-    // {
-    //   id: "example-with-children",
-    //   label: "ตัวอย่างเมนูย่อย",
-    //   icon: Settings,
-    //   routeName: null,
-    //   children: [
-    //     {
-    //       id: "child-1",
-    //       label: "เมนูย่อย 1",
-    //       icon: User,
-    //       routeName: "Child1Route"
-    //     },
-    //     {
-    //       id: "child-2",
-    //       label: "เมนูย่อย 2",
-    //       icon: Database,
-    //       routeName: "Child2Route",
-    //       showCondition: () => true // optional condition
-    //     }
-    //   ]
-    // },
+    {
+      id: 'manage-teachers',
+      label: 'รายชื่อคุณครู',
+      icon: UsersRound,
+      routeName: ROUTE_NAMES.MANAGE_TEACHERS,
+      children: null,
+    },
+    {
+      id: 'manage-students',
+      label: 'รายชื่อนักเรียน',
+      icon: GraduationCap,
+      routeName: ROUTE_NAMES.MANAGE_STUDENTS,
+      children: null,
+    },
+    {
+      id: 'import-data',
+      label: 'นำเข้าข้อมูล',
+      icon: Upload,
+      routeName: ROUTE_NAMES.IMPORT_DATA,
+      children: null,
+    },
+    {
+      id: 'requests',
+      label: 'คำร้อง',
+      icon: FileText,
+      routeName: ROUTE_NAMES.REQUESTS,
+      children: null,
+    },
   ],
   settings: [
     {

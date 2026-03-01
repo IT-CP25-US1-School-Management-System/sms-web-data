@@ -7,6 +7,10 @@ export const ROUTE_NAMES = {
   SETTINGS: 'Settings',
   HOME: 'Home',
   PROFILE: 'Profile',
+  MANAGE_TEACHERS: 'ManageTeachers',
+  MANAGE_STUDENTS: 'ManageStudents',
+  IMPORT_DATA: 'ImportData',
+  REQUESTS: 'Requests',
 } as const
 
 export const DATASET_SENSITIVITY = {

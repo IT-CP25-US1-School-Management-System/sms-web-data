@@ -29,6 +29,30 @@ const router = createRouter({
       component: () => import('@/views/ProfileView.vue'),
       meta: { requiresAuth: true },
     },
+    {
+      path: '/manage/teachers',
+      name: ROUTE_NAMES.MANAGE_TEACHERS,
+      component: () => import('@/views/manage/ManageTeacherView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/manage/students',
+      name: ROUTE_NAMES.MANAGE_STUDENTS,
+      component: () => import('@/views/manage/ManageStudentView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/import-data',
+      name: ROUTE_NAMES.IMPORT_DATA,
+      component: () => import('@/views/manage/ImportDataView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/requests',
+      name: ROUTE_NAMES.REQUESTS,
+      component: () => import('@/views/manage/RequestsView.vue'),
+      meta: { requiresAuth: true },
+    },
   ],
 })
 
