@@ -7,6 +7,12 @@ export const ROUTE_NAMES = {
   SETTINGS: 'Settings',
   HOME: 'Home',
   PROFILE: 'Profile',
+  PERSONAL: 'Personal',
+  PERSONAL_INFO: 'personal-information',
+  ADDRESS_INFO: 'address-information',
+  FAMILY_INFO: 'family-information',
+  EDUCATION_INFO: 'education-information',
+  PROFESSIONAL_LICENSE_INFO: 'professional-license-information',
 } as const
 
 export const DATASET_SENSITIVITY = {
