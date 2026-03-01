@@ -66,7 +66,7 @@ src/
 - **Language**: Always use TypeScript. Never use plain JavaScript.
 - **Vue SFC format**: Always use `<script setup lang="ts">` (Composition API with `<script setup>`).
 - **No Options API**: Never use Options API (`data()`, `methods`, `computed` properties as objects).
-- **Formatting**: Follow the existing code style. No semicolons are used inconsistently — match the style of the file you're editing.
+- **Formatting**: Prettier is configured via `.prettierrc.json`. Run `bun run format` to auto-format. Key rules: no semicolons (`semi: false`), single quotes, 100 char print width, TailwindCSS class sorting via `prettier-plugin-tailwindcss`.
 
 ### Naming Conventions
 
@@ -109,12 +109,14 @@ import { ROUTE_NAMES } from '@/lib/constants'
 
 ### API & HTTP Requests
 
-- Two Axios instances exist in `src/stores/api.ts`:
-  - `authApiInstance` — for authentication endpoints (`VITE_API_BASE_URL_AUTH`)
+- Three Axios instances exist in `src/stores/api.ts`:
+  - `authApiInstance` — for authentication endpoints (`VITE_API_BASE_URL_AUTH`).
   - `dataApiInstance` — for data endpoints (`VITE_API_BASE_URL_DATA`), includes automatic 401 retry with session refresh.
+  - `documentApiInstance` — for document endpoints (`VITE_API_BASE_URL_DOCUMENT`), includes automatic 401 retry with session refresh.
 - API functions are defined as named exports in `src/stores/api.ts`.
 - Always define request/response types in `src/types/`.
 - Axios interceptors handle token refresh and error logging automatically.
+- When adding a new API domain, follow the existing pattern: create an Axios instance, add a 401 interceptor, and update `setTokens()` to manage the Authorization header.
 
 ### Routing
 
@@ -152,6 +154,7 @@ import { ROUTE_NAMES } from '@/lib/constants'
 - Required variables:
   - `VITE_API_BASE_URL_AUTH` — Auth API base URL
   - `VITE_API_BASE_URL_DATA` — Data API base URL
+  - `VITE_API_BASE_URL_DOCUMENT` — Document API base URL
   - `VITE_APP_NAME` — Application display name
   - `VITE_APP_VERSION` — Application version
   - `VITE_APP_MODE` — `development` | `production`
@@ -184,12 +187,34 @@ import { ROUTE_NAMES } from '@/lib/constants'
 
 ## Commands
 
-| Command           | Description                   |
-| ----------------- | ----------------------------- |
-| `bun install`     | Install dependencies          |
-| `bun run dev`     | Start dev server (port 5173)  |
-| `bun run build`   | Type-check and build for prod |
-| `bun run preview` | Preview production build      |
+| Command                | Description                              |
+| ---------------------- | ---------------------------------------- |
+| `bun install`          | Install dependencies                     |
+| `bun run dev`          | Start dev server (port 5173)             |
+| `bun run build`        | Type-check and build for prod            |
+| `bun run preview`      | Preview production build                 |
+| `bun run format`       | Format all files in `src/` with Prettier |
+| `bun run format:check` | Check formatting without writing         |
+
+## Security Considerations
+
+- **Never store tokens in `localStorage` or `sessionStorage`** — tokens are kept in memory only (`src/stores/api.ts`).
+- **Never commit `.env` files** — they are listed in `.gitignore`. Use `.env.example` as a template.
+- **Never log sensitive data** (tokens, passwords, PII) to the console in production code.
+- **Always use `withCredentials: true`** on Axios instances so HTTP-only cookies are sent automatically.
+- **Always validate and sanitize user input** before sending to APIs — use Zod schemas via Vee-Validate.
+- **PKCE is required** for the OAuth2 flow — never disable it.
+
+## Commit & PR Guidelines
+
+- Write commit messages in English, using the **Conventional Commits** format:
+  - `feat: add user management page`
+  - `fix: resolve 401 loop on session refresh`
+  - `chore: update dependencies`
+  - `refactor: extract pagination logic to composable`
+- Keep commits small and focused — one logical change per commit.
+- Run `bun run format` and `bun run build` before committing to ensure code is formatted and type-safe.
+- PR titles should follow the same Conventional Commits format.
 
 ## Important Notes
 
@@ -198,3 +223,4 @@ import { ROUTE_NAMES } from '@/lib/constants'
 - **Always use route names** from `ROUTE_NAMES` constant — never hardcode path strings.
 - **All new dependencies** should be installed via `bun add <package>`.
 - The project uses **TailwindCSS v4** which uses `@tailwindcss/vite` plugin (no `tailwind.config.js` needed).
+- The project uses **Prettier** for code formatting — always run `bun run format` before committing.
