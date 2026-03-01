@@ -1,42 +1,36 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
-import { useAuthStore } from "@/stores/auth";
-import { dataApiInstance } from "@/stores/api";
-import MainLayout from "@/layouts/MainLayout.vue";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { ref, onMounted } from 'vue'
+import { useAuthStore } from '@/stores/auth'
+import { dataApiInstance } from '@/stores/api'
+import MainLayout from '@/layouts/MainLayout.vue'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
-const authStore = useAuthStore();
-const testResult = ref<string>("");
-const isLoading = ref(false);
+const authStore = useAuthStore()
+const testResult = ref<string>('')
+const isLoading = ref(false)
 
 /**
  * Test DATA API call
  */
 const testDataApi = async () => {
   try {
-    isLoading.value = true;
-    testResult.value = "กำลังทดสอบ...";
+    isLoading.value = true
+    testResult.value = 'กำลังทดสอบ...'
 
-    const response = await dataApiInstance.get("/api/test");
-    testResult.value = `สำเร็จ: ${JSON.stringify(response.data)}`;
+    const response = await dataApiInstance.get('/api/test')
+    testResult.value = `สำเร็จ: ${JSON.stringify(response.data)}`
   } catch (error: any) {
-    testResult.value = `ข้อผิดพลาด: ${error.message}`;
-    console.error("Test DATA API error:", error);
+    testResult.value = `ข้อผิดพลาด: ${error.message}`
+    console.error('Test DATA API error:', error)
   } finally {
-    isLoading.value = false;
+    isLoading.value = false
   }
-};
+}
 
 onMounted(() => {
-  console.log("Home page loaded, user:", authStore.user);
-});
+  console.log('Home page loaded, user:', authStore.user)
+})
 </script>
 
 <template>
@@ -58,7 +52,7 @@ onMounted(() => {
           <div><strong>ID:</strong> {{ authStore.user.id }}</div>
           <div>
             <strong>สิทธิ์:</strong>
-            {{ authStore.user.roles?.join(", ") || "ไม่มีข้อมูล" }}
+            {{ authStore.user.roles?.join(', ') || 'ไม่มีข้อมูล' }}
           </div>
         </CardContent>
       </Card>
@@ -67,13 +61,11 @@ onMounted(() => {
       <Card>
         <CardHeader>
           <CardTitle>ทดสอบ DATA API</CardTitle>
-          <CardDescription
-            >ทดสอบการเรียก API ด้วย Axios instance</CardDescription
-          >
+          <CardDescription>ทดสอบการเรียก API ด้วย Axios instance</CardDescription>
         </CardHeader>
         <CardContent class="space-y-4">
           <Button @click="testDataApi" :disabled="isLoading">
-            {{ isLoading ? "กำลังทดสอบ..." : "ทดสอบ DATA API" }}
+            {{ isLoading ? 'กำลังทดสอบ...' : 'ทดสอบ DATA API' }}
           </Button>
           <div v-if="testResult" class="p-4 rounded-md text-sm bg-input">
             <pre>{{ testResult }}</pre>
