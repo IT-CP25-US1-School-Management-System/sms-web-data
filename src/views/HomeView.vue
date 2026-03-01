@@ -35,7 +35,7 @@ onMounted(() => {
 
 <template>
   <MainLayout>
-    <div class="container mx-auto p-6 space-y-6">
+    <div class="container mx-auto space-y-6 p-6">
       <div class="flex items-center justify-between">
         <h1 class="text-3xl font-bold">แดชบอร์ด</h1>
       </div>
@@ -67,7 +67,7 @@ onMounted(() => {
           <Button @click="testDataApi" :disabled="isLoading">
             {{ isLoading ? 'กำลังทดสอบ...' : 'ทดสอบ DATA API' }}
           </Button>
-          <div v-if="testResult" class="p-4 rounded-md text-sm bg-input">
+          <div v-if="testResult" class="bg-input rounded-md p-4 text-sm">
             <pre>{{ testResult }}</pre>
           </div>
         </CardContent>

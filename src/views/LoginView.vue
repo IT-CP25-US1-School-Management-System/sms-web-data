@@ -75,14 +75,14 @@ onMounted(() => {
 
     <div class="w-full max-w-md space-y-8 p-6">
       <div class="text-center">
-        <div class="mx-auto h-12 w-12 bg-primary rounded-xl flex items-center justify-center mb-6">
-          <Shield class="h-8 w-8 text-primary-foreground" />
+        <div class="bg-primary mx-auto mb-6 flex h-12 w-12 items-center justify-center rounded-xl">
+          <Shield class="text-primary-foreground h-8 w-8" />
         </div>
 
-        <h1 class="text-3xl font-bold text-foreground transition-colors duration-200">
+        <h1 class="text-foreground text-3xl font-bold transition-colors duration-200">
           {{ env.APP_NAME }}
         </h1>
-        <p class="mt-2 text-sm text-muted-foreground transition-colors duration-200">
+        <p class="text-muted-foreground mt-2 text-sm transition-colors duration-200">
           เข้าสู่ระบบเพื่อจัดการข้อมูล
         </p>
 
@@ -102,7 +102,7 @@ onMounted(() => {
             <Button
               @click="handleLogin"
               :disabled="isLoading"
-              class="w-full h-11 text-base font-medium"
+              class="h-11 w-full text-base font-medium"
               size="lg"
             >
               <Loader2 v-if="isLoading" class="mr-2 h-4 w-4 animate-spin" />
@@ -114,8 +114,8 @@ onMounted(() => {
           </div>
 
           <!-- Loading state for callback -->
-          <div v-if="route.query.code && isLoading" class="text-center py-4">
-            <div class="inline-flex items-center text-sm text-muted-foreground">
+          <div v-if="route.query.code && isLoading" class="py-4 text-center">
+            <div class="text-muted-foreground inline-flex items-center text-sm">
               <Loader2 class="mr-2 h-4 w-4 animate-spin" />
               กำลังดำเนินการเข้าสู่ระบบ...
             </div>
@@ -124,7 +124,7 @@ onMounted(() => {
           <!-- Error display -->
           <div
             v-if="authStore.error"
-            class="p-3 text-sm text-destructive bg-destructive/10 rounded-md border border-destructive/20 transition-all duration-300"
+            class="text-destructive bg-destructive/10 border-destructive/20 rounded-md border p-3 text-sm transition-all duration-300"
           >
             {{ 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ กรุณาลองใหม่อีกครั้ง' }}
           </div>
