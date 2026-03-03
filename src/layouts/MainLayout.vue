@@ -17,10 +17,7 @@ import {
   Users,
   User,
   Database,
-  HardDrive,
   FileText,
-  Cylinder,
-  FileKey,
 } from 'lucide-vue-next'
 import AppSidebar from '@/layouts/AppSidebar.vue'
 import ModeToggle from '@/components/ModeToggle.vue'
@@ -31,14 +28,10 @@ const breadcrumbConfig = {
   Home: { label: 'หน้าหลัก', icon: Home },
   Settings: { label: 'ตั้งค่าระบบ', icon: Settings },
   Profile: { label: 'โปรไฟล์', icon: User },
-  ManageDatabase: { label: 'จัดการฐานข้อมูล', icon: Database },
-  ManageDatabaseWithID: { label: 'รายละเอียดฐานข้อมูล', icon: Cylinder },
-  Dataset: { label: 'Dataset', icon: HardDrive },
-  DatasetVersion: { label: 'Dataset Version', icon: FileText },
-  DatasetVersionServing: { label: 'View Data', icon: Database },
-  Users: { label: 'จัดการผู้ใช้งาน', icon: Users },
-  UserDetail: { label: 'รายละเอียดผู้ใช้งาน', icon: User },
-  Roles: { label: 'จัดการบทบาท', icon: FileKey },
+  ManageTeachers: { label: 'รายชื่อคุณครู', icon: Users },
+  ManageStudents: { label: 'รายชื่อนักเรียน', icon: Users },
+  ImportData: { label: 'นำเข้าข้อมูล', icon: Database },
+  Requests: { label: 'คำร้อง', icon: FileText },
 }
 
 const currentBreadcrumbs = computed(() => {
@@ -76,6 +69,34 @@ const currentBreadcrumbs = computed(() => {
       label: breadcrumbConfig.Profile.label,
       icon: breadcrumbConfig.Profile.icon,
       to: { name: ROUTE_NAMES.PROFILE },
+      isLast: true,
+    })
+  } else if (routeName === ROUTE_NAMES.MANAGE_TEACHERS) {
+    breadcrumbs.push({
+      label: breadcrumbConfig.ManageTeachers.label,
+      icon: breadcrumbConfig.ManageTeachers.icon,
+      to: { name: ROUTE_NAMES.MANAGE_TEACHERS },
+      isLast: true,
+    })
+  } else if (routeName === ROUTE_NAMES.MANAGE_STUDENTS) {
+    breadcrumbs.push({
+      label: breadcrumbConfig.ManageStudents.label,
+      icon: breadcrumbConfig.ManageStudents.icon,
+      to: { name: ROUTE_NAMES.MANAGE_STUDENTS },
+      isLast: true,
+    })
+  } else if (routeName === ROUTE_NAMES.IMPORT_DATA) {
+    breadcrumbs.push({
+      label: breadcrumbConfig.ImportData.label,
+      icon: breadcrumbConfig.ImportData.icon,
+      to: { name: ROUTE_NAMES.IMPORT_DATA },
+      isLast: true,
+    })
+  } else if (routeName === ROUTE_NAMES.REQUESTS) {
+    breadcrumbs.push({
+      label: breadcrumbConfig.Requests.label,
+      icon: breadcrumbConfig.Requests.icon,
+      to: { name: ROUTE_NAMES.REQUESTS },
       isLast: true,
     })
   } else {
