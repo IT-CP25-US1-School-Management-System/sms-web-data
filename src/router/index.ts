@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-// import { useAuthStore } from "@/stores/auth";
+import { useAuthStore } from '@/stores/auth'
 import { ROUTE_NAMES } from '@/lib/constants'
 
 const router = createRouter({
@@ -85,7 +85,7 @@ const router = createRouter({
           component: () => import('@/views/web/work_history/RoyalDecorations.vue'),
           meta: { requiresAuth: true, label: 'เครื่องราชอิสริยาภรณ์' },
         },
-         {
+        {
           path: 'academic-rank-history',
           name: ROUTE_NAMES.ACADEMIC_RANK_HISTORY,
           component: () => import('@/views/web/work_history/AcademicRankHistory.vue'),
@@ -105,7 +105,7 @@ const router = createRouter({
         },
       ],
     },
-     {
+    {
       path: '/achievements',
       component: () => import('@/views/web/achievements/AchievementsView.vue'),
       meta: { requiresAuth: true },
@@ -144,6 +144,30 @@ const router = createRouter({
           meta: { requiresAuth: true, label: 'ติดตามคำร้อง' },
         },
       ],
+    },
+    {
+      path: '/manage/teachers',
+      name: ROUTE_NAMES.MANAGE_TEACHERS,
+      component: () => import('@/views/manage/ManageTeacherView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/manage/students',
+      name: ROUTE_NAMES.MANAGE_STUDENTS,
+      component: () => import('@/views/manage/ManageStudentView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/import-data',
+      name: ROUTE_NAMES.IMPORT_DATA,
+      component: () => import('@/views/manage/ImportDataView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/requests',
+      name: ROUTE_NAMES.REQUESTS,
+      component: () => import('@/views/manage/RequestsView.vue'),
+      meta: { requiresAuth: true },
     },
   ],
 })

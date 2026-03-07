@@ -25,6 +25,10 @@ export const ROUTE_NAMES = {
   TRACK_DOCUMENTS: 'track-documents',
   EDUCATION: 'education',
   PROFESSIONAL_LICENSE: 'professional-license',
+  MANAGE_TEACHERS: 'ManageTeachers',
+  MANAGE_STUDENTS: 'ManageStudents',
+  IMPORT_DATA: 'ImportData',
+  REQUESTS: 'Requests',
 } as const
 
 export const DATASET_SENSITIVITY = {

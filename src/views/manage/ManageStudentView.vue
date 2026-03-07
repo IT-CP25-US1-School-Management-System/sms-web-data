@@ -1,0 +1,294 @@
+<script setup lang="ts">
+import { ref, onMounted, watch } from 'vue'
+import MainLayout from '@/layouts/MainLayout.vue'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Search, Plus, MoreHorizontal, Pencil, Trash2, Loader2 } from 'lucide-vue-next'
+import { usePagination } from '@/composables/usePagination'
+import type { PaginationData } from '@/composables/usePagination'
+import { toast } from 'vue-sonner'
+import type { Student } from '@/types/student'
+import { getStudents, deleteStudent } from '@/stores/students'
+
+// State
+const students = ref<Student[]>([])
+const loading = ref(false)
+const searchQuery = ref('')
+
+// Pagination state
+const pagination = ref<PaginationData>({
+  page: 1,
+  per_page: 15,
+  total_pages: 1,
+  total_rows: 0,
+})
+
+// Use pagination composable
+const { canPreviousPage, canNextPage, getVisiblePages } = usePagination(pagination)
+
+// Fetch students from API
+const fetchStudents = async () => {
+  loading.value = true
+  try {
+    // Build flat filter array
+    const filterConditions: any[] = []
+    
+    // Add search filter if query exists
+    if (searchQuery.value.trim()) {
+      const query = searchQuery.value.trim()
+      filterConditions.push({
+        logic: 'OR',
+        conditions: [
+          { column: 'first_name_th', operator: 'like', value: `%${query}%` },
+          { column: 'last_name_th', operator: 'like', value: `%${query}%` },
+          { column: 'student_id', operator: 'like', value: `%${query}%` },
+        ],
+      })
+    }
+
+    const response = await getStudents({
+      page: pagination.value.page,
+      per_page: pagination.value.per_page,
+      filter: filterConditions.length > 0 ? filterConditions : undefined,
+    })
+
+    students.value = response.data
+    pagination.value.total_rows = response.total_rows
+    pagination.value.total_pages = response.total_pages
+  } catch (error: any) {
+    console.error('Failed to fetch students:', error)
+    toast.error('เกิดข้อผิดพลาด', {
+      description: error.message || 'ไม่สามารถโหลดข้อมูลนักเรียนได้',
+    })
+  } finally {
+    loading.value = false
+  }
+}
+
+// Watch for pagination changes
+watch(() => pagination.value.page, () => {
+  fetchStudents()
+})
+
+// Watch for search query changes (debounced)
+let searchTimeout: number
+watch(searchQuery, () => {
+  clearTimeout(searchTimeout)
+  searchTimeout = setTimeout(() => {
+    pagination.value.page = 1 // Reset to first page on search
+    fetchStudents()
+  }, 500) as unknown as number // 500ms debounce
+})
+
+// Load data on mount
+onMounted(() => {
+  fetchStudents()
+})
+
+// Page change handler
+const goToPage = (page: number) => {
+  pagination.value.page = page
+}
+
+// Previous page handler
+const previousPage = () => {
+  if (canPreviousPage.value) {
+    pagination.value.page--
+  }
+}
+
+// Next page handler
+const nextPage = () => {
+  if (canNextPage.value) {
+    pagination.value.page++
+  }
+}
+
+// Action handlers
+const handleEdit = (student: Student) => {
+  console.log('Edit student:', student)
+  toast.info('ฟีเจอร์กำลังพัฒนา', {
+    description: 'ระบบแก้ไขข้อมูลนักเรียนกำลังอยู่ระหว่างการพัฒนา',
+  })
+  // TODO: Implement edit functionality
+}
+
+const handleDelete = async (student: Student) => {
+  if (!confirm(`คุณต้องการลบนักเรียน ${student.first_name_th} ${student.last_name_th} ใช่หรือไม่?`)) {
+    return
+  }
+
+  try {
+    await deleteStudent(student.id)
+    toast.success('สำเร็จ', {
+      description: 'ลบข้อมูลนักเรียนเรียบร้อยแล้ว',
+    })
+    fetchStudents() // Reload data
+  } catch (error: any) {
+    console.error('Failed to delete student:', error)
+    toast.error('เกิดข้อผิดพลาด', {
+      description: error.message || 'ไม่สามารถลบข้อมูลนักเรียนได้',
+    })
+  }
+}
+
+const handleAddStudent = () => {
+  toast.info('ฟีเจอร์กำลังพัฒนา', {
+    description: 'ระบบเพิ่มนักเรียนกำลังอยู่ระหว่างการพัฒนา',
+  })
+  // TODO: Implement add student functionality
+}
+</script>
+
+<template>
+  <MainLayout>
+    <div class="container mx-auto py-6 space-y-6">
+      <!-- Header with search and add button -->
+      <div class="flex gap-4 justify-between items-center">
+        <div class="relative flex-1 max-w-md">
+          <Search class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            v-model="searchQuery"
+            type="text"
+            placeholder="ค้นหาชื่อนักเรียน"
+            class="pl-10"
+            :disabled="loading"
+          />
+        </div>
+        <Button
+          class="bg-green-600 hover:bg-green-700"
+          @click="handleAddStudent"
+          :disabled="loading"
+        >
+          <Plus class="h-4 w-4 mr-2" />
+          เพิ่มรายชื่อ
+        </Button>
+      </div>
+
+    <!-- Table Card -->
+    <div class="bg-blue-600 text-white rounded-t-lg p-4">
+      <h2 class="text-lg font-semibold">รายชื่อนักเรียน</h2>
+    </div>
+    
+    <div class="border rounded-b-lg overflow-hidden">
+      <!-- Table -->
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead class="bg-muted/50">
+            <tr>
+              <th class="text-left py-3 px-4 font-medium">ชื่อ</th>
+              <th class="text-left py-3 px-4 font-medium">นามสกุล</th>
+              <th class="text-center py-3 px-4 font-medium">เลขประจำตัว</th>
+              <th class="text-center py-3 px-4 font-medium">ชั้น</th>
+              <th class="text-center py-3 px-4 font-medium">ห้อง</th>
+              <th class="text-center py-3 px-4 font-medium">การดำเนินการ</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Loading state -->
+            <tr v-if="loading">
+              <td colspan="6" class="py-8 text-center">
+                <div class="flex justify-center items-center gap-2">
+                  <Loader2 class="h-5 w-5 animate-spin" />
+                  <span class="text-muted-foreground">กำลังโหลดข้อมูล...</span>
+                </div>
+              </td>
+            </tr>
+            <!-- Empty state -->
+            <tr v-else-if="students.length === 0">
+              <td colspan="6" class="py-8 text-center text-muted-foreground">
+                ไม่พบข้อมูลนักเรียน
+              </td>
+            </tr>
+            <!-- Data rows -->
+            <tr
+              v-else
+              v-for="student in students"
+              :key="student.id"
+              class="border-t hover:bg-muted/30 transition-colors"
+            >
+              <td class="py-3 px-4 align-middle">{{ student.first_name_th }}</td>
+              <td class="py-3 px-4 align-middle">{{ student.last_name_th }}</td>
+              <td class="py-3 px-4 text-center align-middle">{{ student.student_id }}</td>
+              <td class="py-3 px-4 text-center align-middle">{{ student.grade_level }}</td>
+              <td class="py-3 px-4 text-center align-middle">{{ student.class_section }}</td>
+              <td class="py-3 px-4 align-middle">
+                <div class="flex justify-center">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger as-child>
+                      <Button variant="ghost" size="sm">
+                        <MoreHorizontal class="h-5 w-5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" class="flex flex-row gap-1 p-1">
+                      <DropdownMenuItem @click="handleEdit(student)" class="cursor-pointer">
+                        <Pencil class="h-4 w-4 mr-2" />
+                        แก้ไข
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        @click="handleDelete(student)"
+                        class="text-red-600 cursor-pointer"
+                      >
+                        <Trash2 class="h-4 w-4 mr-2" />
+                        ลบ
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div v-if="!loading && students.length > 0" class="flex justify-center items-center gap-2 py-4 border-t">
+        <Button
+          variant="ghost"
+          size="sm"
+          :disabled="!canPreviousPage"
+          @click="previousPage"
+        >
+          Previous
+        </Button>
+
+        <template v-for="(pageNum, index) in getVisiblePages" :key="index">
+          <Button
+            v-if="typeof pageNum === 'number'"
+            :variant="pageNum === pagination.page ? 'default' : 'ghost'"
+            size="sm"
+            @click="goToPage(pageNum)"
+          >
+            {{ pageNum }}
+          </Button>
+          <span v-else class="px-2">...</span>
+        </template>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          :disabled="!canNextPage"
+          @click="nextPage"
+        >
+          Next
+        </Button>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div v-if="!loading" class="text-sm text-muted-foreground text-center">
+      แสดง {{ students.length }} รายการจาก {{ pagination.total_rows }} รายการทั้งหมด
+    </div>
+  </div>
+  </MainLayout>
+</template>
+
+<style scoped>
+/* Add any custom styles here if needed */
+</style>
