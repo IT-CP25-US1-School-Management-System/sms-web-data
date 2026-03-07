@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import CreateForm from '@/components/form/CreateForm.vue'
+import { Button } from '@/components/ui/button'
 import { toast } from 'vue-sonner'
 // TODO: เปลี่ยนเป็น false เมื่อต้องการดูอย่างเดียว (readonly)
 const isEditMode = true
