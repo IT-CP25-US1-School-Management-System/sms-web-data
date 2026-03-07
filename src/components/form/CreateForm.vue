@@ -5,14 +5,25 @@ import { toast } from 'vue-sonner'
 import { z } from 'zod'
 
 import { Button } from '@/components/ui/button'
+import { Calendar } from '@/components/ui/calendar'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { RangeCalendar } from '@/components/ui/range-calendar'
 
-import { ChevronUp, CirclePlus, Trash2, X } from 'lucide-vue-next'
+import { ChevronUp, CirclePlus, CalendarIcon, Trash2, X } from 'lucide-vue-next'
 
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { type DateValue, CalendarDate } from '@internationalized/date'
+import type { DateRange } from 'reka-ui'
 import { h, ref, watch } from 'vue'
 
 const formSchema = toTypedSchema(
@@ -54,7 +65,7 @@ const onSubmit = handleSubmit((data) => {
 type FieldItem = {
   name: string
   label?: string
-  type: 'text' | 'date' | 'select' | 'number' | 'email' | 'textarea' | 'file'
+  type: 'text' | 'date' | 'date-range' | 'select' | 'number' | 'email' | 'textarea' | 'file'
   placeholder?: string
   required?: boolean
   disabled?: boolean
@@ -67,6 +78,7 @@ type FieldItem = {
 type FieldSection = {
   topic?: string
   content: FieldItem[]
+  subFields?: FieldItem[] // nested dynamic form within section
 }
 
 const props = defineProps<{
@@ -167,6 +179,80 @@ function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+// Sub-form state: key = `${entryIndex}-${sectionIndex}`, value = array of sub-entries
+const subEntries = ref<Record<string, Record<string, string>[]>>({})
+
+function getSubEntries(entryIdx: number, sectionIdx: number): Record<string, string>[] {
+  const key = `${entryIdx}-${sectionIdx}`
+  if (!subEntries.value[key]) {
+    subEntries.value[key] = []
+  }
+  return subEntries.value[key]
+}
+
+function addSubEntry(entryIdx: number, sectionIdx: number) {
+  const key = `${entryIdx}-${sectionIdx}`
+  if (!subEntries.value[key]) {
+    subEntries.value[key] = []
+  }
+  subEntries.value[key].push({})
+}
+
+function deleteSubEntry(entryIdx: number, sectionIdx: number, subIdx: number) {
+  const key = `${entryIdx}-${sectionIdx}`
+  subEntries.value[key]?.splice(subIdx, 1)
+}
+
+// Date picker helpers
+const datePopoverOpen = ref<Record<string, boolean>>({})
+
+function stringToDateValue(str: string | undefined): DateValue | undefined {
+  if (!str) return undefined
+  const [y, m, d] = str.split('-').map(Number)
+  if (!y || !m || !d) return undefined
+  return new CalendarDate(y, m, d)
+}
+
+function dateValueToString(dv: DateValue): string {
+  const y = String(dv.year).padStart(4, '0')
+  const m = String(dv.month).padStart(2, '0')
+  const d = String(dv.day).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+function formatDisplayDate(str: string | undefined): string {
+  if (!str) return ''
+  const [y, m, d] = str.split('-')
+  if (!y || !m || !d) return ''
+  return `${d}/${m}/${y}`
+}
+
+// Date-range helpers  (stored as "YYYY-MM-DD~YYYY-MM-DD")
+function stringToDateRange(str: string | undefined): DateRange | undefined {
+  if (!str) return undefined
+  const [startStr, endStr] = str.split('~')
+  const start = stringToDateValue(startStr)
+  const end = stringToDateValue(endStr)
+  if (!start) return undefined
+  return { start, end: end ?? start }
+}
+
+function dateRangeToString(range: DateRange): string {
+  const s = range.start ? dateValueToString(range.start) : ''
+  const e = range.end ? dateValueToString(range.end) : s
+  return `${s}~${e}`
+}
+
+function formatDisplayDateRange(str: string | undefined): string {
+  if (!str) return ''
+  const [startStr, endStr] = str.split('~')
+  const s = formatDisplayDate(startStr)
+  const e = formatDisplayDate(endStr)
+  if (!s) return ''
+  if (!e || s === e) return s
+  return `${s} — ${e}`
 }
 </script>
 
@@ -314,41 +400,125 @@ function formatFileSize(bytes: number): string {
                               class="disabled:opacity-50"
                             />
 
-                            <!-- date -->
-                            <Input
+                            <!-- date (Popover + Calendar) -->
+                            <Popover
                               v-else-if="fieldItem.type === 'date'"
-                              :id="`form-field-${fieldItem.name}`"
-                              v-bind="veeField"
-                              type="date"
-                              :placeholder="fieldItem.placeholder || 'วว / ดด / ปปปป'"
-                              :aria-invalid="!!errors.length"
-                              :disabled="fieldItem.disabled"
-                              class="disabled:opacity-50"
-                            />
+                              v-model:open="
+                                datePopoverOpen[
+                                  `main-${entryIndex}-${sectionIndex}-${fieldItem.name}`
+                                ]
+                              "
+                            >
+                              <PopoverTrigger as-child>
+                                <Button
+                                  :id="`form-field-${fieldItem.name}`"
+                                  variant="outline"
+                                  :disabled="fieldItem.disabled"
+                                  :class="[
+                                    'w-full justify-start text-left font-normal',
+                                    !veeField.value && 'text-muted-foreground',
+                                    fieldItem.disabled && 'opacity-50',
+                                  ]"
+                                >
+                                  <CalendarIcon class="mr-2 h-4 w-4" />
+                                  {{
+                                    veeField.value
+                                      ? formatDisplayDate(veeField.value as string)
+                                      : fieldItem.placeholder || 'วว / ดด / ปปปป'
+                                  }}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent class="w-auto p-0" align="start">
+                                <Calendar
+                                  :model-value="stringToDateValue(veeField.value as string)"
+                                  layout="month-and-year"
+                                  @update:model-value="
+                                    (val: DateValue | undefined) => {
+                                      if (val) {
+                                        veeField['onUpdate:modelValue']?.(dateValueToString(val))
+                                        datePopoverOpen[
+                                          `main-${entryIndex}-${sectionIndex}-${fieldItem.name}`
+                                        ] = false
+                                      }
+                                    }
+                                  "
+                                />
+                              </PopoverContent>
+                            </Popover>
+
+                            <!-- date-range (Popover + RangeCalendar) -->
+                            <Popover
+                              v-else-if="fieldItem.type === 'date-range'"
+                              v-model:open="
+                                datePopoverOpen[
+                                  `range-${entryIndex}-${sectionIndex}-${fieldItem.name}`
+                                ]
+                              "
+                            >
+                              <PopoverTrigger as-child>
+                                <Button
+                                  :id="`form-field-${fieldItem.name}`"
+                                  variant="outline"
+                                  :disabled="fieldItem.disabled"
+                                  :class="[
+                                    'w-full justify-start text-left font-normal',
+                                    !veeField.value && 'text-muted-foreground',
+                                    fieldItem.disabled && 'opacity-50',
+                                  ]"
+                                >
+                                  <CalendarIcon class="mr-2 h-4 w-4" />
+                                  {{
+                                    veeField.value
+                                      ? formatDisplayDateRange(veeField.value as string)
+                                      : fieldItem.placeholder || 'วว / ดด / ปปปป'
+                                  }}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent class="w-auto p-0" align="start">
+                                <RangeCalendar
+                                  :model-value="stringToDateRange(veeField.value as string)"
+                                  @update:model-value="
+                                    (val: DateRange) => {
+                                      if (val.start) {
+                                        veeField['onUpdate:modelValue']?.(dateRangeToString(val))
+                                        if (val.end) {
+                                          datePopoverOpen[
+                                            `range-${entryIndex}-${sectionIndex}-${fieldItem.name}`
+                                          ] = false
+                                        }
+                                      }
+                                    }
+                                  "
+                                />
+                              </PopoverContent>
+                            </Popover>
 
                             <!-- select -->
-                            <NativeSelect
+                            <Select
                               v-else-if="fieldItem.type === 'select'"
-                              :id="`form-field-${fieldItem.name}`"
-                              :model-value="veeField.value"
-                              :aria-invalid="!!errors.length"
+                              :model-value="(veeField.value as string) || ''"
                               :disabled="fieldItem.disabled"
-                              :name="veeField.name"
-                              class="w-full"
-                              @update:model-value="veeField['onUpdate:modelValue']?.($event)"
-                              @blur="veeField.onBlur"
+                              @update:model-value="
+                                (val: any) => veeField['onUpdate:modelValue']?.(val)
+                              "
                             >
-                              <NativeSelectOption value="" disabled selected>
-                                {{ fieldItem.placeholder || 'เลือก...' }}
-                              </NativeSelectOption>
-                              <NativeSelectOption
-                                v-for="opt in fieldItem.options"
-                                :key="opt.value"
-                                :value="opt.value"
+                              <SelectTrigger
+                                :id="`form-field-${fieldItem.name}`"
+                                class="w-full"
+                                :aria-invalid="!!errors.length"
                               >
-                                {{ opt.label }}
-                              </NativeSelectOption>
-                            </NativeSelect>
+                                <SelectValue :placeholder="fieldItem.placeholder || 'เลือก...'" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem
+                                  v-for="opt in fieldItem.options"
+                                  :key="opt.value"
+                                  :value="opt.value"
+                                >
+                                  {{ opt.label }}
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
 
                             <!-- textarea -->
                             <Textarea
@@ -433,6 +603,176 @@ function formatFileSize(bytes: number): string {
                               </button>
                             </div>
                           </div>
+                        </div>
+                      </div>
+
+                      <!-- sub-form (nested dynamic entries within section) -->
+                      <div v-if="section.subFields?.length" class="mt-4">
+                        <!-- ปุ่มเพิ่มข้อมูล sub-entry -->
+                        <div
+                          v-if="!readonly"
+                          class="border-2 rounded-lg py-2 gap-1 flex flex-col items-center justify-center cursor-pointer hover:bg-muted/40 transition-colors duration-200"
+                          @click="addSubEntry(entryIndex, sectionIndex)"
+                        >
+                          <button
+                            type="button"
+                            class="rounded-full flex items-center justify-center"
+                            aria-label="เพิ่มข้อมูล"
+                          >
+                            <CirclePlus class="w-5 h-5 sm:w-8 sm:h-8" stroke-width="3" />
+                          </button>
+                          <p class="font-semibold text-xs">เพิ่มข้อมูล</p>
+                        </div>
+
+                        <!-- sub-entries list -->
+                        <div
+                          v-for="(subEntry, subIdx) in getSubEntries(entryIndex, sectionIndex)"
+                          :key="subIdx"
+                          class="flex items-end gap-4 mt-3"
+                        >
+                          <div class="grid grid-cols-1 gap-4 sm:grid-cols-4 flex-1">
+                            <Field v-for="subField in section.subFields" :key="subField.name">
+                              <FieldLabel>
+                                {{ subField.label || subField.name }}
+                                <span v-if="subField.required" class="text-red-500">*</span>
+                              </FieldLabel>
+                              <Input
+                                v-if="['text', 'number', 'email'].includes(subField.type)"
+                                :model-value="subEntry[subField.name] || ''"
+                                :type="subField.type"
+                                :placeholder="
+                                  subField.placeholder || subField.label || subField.name
+                                "
+                                :disabled="subField.disabled"
+                                class="disabled:opacity-50"
+                                @input="
+                                  (e: Event) =>
+                                    (subEntry[subField.name] = (e.target as HTMLInputElement).value)
+                                "
+                              />
+                              <Popover
+                                v-else-if="subField.type === 'date'"
+                                v-model:open="
+                                  datePopoverOpen[
+                                    `sub-${entryIndex}-${sectionIndex}-${subIdx}-${subField.name}`
+                                  ]
+                                "
+                              >
+                                <PopoverTrigger as-child>
+                                  <Button
+                                    variant="outline"
+                                    :disabled="subField.disabled"
+                                    :class="[
+                                      'w-full justify-start text-left font-normal',
+                                      !subEntry[subField.name] && 'text-muted-foreground',
+                                      subField.disabled && 'opacity-50',
+                                    ]"
+                                  >
+                                    <CalendarIcon class="mr-2 h-4 w-4" />
+                                    {{
+                                      subEntry[subField.name]
+                                        ? formatDisplayDate(subEntry[subField.name])
+                                        : subField.placeholder || 'วว / ดด / ปปปป'
+                                    }}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent class="w-auto p-0" align="start">
+                                  <Calendar
+                                    :model-value="stringToDateValue(subEntry[subField.name])"
+                                    layout="month-and-year"
+                                    @update:model-value="
+                                      (val: DateValue | undefined) => {
+                                        if (val) {
+                                          subEntry[subField.name] = dateValueToString(val)
+                                          datePopoverOpen[
+                                            `sub-${entryIndex}-${sectionIndex}-${subIdx}-${subField.name}`
+                                          ] = false
+                                        }
+                                      }
+                                    "
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                              <!-- sub-form date-range -->
+                              <Popover
+                                v-else-if="subField.type === 'date-range'"
+                                v-model:open="
+                                  datePopoverOpen[
+                                    `sub-range-${entryIndex}-${sectionIndex}-${subIdx}-${subField.name}`
+                                  ]
+                                "
+                              >
+                                <PopoverTrigger as-child>
+                                  <Button
+                                    variant="outline"
+                                    :disabled="subField.disabled"
+                                    :class="[
+                                      'w-full justify-start text-left font-normal',
+                                      !subEntry[subField.name] && 'text-muted-foreground',
+                                      subField.disabled && 'opacity-50',
+                                    ]"
+                                  >
+                                    <CalendarIcon class="mr-2 h-4 w-4" />
+                                    {{
+                                      subEntry[subField.name]
+                                        ? formatDisplayDateRange(subEntry[subField.name])
+                                        : subField.placeholder || 'วว / ดด / ปปปป'
+                                    }}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent class="w-auto p-0" align="start">
+                                  <RangeCalendar
+                                    :model-value="stringToDateRange(subEntry[subField.name])"
+                                    @update:model-value="
+                                      (val: DateRange) => {
+                                        if (val.start) {
+                                          subEntry[subField.name] = dateRangeToString(val)
+                                          if (val.end) {
+                                            datePopoverOpen[
+                                              `sub-range-${entryIndex}-${sectionIndex}-${subIdx}-${subField.name}`
+                                            ] = false
+                                          }
+                                        }
+                                      }
+                                    "
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                              <Select
+                                v-else-if="subField.type === 'select'"
+                                :model-value="subEntry[subField.name] || ''"
+                                :disabled="subField.disabled"
+                                @update:model-value="
+                                  (val: any) => {
+                                    subEntry[subField.name] = val as string
+                                  }
+                                "
+                              >
+                                <SelectTrigger class="w-full">
+                                  <SelectValue :placeholder="subField.placeholder || 'เลือก...'" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem
+                                    v-for="opt in subField.options"
+                                    :key="opt.value"
+                                    :value="opt.value"
+                                  >
+                                    {{ opt.label }}
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </Field>
+                          </div>
+                          <Button
+                            v-if="!readonly"
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            class="shrink-0 mb-0.5"
+                            @click="deleteSubEntry(entryIndex, sectionIndex, subIdx)"
+                          >
+                            <Trash2 class="w-4 h-4" />
+                          </Button>
                         </div>
                       </div>
                     </form>

@@ -34,11 +34,10 @@ import {
   User,
   ChevronsUpDown,
   LogOut,
-  Database,
+  FileClock,
   ChevronRight,
-  HardDrive,
-  Users,
-  FileText,
+  Notebook,
+  TicketSlash,
 } from 'lucide-vue-next'
 
 import { getImgInitials } from '@/lib/helpers'
@@ -71,46 +70,129 @@ const menuConfig: {
     {
       id: 'personal',
       label: 'ข้อมูลบุคคล',
-      icon: Home,
+      icon: User,
       routeName: null,
       children: [
         {
-          id: 'personal-info',
+          id: 'personal-details',
           label: 'ข้อมูลส่วนบุคคล',
-          icon: User,
-          routeName: ROUTE_NAMES.PERSONAL_INFO,
+          icon: null,
+          routeName: ROUTE_NAMES.PERSONAL_DETAILS,
         },
         {
-          id: 'address-info',
+          id: 'address',
           label: 'ข้อมูลที่อยู่',
-          icon: Database,
-          routeName: ROUTE_NAMES.ADDRESS_INFO,
+          icon: null,
+          routeName: ROUTE_NAMES.ADDRESS,
           showCondition: () => true, // optional condition
         },
         {
-          id: 'family-info',
+          id: 'family',
           label: 'ข้อมูลครอบครัว',
-          icon: Database,
-          routeName: ROUTE_NAMES.FAMILY_INFO,
+          icon: null,
+          routeName: ROUTE_NAMES.FAMILY,
           showCondition: () => true, // optional condition
         },
         {
-          id: 'education-info',
+          id: 'education',
           label: 'ข้อมูลการศึกษา',
-          icon: Database,
-          routeName: ROUTE_NAMES.EDUCATION_INFO,
+          icon: null,
+          routeName: ROUTE_NAMES.EDUCATION,
           showCondition: () => true, // optional condition
         },
         {
           id: 'professional-license',
           label: 'ใบประกอบวิชาชีพ',
-          icon: Database,
-          routeName: ROUTE_NAMES.PROFESSIONAL_LICENSE_INFO,
+          icon: null,
+          routeName: ROUTE_NAMES.PROFESSIONAL_LICENSE,
           showCondition: () => true, // optional condition
         },
       ],
     },
-
+    {
+      id: 'work-history',
+      label: 'ประวัติการทำงาน',
+      icon: FileClock,
+      routeName: null,
+      children: [
+        {
+          id: 'position-history',
+          label: 'ข้อมูลการดำรงตำแหน่ง',
+          icon: null,
+          routeName: ROUTE_NAMES.POSITION_HISTORY,
+        },
+        {
+          id: 'royal-decorations',
+          label: 'ประวัติเครื่องราชอิสริยาภรณ์',
+          icon: null,
+          routeName: ROUTE_NAMES.ROYAL_DECORATIONS,
+          showCondition: () => true, // optional condition
+        },
+        {
+          id: 'academic-rank-history',
+          label: 'ประวัติวิทยฐานะ',
+          icon: null,
+          routeName: ROUTE_NAMES.ACADEMIC_RANK_HISTORY,
+          showCondition: () => true, // optional condition
+        },
+        {
+          id: 'employment',
+          label: 'ข้อมูลการจ้าง',
+          icon: null,
+          routeName: ROUTE_NAMES.EMPLOYMENT,
+          showCondition: () => true, // optional condition
+        },
+        {
+          id: 'contract-position',
+          label: 'ประวัติการดำรงตำแหน่ง (อัตราจ้าง)',
+          icon: null,
+          routeName: ROUTE_NAMES.CONTRACT_POSITION,
+          showCondition: () => true, // optional condition
+        },
+      ],
+    },
+    {
+      id: 'achievements',
+      label: 'ข้อมูลการอบรม / ข้อมูลผลงาน',
+      icon: Notebook,
+      routeName: null,
+      children: [
+        {
+          id: 'training',
+          label: 'ข้อมูลการอบรม/ศึกษาดูงาน',
+          icon: null,
+          routeName: ROUTE_NAMES.TRAINING,
+        },
+        {
+          id: 'achievements-innovations',
+          label: 'ข้อมูลผลงานและนวัตกรรม',
+          icon: null,
+          routeName: ROUTE_NAMES.ACHIEVEMENTS_INNOVATIONS,
+          showCondition: () => true, // optional condition
+        },
+      ],
+    },
+     {
+      id: 'documents',
+      label: 'คำร้อง',
+      icon: TicketSlash,
+      routeName: null,
+      children: [
+        {
+          id: 'create-documents',
+          label: 'ยื่นคำร้อง',
+          icon: null,
+          routeName: ROUTE_NAMES.SUBMIT_DOCUMENTS,
+        },
+        {
+          id: 'track-documents',
+          label: 'ติดตามคำร้อง',
+          icon: null,
+          routeName: ROUTE_NAMES.TRACK_DOCUMENTS,
+          showCondition: () => true, // optional condition
+        },
+      ],
+    },
     // ตัวอย่างการใช้ children - uncomment เมื่อต้องการใช้
     // {
     //   id: "example-with-children",

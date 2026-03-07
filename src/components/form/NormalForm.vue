@@ -5,14 +5,23 @@ import { toast } from 'vue-sonner'
 import { z } from 'zod'
 
 import { Button } from '@/components/ui/button'
+import { Calendar } from '@/components/ui/calendar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
-import { X } from 'lucide-vue-next'
+import { CalendarIcon, X } from 'lucide-vue-next'
 
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { type DateValue, CalendarDate } from '@internationalized/date'
 import { h, ref } from 'vue'
 
 const formSchema = toTypedSchema(
@@ -116,6 +125,30 @@ function formatFileSize(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
+
+// Date picker helpers
+const datePopoverOpen = ref<Record<string, boolean>>({})
+
+function stringToDateValue(str: string | undefined): DateValue | undefined {
+  if (!str) return undefined
+  const [y, m, d] = str.split('-').map(Number)
+  if (!y || !m || !d) return undefined
+  return new CalendarDate(y, m, d)
+}
+
+function dateValueToString(dv: DateValue): string {
+  const y = String(dv.year).padStart(4, '0')
+  const m = String(dv.month).padStart(2, '0')
+  const d = String(dv.day).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+function formatDisplayDate(str: string | undefined): string {
+  if (!str) return ''
+  const [y, m, d] = str.split('-')
+  if (!y || !m || !d) return ''
+  return `${d}/${m}/${y}`
+}
 </script>
 
 <template>
@@ -157,41 +190,70 @@ function formatFileSize(bytes: number): string {
                     class="disabled:opacity-50"
                   />
 
-                  <!-- date -->
-                  <Input
+                  <!-- date (Popover + Calendar) -->
+                  <Popover
                     v-else-if="fieldItem.type === 'date'"
-                    :id="`form-field-${fieldItem.name}`"
-                    v-bind="field"
-                    type="date"
-                    :placeholder="fieldItem.placeholder || 'วว / ดด / ปปปป'"
-                    :aria-invalid="!!errors.length"
-                    :disabled="fieldItem.disabled"
-                    class="disabled:opacity-50"
-                  />
+                    v-model:open="datePopoverOpen[fieldItem.name]"
+                  >
+                    <PopoverTrigger as-child>
+                      <Button
+                        :id="`form-field-${fieldItem.name}`"
+                        variant="outline"
+                        :disabled="fieldItem.disabled"
+                        :class="[
+                          'w-full justify-start text-left font-normal',
+                          !field.value && 'text-muted-foreground',
+                          fieldItem.disabled && 'opacity-50',
+                        ]"
+                      >
+                        <CalendarIcon class="mr-2 h-4 w-4" />
+                        {{
+                          field.value
+                            ? formatDisplayDate(field.value as string)
+                            : fieldItem.placeholder || 'วว / ดด / ปปปป'
+                        }}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent class="w-auto p-0" align="start">
+                      <Calendar
+                        :model-value="stringToDateValue(field.value as string)"
+                        layout="month-and-year"
+                        @update:model-value="
+                          (val: DateValue | undefined) => {
+                            if (val) {
+                              field['onUpdate:modelValue']?.(dateValueToString(val))
+                              datePopoverOpen[fieldItem.name] = false
+                            }
+                          }
+                        "
+                      />
+                    </PopoverContent>
+                  </Popover>
 
                   <!-- select -->
-                  <NativeSelect
+                  <Select
                     v-else-if="fieldItem.type === 'select'"
-                    :id="`form-field-${fieldItem.name}`"
-                    :model-value="field.value"
-                    :aria-invalid="!!errors.length"
+                    :model-value="(field.value as string) || ''"
                     :disabled="fieldItem.disabled"
-                    :name="field.name"
-                    class="w-full"
-                    @update:model-value="field['onUpdate:modelValue']?.($event)"
-                    @blur="field.onBlur"
+                    @update:model-value="(val: any) => field['onUpdate:modelValue']?.(val)"
                   >
-                    <NativeSelectOption value="" disabled selected>
-                      {{ fieldItem.placeholder || 'เลือก...' }}
-                    </NativeSelectOption>
-                    <NativeSelectOption
-                      v-for="opt in fieldItem.options"
-                      :key="opt.value"
-                      :value="opt.value"
+                    <SelectTrigger
+                      :id="`form-field-${fieldItem.name}`"
+                      class="w-full"
+                      :aria-invalid="!!errors.length"
                     >
-                      {{ opt.label }}
-                    </NativeSelectOption>
-                  </NativeSelect>
+                      <SelectValue :placeholder="fieldItem.placeholder || 'เลือก...'" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem
+                        v-for="opt in fieldItem.options"
+                        :key="opt.value"
+                        :value="opt.value"
+                      >
+                        {{ opt.label }}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
 
                   <!-- textarea -->
                   <Textarea

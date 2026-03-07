@@ -20,10 +20,9 @@ import {
   Settings,
   Users,
   User,
-  Database,
-  HardDrive,
-  FileText,
-  Cylinder,
+  FileClock,
+  Notebook,
+  TicketSlash,
   FileKey,
 } from "lucide-vue-next";
 import AppSidebar from "./AppSidebar.vue";
@@ -35,15 +34,10 @@ const breadcrumbConfig = {
   Home: { label: "หน้าหลัก", icon: Home },
   Settings: { label: "ตั้งค่าระบบ", icon: Settings },
   Profile: { label: "โปรไฟล์", icon: User },
-  Personal: { label: "ข้อมูลบุคคล", icon: Database },
-  PersonalInfo: { label: "ข้อมูลส่วนบุคคล", icon: Database },
-
- 
-  
-  ManageDatabaseWithID: { label: "รายละเอียดฐานข้อมูล", icon: Cylinder },
-  Dataset: { label: "Dataset", icon: HardDrive },
-  DatasetVersion: { label: "Dataset Version", icon: FileText },
-  DatasetVersionServing: { label: "View Data", icon: Database },
+  Personal: { label: "ข้อมูลบุคคล", icon: User },
+  WorkHistory: { label: "ประวัติการทำงาน", icon: FileClock },
+  Achievements: { label: "ผลงานและนวัตกรรม", icon: Notebook },
+  Documents: { label: "คำร้อง", icon: TicketSlash },
   Users: { label: "จัดการผู้ใช้งาน", icon: Users },
   UserDetail: { label: "รายละเอียดผู้ใช้งาน", icon: User },
   Roles: { label: "จัดการบทบาท", icon: FileKey },
@@ -91,10 +85,34 @@ const currentBreadcrumbs = computed(() => {
     breadcrumbs.push({
       label: breadcrumbConfig.Personal.label,
       icon: breadcrumbConfig.Personal.icon,
-      to: { name: ROUTE_NAMES.PERSONAL_INFO },
+      to: { name: ROUTE_NAMES.PERSONAL_DETAILS },
       isLast: true,
     });
   } 
+  else if (routeName === ROUTE_NAMES.WORK_HISTORY) {
+    breadcrumbs.push({
+      label: breadcrumbConfig.WorkHistory.label,
+      icon: breadcrumbConfig.WorkHistory.icon,
+      to: { name: ROUTE_NAMES.POSITION_HISTORY },
+      isLast: true,
+    });
+  }
+  else if (routeName === ROUTE_NAMES.ACHIEVEMENTS) {
+    breadcrumbs.push({
+      label: breadcrumbConfig.Achievements.label,
+      icon: breadcrumbConfig.Achievements.icon,
+      to: { name: ROUTE_NAMES.TRAINING },
+      isLast: true,
+    });
+  }
+    else if (routeName === ROUTE_NAMES.DOCUMENTS) {
+    breadcrumbs.push({
+      label: breadcrumbConfig.Documents.label,
+      icon: breadcrumbConfig.Documents.icon,
+      to: { name: ROUTE_NAMES.SUBMIT_DOCUMENTS },
+      isLast: true,
+    });
+  }
   else {
     breadcrumbs.push({
       label: routeName,
