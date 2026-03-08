@@ -139,8 +139,10 @@ documentApiInstance.interceptors.response.use(
 /**
  * Get authorization URL from OAuth2 provider
  */
-export async function getAuthUrl(): Promise<AuthorizeResponse> {
-  const response = await authApiInstance.post<AuthorizeResponse>('/v1/oauth2/login')
+export async function getAuthUrl(redirectUri: string): Promise<AuthorizeResponse> {
+  const response = await authApiInstance.post<AuthorizeResponse>('/v1/oauth2/login', {
+    redirect_uri: redirectUri,
+  })
   return response.data
 }
 
