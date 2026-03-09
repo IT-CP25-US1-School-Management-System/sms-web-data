@@ -372,7 +372,7 @@ function formatDisplayDateRange(str: string | undefined): string {
                   <CardContent class="pt-0">
                     <form :id="`form-${entryIndex}-${sectionIndex}`" @submit="onSubmit">
                       <!-- non-file fields -->
-                      <div class="grid grid-cols-1 gap-4 sm:grid-cols-4">
+                      <div class="grid grid-cols-1 gap-4 lg:grid-cols-4 md:grid-cols-3 sm:grid-cols-2 items-end">
                         <VeeField
                           v-for="fieldItem in section.content.filter((f) => f.type !== 'file')"
                           :key="fieldItem.name"
@@ -630,7 +630,7 @@ function formatDisplayDateRange(str: string | undefined): string {
                           :key="subIdx"
                           class="flex items-end gap-4 mt-3"
                         >
-                          <div class="grid grid-cols-1 gap-4 sm:grid-cols-4 flex-1">
+                          <div class="grid grid-cols-1 gap-4 lg:grid-cols-4 md:grid-cols-3 sm:grid-cols-2 flex-1 items-end">
                             <Field v-for="subField in section.subFields" :key="subField.name">
                               <FieldLabel>
                                 {{ subField.label || subField.name }}

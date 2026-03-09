@@ -174,7 +174,7 @@ function formatDisplayDate(str: string | undefined): string {
       <div class="overflow-hidden flex flex-col gap-0">
         <CardContent>
           <form id="form-vee-demo" @submit="onSubmit">
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-4">
+            <div class="grid grid-cols-1 gap-4 lg:grid-cols-4 md:grid-cols-3 sm:grid-cols-2 items-end">
               <VeeField
                 v-for="fieldItem in fields"
                 :key="fieldItem.name"

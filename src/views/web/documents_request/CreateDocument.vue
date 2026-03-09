@@ -185,9 +185,7 @@ watch(requestType, () => {
           </Field>
         </div>
 
-        <!-- ══════════════════════════════════════════════════════
-             Type 1: คำร้องขอเอกสาร
-        ══════════════════════════════════════════════════════ -->
+        <!-- Type 1: คำร้องขอเอกสาร -->
         <template v-if="requestType === '1'">
           <Separator class="my-4" />
 
@@ -234,12 +232,12 @@ watch(requestType, () => {
           </div>
 
           <!-- เอกสารหนังสือผ่านสิทธิ์ -->
-          <div class="flex flex-wrap items-end gap-4 mb-4">
+          <div class="flex flex-wrap items-center gap-4 mb-4">
             <div class="flex items-center gap-2 min-w-40 mt-2">
               <Checkbox id="chk-letter" v-model:checked="chkLetter" />
               <Label for="chk-letter" class="cursor-pointer">เอกสารหนังสือผ่านสิทธิ์</Label>
             </div>
-            <Field class="w-48">
+            <Field class="w-64">
               <FieldLabel>ธนาคาร <span class="text-red-500">*</span></FieldLabel>
               <Select v-model="letterBank" :disabled="!chkLetter">
                 <SelectTrigger class="w-full">
@@ -252,7 +250,7 @@ watch(requestType, () => {
                 </SelectContent>
               </Select>
             </Field>
-            <Field class="w-48">
+            <Field class="w-64">
               <FieldLabel>จำนวน <span class="text-red-500">*</span></FieldLabel>
               <Select v-model="letterQty" :disabled="!chkLetter">
                 <SelectTrigger class="w-full">
@@ -306,9 +304,7 @@ watch(requestType, () => {
           </div>
         </template>
 
-        <!-- ══════════════════════════════════════════════════════
-             Type 2: คำขอบัตรประจำตัว
-        ══════════════════════════════════════════════════════ -->
+        <!-- Type 2: คำขอบัตรประจำตัว -->
         <template v-if="requestType === '2'">
           <Separator class="my-4" />
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -357,9 +353,7 @@ watch(requestType, () => {
           </div>
         </template>
 
-        <!-- ══════════════════════════════════════════════════════
-             Type 3: คำร้องขออนุญาตไปต่างประเทศ
-        ══════════════════════════════════════════════════════ -->
+        <!-- Type 3: คำร้องขออนุญาตไปต่างประเทศ -->
         <template v-if="requestType === '3'">
           <Separator class="my-4" />
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -408,9 +402,7 @@ watch(requestType, () => {
           </div>
         </template>
 
-        <!-- ══════════════════════════════════════════════════════
-             Type 4: แบบรายงานเปลี่ยนแปลงหรือเพิ่มเติมรายการลงในสมุดประวัติ
-        ══════════════════════════════════════════════════════ -->
+        <!-- Type 4: แบบรายงานเปลี่ยนแปลงหรือเพิ่มเติมรายการลงในสมุดประวัติ -->
         <template v-if="requestType === '4'">
           <Separator class="my-4" />
 
@@ -481,12 +473,12 @@ watch(requestType, () => {
           <Separator class="my-4" />
 
           <!-- เอกสารหนังสือผ่านสิทธิ์ -->
-          <div class="flex flex-wrap items-end gap-4 mb-4">
+          <div class="flex flex-wrap items-center gap-4 mb-4">
             <div class="flex items-center gap-2 min-w-40 mt-2">
               <Checkbox id="chk-letter4" v-model:checked="chkLetter4" />
               <Label for="chk-letter4" class="cursor-pointer">เอกสารหนังสือผ่านสิทธิ์</Label>
             </div>
-            <Field class="w-48">
+            <Field class="w-64">
               <FieldLabel>ธนาคาร <span class="text-red-500">*</span></FieldLabel>
               <Select v-model="letterBank4" :disabled="!chkLetter4">
                 <SelectTrigger class="w-full">
@@ -499,7 +491,7 @@ watch(requestType, () => {
                 </SelectContent>
               </Select>
             </Field>
-            <Field class="w-48">
+            <Field class="w-64">
               <FieldLabel>จำนวน <span class="text-red-500">*</span></FieldLabel>
               <Select v-model="letterQty4" :disabled="!chkLetter4">
                 <SelectTrigger class="w-full">
@@ -563,9 +555,9 @@ watch(requestType, () => {
           </div>
         </template>
 
-        <!-- ══════════════════════════════════════════════════════
+        <!-- 
              Type 5: การประเมินผลการพัฒนางานตามข้อตกลง PA
-        ══════════════════════════════════════════════════════ -->
+         -->
         <template v-if="requestType === '5'">
           <div class="flex flex-col gap-3 mt-4">
             <Card
@@ -635,14 +627,14 @@ watch(requestType, () => {
           </div>
         </template>
 
-        <!-- ══════════════════════════════════════════════════════
+        <!--
              Type 6: การส่ง PA2 กับ PA3
-        ══════════════════════════════════════════════════════ -->
+        -->
         <template v-if="requestType === '6'">
           <Separator class="my-4" />
 
           <!-- Row 1: กลุ่มสาระ, ปฏิบัติการสอนชั้น/ระดับ x2, รายวิชา -->
-          <div class="grid grid-cols-1 gap-4 sm:grid-cols-4 mb-4">
+          <div class="grid grid-cols-1 gap-4 mb-4 items-end lg:grid-cols-4 md:grid-cols-3 sm:grid-cols-2">
             <Field>
               <FieldLabel>กลุ่มสาระ <span class="text-red-500">*</span></FieldLabel>
               <Select v-model="pa2GroupSubject">
@@ -671,7 +663,7 @@ watch(requestType, () => {
           </div>
 
           <!-- Row 2: ชม.การสอน x4 -->
-          <div class="grid grid-cols-1 gap-4 sm:grid-cols-4 mb-4">
+          <div class="grid grid-cols-1 gap-4 lg:grid-cols-4 md:grid-cols-3 sm:grid-cols-2 mb-4 items-end">
             <Field>
               <FieldLabel>การสอนตามตารางสอน <span class="text-red-500">*</span></FieldLabel>
               <Input v-model="pa2TeachHours" type="text" placeholder="จำนวนชั่วโมง / สัปดาห์" />
@@ -698,7 +690,7 @@ watch(requestType, () => {
           </div>
 
           <!-- Row 3: รายชื่อคณะกรรมการประเมิน -->
-          <div class="grid grid-cols-1 gap-4 sm:grid-cols-3 mb-4">
+          <div class="grid grid-cols-1 gap-4 mb-4 items-end lg:grid-cols-4 md:grid-cols-3 sm:grid-cols-2">
             <Field>
               <FieldLabel
                 >รายชื่อคณะกรรมการประเมิน คนที่ 1 <span class="text-red-500">*</span></FieldLabel
