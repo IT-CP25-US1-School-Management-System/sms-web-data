@@ -14,7 +14,13 @@ const router = createRouter({
     {
       path: '/',
       name: ROUTE_NAMES.HOME,
-      component: () => import('@/views/HomeView.vue'),
+      redirect: () => {
+        const authStore = useAuthStore()
+        if (authStore.hasRole('admin')) {
+          return { name: ROUTE_NAMES.MANAGE_TEACHERS }
+        }
+        return { name: ROUTE_NAMES.PERSONAL_DETAILS }
+      },
       meta: { requiresAuth: true },
     },
     {
@@ -32,7 +38,7 @@ const router = createRouter({
     {
       path: '/personal',
       component: () => import('@/views/web/personal/PersonalView.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, webOnly: true },
       redirect: { name: ROUTE_NAMES.PERSONAL_DETAILS },
       children: [
         {
@@ -70,7 +76,7 @@ const router = createRouter({
     {
       path: '/work-history',
       component: () => import('@/views/web/work_history/WorkHistotyView.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, webOnly: true },
       redirect: { name: ROUTE_NAMES.POSITION_HISTORY },
       children: [
         {
@@ -108,7 +114,7 @@ const router = createRouter({
     {
       path: '/achievements',
       component: () => import('@/views/web/achievements/AchievementsView.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, webOnly: true },
       redirect: { name: ROUTE_NAMES.TRAINING },
       children: [
         {
@@ -128,7 +134,7 @@ const router = createRouter({
     {
       path: '/documents',
       component: () => import('@/views/web/documents_request/DocumentsView.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, webOnly: true },
       redirect: { name: ROUTE_NAMES.SUBMIT_DOCUMENTS },
       children: [
         {
@@ -146,73 +152,83 @@ const router = createRouter({
       ],
     },
     {
+      path: '/manage',
+      redirect: { name: ROUTE_NAMES.MANAGE_TEACHERS },
+      meta: { requiresAuth: true, adminOnly: true },
+    },
+    {
       path: '/manage/teachers',
       name: ROUTE_NAMES.MANAGE_TEACHERS,
       component: () => import('@/views/manage/ManageTeacherView.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, adminOnly: true },
     },
     {
       path: '/manage/students',
       name: ROUTE_NAMES.MANAGE_STUDENTS,
       component: () => import('@/views/manage/ManageStudentView.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, adminOnly: true },
     },
     {
       path: '/import-data',
       name: ROUTE_NAMES.IMPORT_DATA,
       component: () => import('@/views/manage/ImportDataView.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, adminOnly: true },
     },
     {
       path: '/requests',
       name: ROUTE_NAMES.REQUESTS,
       component: () => import('@/views/manage/RequestsView.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, adminOnly: true },
     },
   ],
 })
 
-// router.beforeEach(async (to, _from, next) => {
-//   const authStore = useAuthStore();
+router.beforeEach(async (to, _from, next) => {
+  const authStore = useAuthStore()
 
-//   if (to.name === ROUTE_NAMES.LOGIN) {
-//     if (!authStore.isAuthenticated) {
-//       try {
-//         await authStore.checkSession();
-//         if (authStore.isAuthenticated) {
-//           next({ name: ROUTE_NAMES.HOME });
-//           return;
-//         }
-//       } catch (error) {
-//         console.log("Session check failed on login page:", error);
-//       }
-//     } else {
-//       next({ name: ROUTE_NAMES.HOME });
-//       return;
-//     }
+  // Guest route (login page)
+  if (to.meta.requiresGuest) {
+    if (authStore.isAuthenticated) {
+      next({ name: ROUTE_NAMES.HOME })
+      return
+    }
+    next()
+    return
+  }
 
-//     next();
-//     return;
-//   }
+  // Auth required routes — check session
+  if (to.meta.requiresAuth) {
+    if (!authStore.isAuthenticated) {
+      try {
+        await authStore.checkSession()
+      } catch (error) {
+        console.log('Session check failed, redirecting to login:', error)
+        next({ name: ROUTE_NAMES.LOGIN })
+        return
+      }
+    }
 
-//   if (to.meta.requiresAuth) {
-//     if (!authStore.isAuthenticated) {
-//       try {
-//         await authStore.checkSession();
-//       } catch (error) {
-//         console.log("Session check failed, redirecting to login:", error);
-//         next({ name: ROUTE_NAMES.LOGIN });
-//         return;
-//       }
-//     }
+    if (!authStore.isAuthenticated) {
+      next({ name: ROUTE_NAMES.LOGIN })
+      return
+    }
 
-//     if (!authStore.isAuthenticated) {
-//       next({ name: ROUTE_NAMES.LOGIN });
-//       return;
-//     }
-//   }
+    const isAdmin = authStore.hasRole('admin')
 
-//   next();
-// });
+    // Admin trying to access web-only routes → redirect to /manage
+    if (isAdmin && to.meta.webOnly) {
+      next({ name: ROUTE_NAMES.MANAGE_TEACHERS })
+      return
+    }
+
+    // Non-admin trying to access admin-only routes → redirect to /personal
+    if (!isAdmin && to.meta.adminOnly) {
+      next({ name: ROUTE_NAMES.PERSONAL_DETAILS })
+      return
+    }
+  }
+
+  next()
+})
 
 export default router
