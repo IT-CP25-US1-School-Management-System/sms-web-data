@@ -2,7 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { dataApiInstance } from '@/stores/api'
-import MainLayout from '@/layouts/MainLayout.vue'
+import MainLayout from '@/layouts/web/MainLayout.vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
