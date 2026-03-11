@@ -1,10 +1,44 @@
 <script setup lang="ts">
 import CreateForm from '@/components/form/CreateForm.vue'
 import { Button } from '@/components/ui/button'
+import { DATASET_ID, DATASET_VERSION, getDatasetRows } from '@/stores/dataset'
+import { onMounted, ref } from 'vue'
 import { toast } from 'vue-sonner'
 
 // TODO: เปลี่ยนเป็น false เมื่อต้องการดูอย่างเดียว (readonly)
 const isEditMode = true
+const loading = ref(false)
+const familyData = ref<Record<string, any>[]>([])
+
+/*async function fetchFamilyData() {
+  loading.value = true
+  try {
+    const response = await getDatasetRows(DATASET_ID, DATASET_VERSION, {
+      view: 'personal_view',
+      page: 1,
+      per_page: 50,
+    })
+    familyData.value = response.data[0]?.family_members || []
+    console.log('📦 Family API Response:', response)
+    console.log('📋 Family Data:', response.data)
+    toast.success(`โหลดข้อมูลครอบครัวสำเร็จ (${response.total_rows} รายการ)`, {
+      position: 'bottom-right',
+    })
+  } catch (error: any) {
+    console.error('❌ Family API Error:', error)
+    console.error('❌ Error Response:', error?.response?.data)
+    toast.error(`โหลดข้อมูลครอบครัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
+      position: 'bottom-right',
+    })
+  } finally {
+    loading.value = false
+  }
+}*/
+
+onMounted(() => {
+  console.log("family");
+  // fetchFamilyData()
+})
 
 function handleSave(groupIndex: number) {
   // TODO: เรียก API บันทึกข้อมูล
@@ -22,13 +56,14 @@ function handleDelete(groupIndex: number) {
     <CreateForm
       :isDropdown="true"
       :readonly="!isEditMode"
+      :values="familyData"
       :fields="[
         [
           {
             topic: 'ข้อมูลส่วนตัว',
             content: [
               {
-                name: 'relationship',
+                name: 'relation_type',
                 label: 'ความสัมพันธ์',
                 type: 'select',
                 required: true,
@@ -43,7 +78,7 @@ function handleDelete(groupIndex: number) {
                 ],
               },
               {
-                name: 'title',
+                name: 'prefix_id',
                 label: 'คำนำหน้า',
                 type: 'select',
                 required: true,
@@ -55,7 +90,7 @@ function handleDelete(groupIndex: number) {
                 ],
               },
               {
-                name: 'first-name',
+                name: 'first_name_th',
                 label: 'ชื่อ',
                 type: 'text',
                 required: true,
@@ -63,7 +98,7 @@ function handleDelete(groupIndex: number) {
                 placeholder: '',
               },
               {
-                name: 'last-name',
+                name: 'last_name_th',
                 label: 'นามสกุล',
                 type: 'text',
                 required: true,
@@ -71,19 +106,19 @@ function handleDelete(groupIndex: number) {
                 placeholder: '',
               },
               {
-                name: 'maiden-name',
+                name: 'former_last_name_th',
                 label: 'นามสกุลเดิม',
                 type: 'text',
                 placeholder: '',
               },
               {
-                name: 'middle-name',
+                name: 'middle_name_th',
                 label: 'ชื่อกลาง',
                 type: 'text',
                 placeholder: '',
               },
               {
-                name: 'id-card',
+                name: 'national_id',
                 label: 'เลขบัตรประชาชน',
                 type: 'text',
                 required: true,
@@ -97,18 +132,18 @@ function handleDelete(groupIndex: number) {
                 placeholder: '',
               },
               {
-                name: 'living-status',
+                name: 'is_alive',
                 label: 'การมีชีวิต',
                 type: 'select',
                 required: true,
                 placeholder: '',
                 options: [
-                  { label: 'มีชีวิต', value: 'alive' },
-                  { label: 'เสียชีวิต', value: 'deceased' },
+                  { label: 'มีชีวิต', value: true },
+                  { label: 'เสียชีวิต', value: false },
                 ],
               },
               {
-                name: 'birth-date',
+                name: 'birth_date',
                 label: 'วัน / เดือน / ปี เกิด',
                 type: 'date',
                 placeholder: 'วว / ดด / ปปปป',
@@ -146,13 +181,12 @@ function handleDelete(groupIndex: number) {
               {
                 name: 'province',
                 label: 'จังหวัด',
-                type: 'select',
+                type: 'text',
                 required: true,
                 placeholder: '',
-                options: [],
               },
               {
-                name: 'postal-code',
+                name: 'postal_code',
                 label: 'รหัสไปรษณีย์',
                 type: 'text',
                 required: true,
@@ -161,13 +195,12 @@ function handleDelete(groupIndex: number) {
               {
                 name: 'district',
                 label: 'อำเภอ/เขต',
-                type: 'select',
+                type: 'text',
                 required: true,
                 placeholder: '',
-                options: [],
               },
               {
-                name: 'sub-district',
+                name: 'subdistrict',
                 label: 'ตำบล/แขวง',
                 type: 'select',
                 required: true,
@@ -181,13 +214,13 @@ function handleDelete(groupIndex: number) {
                 placeholder: '',
               },
               {
-                name: 'alley',
+                name: 'soi',
                 label: 'ตรอก/ซอย',
                 type: 'text',
                 placeholder: '',
               },
               {
-                name: 'village',
+                name: 'building',
                 label: 'หมู่บ้าน/อาคาร',
                 type: 'text',
                 placeholder: '',
@@ -199,14 +232,8 @@ function handleDelete(groupIndex: number) {
                 placeholder: '',
               },
               {
-                name: 'house-no',
+                name: 'house_no',
                 label: 'บ้านเลขที่',
-                type: 'text',
-                placeholder: '',
-              },
-              {
-                name: 'house-reg-no',
-                label: 'รหัสทะเบียนบ้าน',
                 type: 'text',
                 placeholder: '',
               },
@@ -219,14 +246,4 @@ function handleDelete(groupIndex: number) {
     />
   </div>
 
-  <!-- ปุ่มบันทึก - อยู่ข้างล่างตลอด -->
-  <div
-    class="shrink-0 flex justify-end border-t border-gray-200 bg-white dark:bg-background rounded-b-xl p-3 mx-4 sm:mx-6"
-  >
-    <Button
-      class="bg-[#16A34A] hover:bg-[#15803D] text-white px-8 py-2 rounded-lg font-semibold shadow-sm"
-    >
-      บันทึก
-    </Button>
-  </div>
 </template>

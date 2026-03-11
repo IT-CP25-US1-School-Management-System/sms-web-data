@@ -75,6 +75,7 @@ type FieldItem = {
 defineProps<{
   topic?: string
   fields?: FieldItem[]
+  values?: Record<string, any>
 }>()
 
 const isOpen = ref(true)
@@ -180,6 +181,8 @@ function formatDisplayDate(str: string | undefined): string {
                 :key="fieldItem.name"
                 v-slot="{ field, errors }"
                 :name="fieldItem.name"
+                
+                :model-value="values?.[fieldItem.name] ?? undefined"
               >
                 <Field :data-invalid="!!errors.length">
                   <FieldLabel :for="`form-field-${fieldItem.name}`">
@@ -289,7 +292,7 @@ function formatDisplayDate(str: string | undefined): string {
               v-for="fieldItem in fields?.filter((f: FieldItem) => f.type === 'file')"
               :key="fieldItem.name"
             >
-              <FieldLabel v-if="fieldItem.label" :for="`form-field-${fieldItem.name}`">
+              <FieldLabel v-if="fieldItem.label" :for="`form-field-${fieldItem.name}`" class="mb-2 block text-sm font-medium">
                 {{ fieldItem.label }}
                 <span v-if="fieldItem.required" class="text-red-500">*</span>
               </FieldLabel>
