@@ -195,18 +195,9 @@ watch(requestType, () => {
               <Checkbox id="chk-salary" v-model:checked="chkSalary" />
               <Label for="chk-salary" class="cursor-pointer">ใบรับรองเงินเดือน</Label>
             </div>
-            <Field class="w-48">
+             <Field class="w-64">
               <FieldLabel>จำนวน <span class="text-red-500">*</span></FieldLabel>
-              <Select v-model="salaryQty" :disabled="!chkSalary">
-                <SelectTrigger class="w-full">
-                  <SelectValue placeholder="เลือก" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem v-for="q in qtyOptions" :key="q.value" :value="q.value">
-                    {{ q.label }}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <Input v-model="letterQty4" type="number" min="1" max="100" placeholder="กรอกจำนวน" />
             </Field>
           </div>
 
@@ -216,18 +207,9 @@ watch(requestType, () => {
               <Checkbox id="chk-work" v-model:checked="chkWork" />
               <Label for="chk-work" class="cursor-pointer">ใบรับรองการปฏิบัติงาน</Label>
             </div>
-            <Field class="w-48">
+            <Field class="w-64">
               <FieldLabel>จำนวน <span class="text-red-500">*</span></FieldLabel>
-              <Select v-model="workQty" :disabled="!chkWork">
-                <SelectTrigger class="w-full">
-                  <SelectValue placeholder="เลือก" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem v-for="q in qtyOptions" :key="q.value" :value="q.value">
-                    {{ q.label }}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <Input v-model="letterQty4" type="number" min="1" max="100" placeholder="กรอกจำนวน" />
             </Field>
           </div>
 
@@ -239,7 +221,7 @@ watch(requestType, () => {
             </div>
             <Field class="w-64">
               <FieldLabel>ธนาคาร <span class="text-red-500">*</span></FieldLabel>
-              <Select v-model="letterBank" :disabled="!chkLetter">
+              <Select v-model="letterBank" >
                 <SelectTrigger class="w-full">
                   <SelectValue placeholder="เลือก" />
                 </SelectTrigger>
@@ -252,16 +234,7 @@ watch(requestType, () => {
             </Field>
             <Field class="w-64">
               <FieldLabel>จำนวน <span class="text-red-500">*</span></FieldLabel>
-              <Select v-model="letterQty" :disabled="!chkLetter">
-                <SelectTrigger class="w-full">
-                  <SelectValue placeholder="เลือก" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem v-for="q in qtyOptions" :key="q.value" :value="q.value">
-                    {{ q.label }}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <Input v-model="letterQty" type="number" min="1" max="100" placeholder="กรอกจำนวน" />
             </Field>
           </div>
 
