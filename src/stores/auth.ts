@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed, readonly } from 'vue'
 import type { AuthTokens, OAuth2CallbackRequest } from '@/types/auth'
 import { getAuthUrl, exchangeAuthCode, getSession, logout as apiLogout, setTokens } from './api'
+import { env } from '@/lib/env'
 
 export const useAuthStore = defineStore('auth', () => {
   const tokens = ref<AuthTokens | null>(null)
@@ -30,7 +31,7 @@ export const useAuthStore = defineStore('auth', () => {
       loading.value = true
       clearError()
 
-      const redirectUri = `${window.location.origin}/login`
+      const redirectUri = env.LOGIN_REDIRECT_URL
       const response = await getAuthUrl(redirectUri)
 
       window.location.href = response.auth_url

@@ -5,6 +5,7 @@ export const env = {
   APP_NAME: import.meta.env.VITE_APP_NAME || 'Sms Web Data',
   APP_VERSION: import.meta.env.VITE_APP_VERSION || '1.0.0',
   APP_MODE: import.meta.env.VITE_APP_MODE || 'development',
+  LOGIN_REDIRECT_URL: import.meta.env.VITE_LOGIN_REDIRECT_URL || `${window.location.origin}/login`,
 }
 
 export const getEnvVar = (key: string, fallback?: string): string => {
