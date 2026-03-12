@@ -85,7 +85,6 @@ jobs:
             docker run -d \
               --name sms-web-data \
               --restart unless-stopped \
-              -p 8080:80 \
               $IMAGE_URL
 
             docker network connect sms_proxy_net sms-web-data || true
