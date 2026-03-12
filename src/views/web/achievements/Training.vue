@@ -105,13 +105,4 @@ function handleDelete(groupIndex: number) {
     />
   </div>
   <!-- ปุ่มบันทึก - อยู่ข้างล่างตลอด -->
-  <div
-    class="shrink-0 flex justify-end border-t border-gray-200 bg-white dark:bg-background rounded-b-xl p-3 mx-4 sm:mx-6"
-  >
-    <Button
-      class="bg-[#16A34A] hover:bg-[#15803D] text-white px-8 py-2 rounded-lg font-semibold shadow-sm"
-    >
-      บันทึก
-    </Button>
-  </div>
 </template>

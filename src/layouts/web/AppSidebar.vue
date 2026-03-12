@@ -165,7 +165,7 @@ const menuConfig: {
         },
         {
           id: 'achievements-innovations',
-          label: 'ข้อมูลผลงานและนวัตกรรม',
+          label: 'ข้อมูลผลงาน/นวัตกรรม',
           icon: null,
           routeName: ROUTE_NAMES.ACHIEVEMENTS_INNOVATIONS,
           showCondition: () => true, // optional condition

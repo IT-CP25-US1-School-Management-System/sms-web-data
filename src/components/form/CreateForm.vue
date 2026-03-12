@@ -70,7 +70,7 @@ type FieldItem = {
   required?: boolean
   disabled?: boolean
   isShow?: boolean
-  options?: { label: string; value: string }[]
+  options?: { label: string; value: any }[]
   accept?: string // e.g. '.pdf,.jpg,.png' or 'image/*'
   multiple?: boolean
 }
@@ -85,6 +85,7 @@ const props = defineProps<{
   isDropdown?: boolean
   readonly?: boolean
   fields?: FieldSection[][]
+  values?: Record<string, any>[]
 }>()
 
 const emit = defineEmits<{
@@ -378,6 +379,7 @@ function formatDisplayDateRange(str: string | undefined): string {
                           :key="fieldItem.name"
                           v-slot="{ field: veeField, errors }"
                           :name="fieldItem.name"
+                          :model-value="props.values?.[entryIndex]?.[fieldItem.name] ?? undefined"
                         >
                           <Field :data-invalid="!!errors.length">
                             <FieldLabel :for="`form-field-${fieldItem.name}`">
@@ -547,7 +549,7 @@ function formatDisplayDateRange(str: string | undefined): string {
                           v-for="fieldItem in section.content.filter((f) => f.type === 'file')"
                           :key="fieldItem.name"
                         >
-                          <FieldLabel v-if="fieldItem.label" :for="`form-field-${fieldItem.name}`">
+                          <FieldLabel v-if="fieldItem.label" :for="`form-field-${fieldItem.name}`" class="mb-2 block text-sm font-medium" >
                             {{ fieldItem.label }}
                             <span v-if="fieldItem.required" class="text-red-500">*</span>
                           </FieldLabel>

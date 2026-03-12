@@ -195,18 +195,9 @@ watch(requestType, () => {
               <Checkbox id="chk-salary" v-model:checked="chkSalary" />
               <Label for="chk-salary" class="cursor-pointer">ใบรับรองเงินเดือน</Label>
             </div>
-            <Field class="w-48">
+             <Field class="w-64">
               <FieldLabel>จำนวน <span class="text-red-500">*</span></FieldLabel>
-              <Select v-model="salaryQty" :disabled="!chkSalary">
-                <SelectTrigger class="w-full">
-                  <SelectValue placeholder="เลือก" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem v-for="q in qtyOptions" :key="q.value" :value="q.value">
-                    {{ q.label }}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <Input v-model="letterQty4" type="number" min="1" max="100" placeholder="กรอกจำนวน" />
             </Field>
           </div>
 
@@ -216,18 +207,9 @@ watch(requestType, () => {
               <Checkbox id="chk-work" v-model:checked="chkWork" />
               <Label for="chk-work" class="cursor-pointer">ใบรับรองการปฏิบัติงาน</Label>
             </div>
-            <Field class="w-48">
+            <Field class="w-64">
               <FieldLabel>จำนวน <span class="text-red-500">*</span></FieldLabel>
-              <Select v-model="workQty" :disabled="!chkWork">
-                <SelectTrigger class="w-full">
-                  <SelectValue placeholder="เลือก" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem v-for="q in qtyOptions" :key="q.value" :value="q.value">
-                    {{ q.label }}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <Input v-model="letterQty4" type="number" min="1" max="100" placeholder="กรอกจำนวน" />
             </Field>
           </div>
 
@@ -239,7 +221,7 @@ watch(requestType, () => {
             </div>
             <Field class="w-64">
               <FieldLabel>ธนาคาร <span class="text-red-500">*</span></FieldLabel>
-              <Select v-model="letterBank" :disabled="!chkLetter">
+              <Select v-model="letterBank" >
                 <SelectTrigger class="w-full">
                   <SelectValue placeholder="เลือก" />
                 </SelectTrigger>
@@ -252,16 +234,7 @@ watch(requestType, () => {
             </Field>
             <Field class="w-64">
               <FieldLabel>จำนวน <span class="text-red-500">*</span></FieldLabel>
-              <Select v-model="letterQty" :disabled="!chkLetter">
-                <SelectTrigger class="w-full">
-                  <SelectValue placeholder="เลือก" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem v-for="q in qtyOptions" :key="q.value" :value="q.value">
-                    {{ q.label }}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <Input v-model="letterQty" type="number" min="1" max="100" placeholder="กรอกจำนวน" />
             </Field>
           </div>
 
@@ -279,7 +252,7 @@ watch(requestType, () => {
               accept=".pdf,.jpg,.png"
               @change="handleFileSelect($event, 'slip')"
             />
-            <Button type="button" @click="triggerFileInput('slip')">
+            <Button type="button" class="cursor-pointer" @click="triggerFileInput('slip')">
               <FileText class="w-4 h-4 mr-1" /> อัปโหลดไฟล์
             </Button>
             <div v-if="fileMap['slip']?.length" class="mt-2 flex flex-col gap-1">
@@ -310,7 +283,7 @@ watch(requestType, () => {
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <p class="text-sm font-semibold mb-2">แบบฟอร์มเอกสารคำขอบัตรประจำตัว</p>
-              <Button type="button" variant="default">
+              <Button type="button" class="cursor-pointer" variant="default">
                 <FileText class="w-4 h-4 mr-1" /> ดาวโหลดไฟล์
               </Button>
             </div>
@@ -327,7 +300,7 @@ watch(requestType, () => {
                 accept=".pdf,.jpg,.png"
                 @change="handleFileSelect($event, 'card-doc')"
               />
-              <Button type="button" variant="destructive" @click="triggerFileInput('card-doc')">
+              <Button type="button" class="cursor-pointer" variant="destructive" @click="triggerFileInput('card-doc')">
                 <FileText class="w-4 h-4 mr-1" /> อัปโหลดไฟล์
               </Button>
               <div v-if="fileMap['card-doc']?.length" class="mt-2 flex flex-col gap-1">
@@ -359,7 +332,7 @@ watch(requestType, () => {
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <p class="text-sm font-semibold mb-2">แบบฟอร์มเอกสารคำร้องขออนุญาตไปต่างประเทศ</p>
-              <Button type="button" variant="default">
+              <Button type="button" class="cursor-pointer" variant="default">
                 <FileText class="w-4 h-4 mr-1" /> ดาวโหลดไฟล์
               </Button>
             </div>
@@ -376,7 +349,7 @@ watch(requestType, () => {
                 accept=".pdf,.jpg,.png"
                 @change="handleFileSelect($event, 'abroad-doc')"
               />
-              <Button type="button" variant="destructive" @click="triggerFileInput('abroad-doc')">
+              <Button type="button" class="cursor-pointer" variant="destructive" @click="triggerFileInput('abroad-doc')">
                 <FileText class="w-4 h-4 mr-1" /> อัปโหลดไฟล์
               </Button>
               <div v-if="fileMap['abroad-doc']?.length" class="mt-2 flex flex-col gap-1">
@@ -390,7 +363,7 @@ watch(requestType, () => {
                     formatFileSize(file.size)
                   }}</span>
                   <button
-                    type="button"
+                    type="button" 
                     class="p-0.5 rounded hover:text-destructive text-muted-foreground"
                     @click="removeFile('abroad-doc', i)"
                   >
@@ -428,7 +401,7 @@ watch(requestType, () => {
               <p class="text-sm font-semibold mb-2">
                 แบบรายงานเปลี่ยนแปลงหรือเพิ่มเติมรายการลงในสมุดประวัติ
               </p>
-              <Button type="button" variant="default">
+              <Button type="button" class="cursor-pointer" variant="default">
                 <FileText class="w-4 h-4 mr-1" /> ดาวโหลดไฟล์
               </Button>
             </div>
@@ -445,7 +418,7 @@ watch(requestType, () => {
                 accept=".pdf,.jpg,.png"
                 @change="handleFileSelect($event, 'report-doc')"
               />
-              <Button type="button" variant="destructive" @click="triggerFileInput('report-doc')">
+              <Button type="button" class="cursor-pointer" variant="destructive" @click="triggerFileInput('report-doc')">
                 <FileText class="w-4 h-4 mr-1" /> อัปโหลดไฟล์
               </Button>
               <div v-if="fileMap['report-doc']?.length" class="mt-2 flex flex-col gap-1">
@@ -459,7 +432,7 @@ watch(requestType, () => {
                     formatFileSize(file.size)
                   }}</span>
                   <button
-                    type="button"
+                    type="button" 
                     class="p-0.5 rounded hover:text-destructive text-muted-foreground"
                     @click="removeFile('report-doc', i)"
                   >
@@ -480,7 +453,7 @@ watch(requestType, () => {
             </div>
             <Field class="w-64">
               <FieldLabel>ธนาคาร <span class="text-red-500">*</span></FieldLabel>
-              <Select v-model="letterBank4" :disabled="!chkLetter4">
+              <Select v-model="letterBank4" >
                 <SelectTrigger class="w-full">
                   <SelectValue placeholder="เลือก" />
                 </SelectTrigger>
@@ -493,16 +466,7 @@ watch(requestType, () => {
             </Field>
             <Field class="w-64">
               <FieldLabel>จำนวน <span class="text-red-500">*</span></FieldLabel>
-              <Select v-model="letterQty4" :disabled="!chkLetter4">
-                <SelectTrigger class="w-full">
-                  <SelectValue placeholder="เลือก" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem v-for="q in qtyOptions" :key="q.value" :value="q.value">
-                    {{ q.label }}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <Input v-model="letterQty4" type="number" min="1" max="100" placeholder="กรอกจำนวน" />
             </Field>
           </div>
 
@@ -512,7 +476,7 @@ watch(requestType, () => {
               <p class="text-sm font-semibold mb-2">
                 แบบคำขอเพิ่ม/ปรับปรุงข้อมูลในฐานข้อมูลบุคลากรภาครัฐ
               </p>
-              <Button type="button" variant="default">
+              <Button type="button" class="cursor-pointer" variant="default">
                 <FileText class="w-4 h-4 mr-1" /> ดาวโหลดไฟล์
               </Button>
             </div>
@@ -529,7 +493,7 @@ watch(requestType, () => {
                 accept=".pdf,.jpg,.png"
                 @change="handleFileSelect($event, 'update-doc')"
               />
-              <Button type="button" variant="destructive" @click="triggerFileInput('update-doc')">
+              <Button type="button" class="cursor-pointer" variant="destructive" @click="triggerFileInput('update-doc')">
                 <FileText class="w-4 h-4 mr-1" /> อัปโหลดไฟล์
               </Button>
               <div v-if="fileMap['update-doc']?.length" class="mt-2 flex flex-col gap-1">
@@ -543,7 +507,7 @@ watch(requestType, () => {
                     formatFileSize(file.size)
                   }}</span>
                   <button
-                    type="button"
+                    type="button" 
                     class="p-0.5 rounded hover:text-destructive text-muted-foreground"
                     @click="removeFile('update-doc', i)"
                   >
@@ -598,7 +562,7 @@ watch(requestType, () => {
                       accept=".pdf"
                       @change="handleFileSelect($event, `pa-${sIdx}`)"
                     />
-                    <Button type="button" @click="triggerFileInput(`pa-${sIdx}`)">
+                    <Button type="button" class="cursor-pointer" @click="triggerFileInput(`pa-${sIdx}`)">
                       <FileText class="w-4 h-4 mr-1" /> อัปโหลดไฟล์
                     </Button>
                     <div v-if="fileMap[`pa-${sIdx}`]?.length" class="mt-2 flex flex-col gap-1">
@@ -612,7 +576,7 @@ watch(requestType, () => {
                           formatFileSize(file.size)
                         }}</span>
                         <button
-                          type="button"
+                          type="button" 
                           class="p-0.5 rounded hover:text-destructive text-muted-foreground"
                           @click="removeFile(`pa-${sIdx}`, i)"
                         >
@@ -729,7 +693,7 @@ watch(requestType, () => {
                 accept=".pdf"
                 @change="handleFileSelect($event, 'pa2-pa1')"
               />
-              <Button type="button" @click="triggerFileInput('pa2-pa1')">
+              <Button type="button" class="cursor-pointer" @click="triggerFileInput('pa2-pa1')">
                 <FileText class="w-4 h-4 mr-1" /> อัปโหลดไฟล์
               </Button>
               <div v-if="fileMap['pa2-pa1']?.length" class="mt-2 flex flex-col gap-1">
@@ -743,7 +707,7 @@ watch(requestType, () => {
                     formatFileSize(file.size)
                   }}</span>
                   <button
-                    type="button"
+                    type="button" 
                     class="p-0.5 rounded hover:text-destructive text-muted-foreground"
                     @click="removeFile('pa2-pa1', i)"
                   >
@@ -768,7 +732,7 @@ watch(requestType, () => {
                 accept=".pdf"
                 @change="handleFileSelect($event, 'pa2-eval1')"
               />
-              <Button type="button" @click="triggerFileInput('pa2-eval1')">
+              <Button type="button" class="cursor-pointer" @click="triggerFileInput('pa2-eval1')">
                 <FileText class="w-4 h-4 mr-1" /> อัปโหลดไฟล์
               </Button>
               <div v-if="fileMap['pa2-eval1']?.length" class="mt-2 flex flex-col gap-1">
@@ -810,7 +774,7 @@ watch(requestType, () => {
                 accept=".pdf"
                 @change="handleFileSelect($event, 'pa2-eval2')"
               />
-              <Button type="button" @click="triggerFileInput('pa2-eval2')">
+              <Button type="button" class="cursor-pointer" @click="triggerFileInput('pa2-eval2')">
                 <FileText class="w-4 h-4 mr-1" /> อัปโหลดไฟล์
               </Button>
               <div v-if="fileMap['pa2-eval2']?.length" class="mt-2 flex flex-col gap-1">
@@ -824,7 +788,7 @@ watch(requestType, () => {
                     formatFileSize(file.size)
                   }}</span>
                   <button
-                    type="button"
+                    type="button" 
                     class="p-0.5 rounded hover:text-destructive text-muted-foreground"
                     @click="removeFile('pa2-eval2', i)"
                   >
@@ -849,7 +813,7 @@ watch(requestType, () => {
                 accept=".pdf"
                 @change="handleFileSelect($event, 'pa2-eval3')"
               />
-              <Button type="button" @click="triggerFileInput('pa2-eval3')">
+              <Button type="button" class="cursor-pointer" @click="triggerFileInput('pa2-eval3')">
                 <FileText class="w-4 h-4 mr-1" /> อัปโหลดไฟล์
               </Button>
               <div v-if="fileMap['pa2-eval3']?.length" class="mt-2 flex flex-col gap-1">
@@ -863,7 +827,7 @@ watch(requestType, () => {
                     formatFileSize(file.size)
                   }}</span>
                   <button
-                    type="button"
+                    type="button" 
                     class="p-0.5 rounded hover:text-destructive text-muted-foreground"
                     @click="removeFile('pa2-eval3', i)"
                   >
@@ -877,9 +841,18 @@ watch(requestType, () => {
       </CardContent>
 
       <!-- ══════════ Footer: Submit button ══════════ -->
-      <div v-if="requestType" class="flex justify-end px-6 pb-4">
-        <Button type="button" class="px-6"> ยื่นคำร้อง </Button>
-      </div>
+      <!-- <div v-if="requestType" class="flex justify-end px-6 pb-4">
+        <Button type="button" class="cursor-pointer" class="px-6"> ยื่นคำร้อง </Button>
+      </div> -->
     </Card>
   </div>
+      <div
+      class="sticky bottom-0 right-0 z-40 flex justify-end border-t border-gray-200 bg-white p-3 w-full"
+    >
+      <Button
+        class="bg-[#16A34A] hover:bg-[#15803D] text-white px-8 py-2 rounded-lg font-semibold shadow-sm"
+      >
+        บันทึก
+      </Button>
+    </div>
 </template>

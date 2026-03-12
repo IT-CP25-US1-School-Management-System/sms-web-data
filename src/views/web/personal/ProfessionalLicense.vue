@@ -38,7 +38,7 @@ import { Button } from '@/components/ui/button'
         },
         {
           name: 'license-file',
-          label: '',
+          label: 'แนบใบประกอบวิชาชีพ',
           type: 'file',
           accept: '.pdf,.jpg,.png',
           multiple: true,
@@ -47,13 +47,13 @@ import { Button } from '@/components/ui/button'
     />
   </div>
   <!-- ปุ่มบันทึก -->
-  <div
-    class="shrink-0 flex justify-end border-t border-gray-200 bg-white dark:bg-background rounded-b-xl p-3 mx-4 sm:mx-6"
-  >
-    <Button
-      class="bg-[#16A34A] hover:bg-[#15803D] text-white px-8 py-2 rounded-lg font-semibold shadow-sm"
+    <div
+      class="sticky bottom-0 right-0 z-40 flex justify-end border-t border-gray-200 bg-white p-3 w-full"
     >
-      บันทึก
-    </Button>
-  </div>
+      <Button
+        class="bg-[#16A34A] hover:bg-[#15803D] text-white px-8 py-2 rounded-lg font-semibold shadow-sm"
+      >
+        บันทึก
+      </Button>
+    </div>
 </template>
