@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
-import MainLayout from '@/layouts/MainLayout.vue'
+import MainLayout from '@/layouts/manage/MainLayout.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -179,25 +179,31 @@ const getTeacherType = (teacher: PersonData) => {
 
 <template>
   <MainLayout>
-    <div class="container mx-auto py-6 space-y-6">
+    <div class="flex h-full flex-col gap-3 py-3">
       <!-- Header with tabs, search, and add button -->
-      <div class="space-y-4">
+      <div class="shrink-0 space-y-2">
       <!-- Tabs -->
-      <div class="flex gap-2">
+      <div class="inline-flex items-center gap-1 rounded-lg bg-muted p-1">
         <Button
-          :variant="activeTab === 'all' ? 'default' : 'outline'"
+          :variant="activeTab === 'all' ? 'default' : 'ghost'"
+          size="sm"
+          :class="activeTab !== 'all' && 'hover:bg-transparent text-muted-foreground'"
           @click="changeTab('all')"
         >
           ทั้งหมด
         </Button>
         <Button
-          :variant="activeTab === 'government' ? 'default' : 'outline'"
+          :variant="activeTab === 'government' ? 'default' : 'ghost'"
+          size="sm"
+          :class="activeTab !== 'government' && 'hover:bg-transparent text-muted-foreground'"
           @click="changeTab('government')"
         >
           ข้าราชการ
         </Button>
         <Button
-          :variant="activeTab === 'contract' ? 'default' : 'outline'"
+          :variant="activeTab === 'contract' ? 'default' : 'ghost'"
+          size="sm"
+          :class="activeTab !== 'contract' && 'hover:bg-transparent text-muted-foreground'"
           @click="changeTab('contract')"
         >
           ครูอัตราจ้าง
@@ -228,114 +234,119 @@ const getTeacherType = (teacher: PersonData) => {
     </div>
 
     <!-- Table Card -->
-    <div class="bg-blue-600 text-white rounded-t-lg p-4">
-      <h2 class="text-lg font-semibold">รายชื่อคุณครู</h2>
-    </div>
-    
-    <div class="border rounded-b-lg overflow-hidden">
-      <!-- Table -->
-      <div class="overflow-x-auto">
+    <div class="flex min-h-0 flex-1 flex-col">
+      <div class="shrink-0 bg-primary text-primary-foreground rounded-lg px-4 py-2 mb-3">
+        <h2 class="text-base font-semibold">รายชื่อคุณครู</h2>
+      </div>
+
+      <div class="flex min-h-0 flex-1 flex-col border rounded-lg">
+        <!-- Table header (fixed, not scrollable) -->
         <table class="w-full">
           <thead class="bg-muted/50">
             <tr>
-              <th class="text-left py-3 px-4 font-medium">ชื่อ</th>
-              <th class="text-left py-3 px-4 font-medium">นามสกุล</th>
-              <th class="text-center py-3 px-4 font-medium">ประเภท</th>
-              <th class="text-center py-3 px-4 font-medium">การดำเนินการ</th>
+              <th class="text-left py-2 px-2 font-medium">ชื่อ</th>
+              <th class="text-left py-2 px-2 font-medium">นามสกุล</th>
+              <th class="text-center py-2 px-2 font-medium">ประเภท</th>
+              <th class="text-center py-2 px-2 font-medium">การดำเนินการ</th>
             </tr>
           </thead>
-          <tbody>
-            <!-- Loading state -->
-            <tr v-if="loading">
-              <td colspan="4" class="py-8 text-center">
-                <div class="flex justify-center items-center gap-2">
-                  <Loader2 class="h-5 w-5 animate-spin" />
-                  <span class="text-muted-foreground">กำลังโหลดข้อมูล...</span>
-                </div>
-              </td>
-            </tr>
-            <!-- Empty state -->
-            <tr v-else-if="teachers.length === 0">
-              <td colspan="4" class="py-8 text-center text-muted-foreground">
-                ไม่พบข้อมูลคุณครู
-              </td>
-            </tr>
-            <!-- Data rows -->
-            <tr
-              v-else
-              v-for="teacher in teachers"
-              :key="teacher.id"
-              class="border-t hover:bg-muted/30 transition-colors"
-            >
-              <td class="py-3 px-4 align-middle">{{ teacher.first_name_th }}</td>
-              <td class="py-3 px-4 align-middle">{{ teacher.last_name_th }}</td>
-              <td class="py-3 px-4 text-center align-middle">{{ getTeacherType(teacher) }}</td>
-              <td class="py-3 px-4 align-middle">
-                <div class="flex justify-center">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger as-child>
-                      <Button variant="ghost" size="sm">
-                        <MoreHorizontal class="h-5 w-5" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" class="flex flex-row gap-1 p-1">
-                      <DropdownMenuItem @click="handleEdit(teacher)" class="cursor-pointer">
-                        <Pencil class="h-4 w-4 mr-2" />
-                        แก้ไข
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        @click="handleDelete(teacher)"
-                        class="text-red-600 cursor-pointer"
-                      >
-                        <Trash2 class="h-4 w-4 mr-2" />
-                        ลบ
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </td>
-            </tr>
-          </tbody>
         </table>
-      </div>
 
-      <!-- Pagination -->
-      <div v-if="!loading && teachers.length > 0" class="flex justify-center items-center gap-2 py-4 border-t">
-        <Button
-          variant="ghost"
-          size="sm"
-          :disabled="!canPreviousPage"
-          @click="previousPage"
-        >
-          Previous
-        </Button>
+        <!-- Table body (scrollable) -->
+        <div class="min-h-0 flex-1 overflow-auto">
+          <table class="w-full">
+            <tbody>
+              <!-- Loading state -->
+              <tr v-if="loading">
+                <td colspan="4" class="py-8 text-center">
+                  <div class="flex justify-center items-center gap-2">
+                    <Loader2 class="h-5 w-5 animate-spin" />
+                    <span class="text-muted-foreground">กำลังโหลดข้อมูล...</span>
+                  </div>
+                </td>
+              </tr>
+              <!-- Empty state -->
+              <tr v-else-if="teachers.length === 0">
+                <td colspan="4" class="py-8 text-center text-muted-foreground">
+                  ไม่พบข้อมูลคุณครู
+                </td>
+              </tr>
+              <!-- Data rows -->
+              <tr
+                v-else
+                v-for="teacher in teachers"
+                :key="teacher.id"
+                class="border-t hover:bg-muted/30 transition-colors"
+              >
+                <td class="py-2 px-2 align-middle">{{ teacher.first_name_th }}</td>
+                <td class="py-2 px-2 align-middle">{{ teacher.last_name_th }}</td>
+                <td class="py-2 px-2 text-center align-middle">{{ getTeacherType(teacher) }}</td>
+                <td class="py-2 px-2 align-middle">
+                  <div class="flex justify-center">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger as-child>
+                        <Button variant="ghost" size="sm">
+                          <MoreHorizontal class="h-5 w-5" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" class="flex flex-row gap-1 p-1">
+                        <DropdownMenuItem @click="handleEdit(teacher)" class="cursor-pointer">
+                          <Pencil class="h-4 w-4 mr-2" />
+                          แก้ไข
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          @click="handleDelete(teacher)"
+                          class="text-red-600 cursor-pointer"
+                        >
+                          <Trash2 class="h-4 w-4 mr-2" />
+                          ลบ
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
-        <template v-for="(pageNum, index) in getVisiblePages" :key="index">
+        <!-- Pagination - fixed at bottom -->
+        <div v-if="!loading && teachers.length > 0" class="shrink-0 flex items-center justify-end gap-2 border-t px-4 py-2">
+          <span class="mr-auto text-sm text-muted-foreground">
+            แสดง {{ teachers.length }} รายการจาก {{ pagination.total_rows }} รายการทั้งหมด
+          </span>
+
           <Button
-            v-if="typeof pageNum === 'number'"
-            :variant="pageNum === pagination.page ? 'default' : 'ghost'"
+            variant="ghost"
             size="sm"
-            @click="goToPage(pageNum)"
+            :disabled="!canPreviousPage"
+            @click="previousPage"
           >
-            {{ pageNum }}
+            ← ก่อนหน้า
           </Button>
-          <span v-else class="px-2">...</span>
-        </template>
 
-        <Button
-          variant="ghost"
-          size="sm"
-          :disabled="!canNextPage"
-          @click="nextPage"
-        >
-          Next
-        </Button>
+          <template v-for="(pageNum, index) in getVisiblePages" :key="index">
+            <Button
+              v-if="typeof pageNum === 'number'"
+              :variant="pageNum === pagination.page ? 'default' : 'ghost'"
+              size="sm"
+              @click="goToPage(pageNum)"
+            >
+              {{ pageNum }}
+            </Button>
+            <span v-else class="px-2">...</span>
+          </template>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            :disabled="!canNextPage"
+            @click="nextPage"
+          >
+            ถัดไป →
+          </Button>
+        </div>
       </div>
-    </div>
-
-    <!-- Stats -->
-    <div v-if="!loading" class="text-sm text-muted-foreground text-center">
-      แสดง {{ teachers.length }} รายการจาก {{ pagination.total_rows }} รายการทั้งหมด
     </div>
   </div>
   </MainLayout>

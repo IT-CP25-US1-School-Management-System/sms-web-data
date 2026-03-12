@@ -19,7 +19,7 @@ import {
   Database,
   FileText,
 } from 'lucide-vue-next'
-import AppSidebar from '@/layouts/AppSidebar.vue'
+import AppSidebar from '@/layouts/manage/AppSidebar.vue'
 import ModeToggle from '@/components/ModeToggle.vue'
 
 const route = useRoute()
@@ -130,7 +130,7 @@ onUnmounted(() => {
 <template>
   <SidebarProvider>
     <AppSidebar />
-    <SidebarInset>
+    <SidebarInset class="flex h-screen flex-col overflow-hidden">
       <!-- Header -->
       <!-- Header -->
       <header
@@ -169,7 +169,7 @@ onUnmounted(() => {
       </header>
 
       <!-- Main Content -->
-      <main class="flex-1 p-6">
+      <main class="min-h-0 flex-1 overflow-hidden p-6">
         <slot />
       </main>
     </SidebarInset>

@@ -7,7 +7,107 @@ Implementation of teacher and student list management interfaces integrated with
 March 1, 2026
 
 ## Last Updated
-March 2, 2026 - Refactored API layer into separate files (dataset.ts, students.ts, teachers.ts)
+March 11, 2026 - Applied same table CSS layout to ManageStudentView
+
+## Changelog
+
+### March 11, 2026
+#### ManageStudentView — Same Table Layout as Teacher (`src/views/manage/ManageStudentView.vue`)
+- Applied identical layout pattern from ManageTeacherView
+- Outer container: `container mx-auto py-6 space-y-6` → `flex h-full flex-col gap-3 py-3`
+- Header section: added `shrink-0`
+- Blue title: detached from table with `rounded-lg mb-3`, `px-4 py-2 text-base`
+- Table split into fixed header + scrollable body (`min-h-0 flex-1 overflow-auto`)
+- Row cells: `py-3 px-4` → `py-2 px-2` (Figma 8px padding)
+- Pagination: moved to bottom-right with `justify-end`, `shrink-0`, `py-2`, Thai labels
+- Stats text merged into pagination row with `mr-auto`
+
+#### ManageTeacherView — Figma Row Sizing & Title Spacing (`src/views/manage/ManageTeacherView.vue`)
+- Table row cells: `py-3 px-4` → `py-2 px-2` to match Figma spec (padding: 8px, gap: 8px)
+- Table header cells: `py-3 px-4` → `py-2 px-2` (same sizing as data rows)
+- Blue title "รายชื่อคุณครู": separated from table with `mb-3`, uses `rounded-lg` (fully rounded)
+- Table container: `border-t-0 rounded-b-lg` → `border rounded-lg` (standalone rounded border since title is detached)
+
+#### ManageTeacherView — More Table Space (`src/views/manage/ManageTeacherView.vue`)
+- Outer container: `space-y-4 py-6` → `gap-3 py-3` (less vertical padding)
+- Header section: `space-y-4` → `shrink-0 space-y-2` (tighter + won't compress)
+- Blue title bar: `p-4 text-lg` → `px-4 py-2 text-base` + `shrink-0`
+- Pagination: `py-3` → `py-2` + `shrink-0`
+- Reconnected blue header to table card: `border-t-0 rounded-b-lg`
+
+#### ManageTeacherView Responsive Layout (`src/views/manage/ManageTeacherView.vue`)
+- Uses flex layout chain (`h-full` → `min-h-0 flex-1`) to fill available viewport height
+- Header section (tabs, search, add button) uses `shrink-0` so it never compresses
+- Table card uses `min-h-0 flex-1` to take remaining space
+- Table body inside `overflow-auto` with `min-h-0 flex-1` — scrolls only when rows exceed available space
+- `<thead>` uses `sticky top-0 z-10` to stay visible during scroll
+- Pagination bar uses `shrink-0` to always stay visible at the bottom
+- All sizes are normal (not compact) — `py-3` rows, standard buttons, `text-sm` stats
+- Layout adapts automatically: small screens scroll, large screens show everything without scroll
+- **Layout chain**: MainLayout (`h-screen` → `flex-1 min-h-0 overflow-hidden`) → ManageTeacherView (`h-full flex-col` → table `min-h-0 flex-1 overflow-auto`)
+- Pagination uses `mt-auto` to push to bottom of flex container
+- Only `<tbody>` is inside the scrollable `<div>` now (two separate `<table>` elements sharing same column widths)
+- Added `mb-2` to the blue "รายชื่อคุณครู" header for spacing between the title bar and the table
+- Changed `rounded-b-lg` to `rounded-lg` on the table border container since the blue header is no longer visually attached
+
+#### MainLayout Height Fix (`src/layouts/manage/MainLayout.vue`)
+- `SidebarInset` now uses `class="flex h-screen flex-col overflow-hidden"` to constrain to viewport height
+- `<main>` changed from `flex-1 p-6` to `min-h-0 flex-1 overflow-hidden p-6` so child flex layouts can calculate height correctly
+- This allows ManageTeacherView's table to scroll within the viewport without pushing pagination off-screen
+#### ManageTeacherView Table Layout Fix (`src/views/manage/ManageTeacherView.vue`)
+- Changed outer container from `container mx-auto py-6 space-y-6` to `flex h-full flex-col space-y-4 py-6` so the page fills available height
+- Table card uses `flex min-h-0 flex-1 flex-col` to fill remaining space
+- Table body wrapped in `min-h-0 flex-1 overflow-auto` so only the table rows scroll (not the whole page)
+- Table header uses `sticky top-0 z-10` to stay visible while scrolling
+- Pagination moved to **bottom-right** with `justify-end` and pinned below the table (not inside scroll area)
+- Stats text ("แสดง X รายการจาก Y รายการทั้งหมด") moved into the pagination bar with `mr-auto` to sit on the left side
+- Pagination no longer requires scrolling down to find — always visible at the bottom
+
+#### Manage Sidebar (`src/layouts/manage/AppSidebar.vue`)
+- Removed "หน้าหลัก" (Home) menu item from the main menu section
+- Removed unused `Home` icon import from lucide-vue-next
+#### Layout Restructuring
+- Moved `src/layouts/AppSidebar.vue` → `src/layouts/manage/AppSidebar.vue`
+- Moved `src/layouts/MainLayout.vue` → `src/layouts/manage/MainLayout.vue`
+- Updated all imports referencing the old layout paths
+
+#### Router Changes (`src/router/index.ts`)
+1. **Home route (`/`) — Role-based redirect**
+   - If user has `admin` role → redirect to `/manage/teachers` (ROUTE_NAMES.MANAGE_TEACHERS)
+   - Otherwise → redirect to `/personal/personal-details` (ROUTE_NAMES.PERSONAL_DETAILS)
+   ```typescript
+   {
+     path: '/',
+     name: ROUTE_NAMES.HOME,
+     redirect: () => {
+       const authStore = useAuthStore()
+       if (authStore.hasRole('admin')) {
+         return { name: ROUTE_NAMES.MANAGE_TEACHERS }
+       }
+       return { name: ROUTE_NAMES.PERSONAL_DETAILS }
+     },
+     meta: { requiresAuth: true },
+   }
+   ```
+
+2. **Manage redirect (`/manage`)**
+   - Added new route `/manage` that redirects to `/manage/teachers`
+
+3. **Route meta flags for role-based access control**
+   - `meta: { webOnly: true }` — Web routes (non-admin users only): `/personal`, `/work-history`, `/achievements`, `/documents`
+   - `meta: { adminOnly: true }` — Admin routes only: `/manage`, `/manage/teachers`, `/manage/students`, `/import-data`, `/requests`
+
+4. **`beforeEach` route guard (enabled)**
+   - Uncommented and rewritten with role-based routing logic:
+     - **Guest routes** (`requiresGuest`): If already authenticated → redirect to HOME
+     - **Auth routes** (`requiresAuth`): If not authenticated → check session → redirect to LOGIN if failed
+     - **Admin + webOnly route** → redirect to `/manage/teachers`
+     - **Non-admin + adminOnly route** → redirect to `/personal/personal-details`
+
+#### Role Detection
+- Uses `useAuthStore().hasRole('admin')` to check if user has the `admin` role
+- Admin role is found in `user_info.roles` array from the auth token response
+- Example roles: `["offline_access", "default-roles-sms-project", "admin", "uma_authorization"]`
 
 ## Files Created/Modified
 

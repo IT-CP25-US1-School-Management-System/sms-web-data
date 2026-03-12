@@ -29,14 +29,11 @@ import {
   SidebarMenuSubItem,
 } from '@/components/ui/sidebar'
 import {
-  Home,
   Settings,
   User,
   ChevronsUpDown,
   LogOut,
   ChevronRight,
-  HardDrive,
-  Users,
   UsersRound,
   GraduationCap,
   Upload,
@@ -70,13 +67,6 @@ const menuConfig: {
   settings: MenuItem[]
 } = {
   main: [
-    {
-      id: 'home',
-      label: 'หน้าหลัก',
-      icon: Home,
-      routeName: ROUTE_NAMES.HOME,
-      children: null,
-    },
     {
       id: 'manage-teachers',
       label: 'รายชื่อคุณครู',
