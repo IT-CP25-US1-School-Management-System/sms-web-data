@@ -1,13 +1,10 @@
 <script setup lang="ts">
 import CreateForm from '@/components/form/CreateForm.vue'
-import { Button } from '@/components/ui/button'
-import { DATASET_ID, DATASET_VERSION, getDatasetRows } from '@/stores/dataset'
 import { onMounted, ref } from 'vue'
 import { toast } from 'vue-sonner'
 
 // TODO: เปลี่ยนเป็น false เมื่อต้องการดูอย่างเดียว (readonly)
 const isEditMode = true
-const loading = ref(false)
 const familyData = ref<Record<string, any>[]>([])
 
 /*async function fetchFamilyData() {
@@ -36,7 +33,7 @@ const familyData = ref<Record<string, any>[]>([])
 }*/
 
 onMounted(() => {
-  console.log("family");
+  console.log('family')
   // fetchFamilyData()
 })
 
@@ -52,7 +49,7 @@ function handleDelete(groupIndex: number) {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 mx-6">
+  <div class="mx-6 flex flex-col gap-4">
     <CreateForm
       :isDropdown="true"
       :readonly="!isEditMode"
@@ -245,5 +242,4 @@ function handleDelete(groupIndex: number) {
       @delete="handleDelete"
     />
   </div>
-
 </template>

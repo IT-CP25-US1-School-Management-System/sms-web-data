@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import CreateForm from '@/components/form/CreateForm.vue'
-import { Button } from '@/components/ui/button'
 import { toast } from 'vue-sonner'
 
 const isEditMode = true
@@ -15,7 +14,7 @@ function handleDelete(groupIndex: number) {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 mx-6">
+  <div class="mx-6 flex flex-col gap-4">
     <CreateForm
       :isDropdown="false"
       :readonly="!isEditMode"
@@ -96,5 +95,4 @@ function handleDelete(groupIndex: number) {
       @delete="handleDelete"
     />
   </div>
-
 </template>

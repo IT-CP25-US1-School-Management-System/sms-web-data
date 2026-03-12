@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import CreateForm from '@/components/form/CreateForm.vue'
-import { Button } from '@/components/ui/button'
 import { toast } from 'vue-sonner'
 // TODO: เปลี่ยนเป็น false เมื่อต้องการดูอย่างเดียว (readonly)
 const isEditMode = true
@@ -17,7 +16,7 @@ function handleDelete(groupIndex: number) {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 mx-6">
+  <div class="mx-6 flex flex-col gap-4">
     <CreateForm
       :isDropdown="false"
       :readonly="!isEditMode"
@@ -105,10 +104,10 @@ function handleDelete(groupIndex: number) {
                 placeholder: '',
                 options: [
                   { label: 'ใช้บรรจุครั้งแรก', value: 'is_used_for_first_appointment' },
-                  { label: 'วุฒิการศึกษาสูงสุด', value: 'is_highest_degree' }, 
-                  { label: 'วุฒิตรงตามมาตรฐานตำแหน่ง', value: 'is_meets_position_standard' }, 
-                  { label: 'วุฒิ กคศ./คุรุสภา รับรอง', value: 'is_recognized_by_kksa' }, 
-                  { label: 'วุฒิ ก.พ. รับรอง', value: 'is_recognized_by_ocsc' }, 
+                  { label: 'วุฒิการศึกษาสูงสุด', value: 'is_highest_degree' },
+                  { label: 'วุฒิตรงตามมาตรฐานตำแหน่ง', value: 'is_meets_position_standard' },
+                  { label: 'วุฒิ กคศ./คุรุสภา รับรอง', value: 'is_recognized_by_kksa' },
+                  { label: 'วุฒิ ก.พ. รับรอง', value: 'is_recognized_by_ocsc' },
                 ],
               },
             ],
@@ -119,5 +118,4 @@ function handleDelete(groupIndex: number) {
       @delete="handleDelete"
     />
   </div>
-
 </template>
