@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import MainLayout from '@/layouts/manage/MainLayout.vue'
 import { Button } from '@/components/ui/button'
+import { ROUTE_NAMES } from '@/lib/constants'
 import { Input } from '@/components/ui/input'
 import {
   DropdownMenu,
@@ -18,6 +20,8 @@ import { getTeachers, deleteTeacher } from '@/stores/teachers'
 
 // Tab types
 type TabType = 'all' | 'government' | 'contract'
+
+const router = useRouter()
 
 // State
 const teachers = ref<PersonData[]>([])
@@ -48,13 +52,13 @@ const fetchTeachers = async () => {
       filterConditions.push({
         column: 'is_government',
         operator: 'eq',
-        value: true,
+        value: 'true',
       })
     } else if (activeTab.value === 'contract') {
       filterConditions.push({
         column: 'is_government',
         operator: 'eq',
-        value: false,
+        value: 'false',
       })
     }
 
@@ -165,15 +169,13 @@ const handleDelete = async (teacher: PersonData) => {
 }
 
 const handleAddTeacher = () => {
-  toast.info('ฟีเจอร์กำลังพัฒนา', {
-    description: 'ระบบเพิ่มคุณครูกำลังอยู่ระหว่างการพัฒนา',
-  })
-  // TODO: Implement add teacher functionality
+  router.push({ name: ROUTE_NAMES.ADD_TEACHER_PERSONAL })
 }
 
-// Get teacher type label - เช็คจาก governments array
+// Get teacher type label - เช็คจาก is_government field (handle boolean or string "true"/"false")
 const getTeacherType = (teacher: PersonData) => {
-  return teacher.governments && teacher.governments.length > 0 ? 'ข้าราชการ' : 'ครูอัตราจ้าง'
+  const isGov = (teacher.is_government as any) === true || (teacher.is_government as any) === 'true'
+  return isGov ? 'ข้าราชการ' : 'ครูอัตราจ้าง'
 }
 </script>
 
@@ -278,7 +280,8 @@ const getTeacherType = (teacher: PersonData) => {
                 :key="teacher.id"
                 class="border-t hover:bg-muted/30 transition-colors"
               >
-                <td class="py-2 px-2 align-middle">{{ teacher.first_name_th }}</td>
+                <td class="py-2 px-2 align-middle">{{teacher.prefixes?.prefixes_name_th || ''}}{{ teacher.first_name_th }}</td>
+
                 <td class="py-2 px-2 align-middle">{{ teacher.last_name_th }}</td>
                 <td class="py-2 px-2 text-center align-middle">{{ getTeacherType(teacher) }}</td>
                 <td class="py-2 px-2 align-middle">

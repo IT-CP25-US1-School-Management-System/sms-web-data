@@ -7,8 +7,28 @@ import {
   updateDatasetRow,
   deleteDatasetRow,
 } from '@/stores/dataset'
+import { defineStore } from 'pinia'
+import { ref, readonly } from 'vue'
 import type { DatasetListResponse, DatasetRowResponse, DatasetQueryParams } from '@/types/dataset'
-import type { PersonData, TeacherCreateDTO, TeacherUpdateDTO } from '@/types/teacher'
+import type {
+  PersonData,
+  TeacherCreateDTO,
+  TeacherUpdateDTO,
+  PersonAddressCreateDTO,
+  FamilyMemberCreateDTO,
+  EducationRecordCreateDTO,
+  ProfessionalLicenseCreateDTO,
+} from '@/types/teacher'
+
+// TODO: Replace with the correct dataset IDs once configured in the DMS backend
+const ADDRESS_DATASET_ID = DATASET_ID
+const ADDRESS_DATASET_VERSION = DATASET_VERSION
+const FAMILY_DATASET_ID = DATASET_ID
+const FAMILY_DATASET_VERSION = DATASET_VERSION
+const EDUCATION_DATASET_ID = DATASET_ID
+const EDUCATION_DATASET_VERSION = DATASET_VERSION
+const LICENSE_DATASET_ID = DATASET_ID
+const LICENSE_DATASET_VERSION = DATASET_VERSION
 
 /**
  * Get list of teachers with pagination and filters
@@ -18,7 +38,7 @@ export async function getTeachers(
 ): Promise<DatasetListResponse<PersonData>> {
   return getDatasetRows<PersonData>(DATASET_ID, DATASET_VERSION, {
     ...params,
-    view_name: 'Teacher',
+    view_name: 'personal_details',
   })
 }
 
@@ -26,7 +46,7 @@ export async function getTeachers(
  * Get a single teacher by ID
  */
 export async function getTeacherById(teacherId: string): Promise<DatasetRowResponse<PersonData>> {
-  return getDatasetRowByKey<PersonData>(DATASET_ID, DATASET_VERSION, teacherId, 'Teacher')
+  return getDatasetRowByKey<PersonData>(DATASET_ID, DATASET_VERSION, teacherId, 'personal_details')
 }
 
 /**
@@ -54,3 +74,63 @@ export async function updateTeacher(
 export async function deleteTeacher(teacherId: string): Promise<void> {
   return deleteDatasetRow(DATASET_ID, DATASET_VERSION, teacherId)
 }
+
+/**
+ * Create a person address linked to a teacher
+ */
+export async function createPersonAddress(
+  data: PersonAddressCreateDTO,
+): Promise<DatasetRowResponse<any>> {
+  return createDatasetRow(ADDRESS_DATASET_ID, ADDRESS_DATASET_VERSION, data)
+}
+
+/**
+ * Create a family member linked to a teacher
+ */
+export async function createFamilyMember(
+  data: FamilyMemberCreateDTO,
+): Promise<DatasetRowResponse<any>> {
+  return createDatasetRow(FAMILY_DATASET_ID, FAMILY_DATASET_VERSION, data)
+}
+
+/**
+ * Create an education record linked to a teacher
+ */
+export async function createEducationRecord(
+  data: EducationRecordCreateDTO,
+): Promise<DatasetRowResponse<any>> {
+  return createDatasetRow(EDUCATION_DATASET_ID, EDUCATION_DATASET_VERSION, data)
+}
+
+/**
+ * Create a professional license linked to a teacher
+ */
+export async function createProfessionalLicense(
+  data: ProfessionalLicenseCreateDTO,
+): Promise<DatasetRowResponse<any>> {
+  return createDatasetRow(LICENSE_DATASET_ID, LICENSE_DATASET_VERSION, data)
+}
+
+/**
+ * Add Teacher Wizard Store
+ * Stores the person_id created during the Add Teacher flow.
+ * Set after PersonalDetail creates the teacher row.
+ * Used by Address / Family / Education / ProfessionalLicense pages.
+ */
+export const useTeacherStore = defineStore('teacher', () => {
+  const personId = ref<string | null>(null)
+
+  function setPersonId(id: string) {
+    personId.value = id
+  }
+
+  function clearPersonId() {
+    personId.value = null
+  }
+
+  return {
+    personId: readonly(personId),
+    setPersonId,
+    clearPersonId,
+  }
+})

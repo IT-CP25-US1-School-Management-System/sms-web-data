@@ -5,12 +5,6 @@
 export type Gender = 'ชาย' | 'หญิง' | 'อื่นๆ'
 export type BloodType = 'A' | 'B' | 'AB' | 'O'
 
-export interface Prefix {
-  id: number
-  name_th: string // คำนำหน้า เช่น นาย, นาง, นางสาว
-  name_en: string // คำนำหน้า ENG เช่น MR, Miss, Mrs
-}
-
 export interface Role {
   id: string
   name: string // ครู/ครูผู้บริหาร, ครูผู้ช่วย, แม่บ้าน
@@ -28,7 +22,7 @@ export interface PersonData {
   id: string
   prefix_id: number
   role_id: string
-  is_government: boolean // ข้าราชการ หรือ ครูอัตราจ้าง
+  is_government: boolean | string // ข้าราชการ หรือ ครูอัตราจ้าง (API returns as string "true"/"false")
   
   first_name_th: string
   middle_name_th?: string
@@ -58,7 +52,10 @@ export interface PersonData {
   // Relations (loaded from API when needed)
   governments?: Government[] // มีเมื่อเป็นข้าราชการ
   employment_contract?: EmploymentContract[] // มีเมื่อเป็นครูอัตราจ้าง
-  
+  prefixes?: {
+    prefixes_name_th: string
+    prefixes_name_en: string
+  }
   created_at: string
   updated_at?: string
 }
@@ -105,9 +102,10 @@ export interface EmploymentContract {
 
 // For API operations
 export interface TeacherCreateDTO {
+  id?: string
   prefix_id: number
   role_id: string
-  is_government: boolean
+  is_government: boolean | string
   first_name_th: string
   last_name_th: string
   middle_name_th?: string
@@ -123,17 +121,85 @@ export interface TeacherCreateDTO {
   nationality?: string
   ethnicity?: string
   blood_type?: BloodType
+  physical_status?: string
   marital_status?: string
+  spouse_name?: string
   appointment_type_id?: number
+  created_at?: string
+  updated_at?: string
 }
 
 export interface TeacherUpdateDTO extends Partial<TeacherCreateDTO> {}
 
-// Simplified view for listing
-export interface TeacherListItem {
-  id: string
+export interface PersonAddressCreateDTO {
+  person_id: string
+  house_registry_no?: string
+  house_no?: string
+  moo?: string
+  building?: string
+  soi?: string
+  road?: string
+  subdistrict_code?: string
+  subdistrict?: string
+  district_code?: string
+  district?: string
+  province_code?: string
+  province?: string
+  postal_code?: string
+  is_house_registered?: boolean
+  is_current?: boolean
+  is_retired_residence?: boolean
+}
+
+export interface FamilyMemberCreateDTO {
+  person_id: string
+  relation_type: string
+  prefix_id?: number
   first_name_th: string
+  middle_name_th?: string
   last_name_th: string
-  is_government: boolean
-  work_status?: string
+  former_last_name_th?: string
+  national_id?: string
+  gender?: string
+  is_alive?: boolean
+  birth_date?: string
+  phone?: string
+  email?: string
+  marital_status?: string
+  is_emergency_contact?: boolean
+  house_no?: string
+  moo?: string
+  building?: string
+  soi?: string
+  road?: string
+  subdistrict?: string
+  district?: string
+  province?: string
+  postal_code?: string
+}
+
+export interface EducationRecordCreateDTO {
+  person_id: string
+  education_level: string
+  qualification: string
+  major_group?: string
+  minor_group?: string
+  institution: string
+  country: string
+  start_date?: string
+  graduation_date?: string
+  honor_type?: string
+  is_used_for_first_appointment?: boolean
+  is_highest_degree?: boolean
+  is_meets_position_standard?: boolean
+  is_recognized_by_kksa?: boolean
+  is_recognized_by_ocsc?: boolean
+}
+
+export interface ProfessionalLicenseCreateDTO {
+  person_id: string
+  license_type: string
+  license_no: string
+  issue_date: string
+  expiry_date: string
 }

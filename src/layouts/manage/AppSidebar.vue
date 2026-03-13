@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { env } from '@/lib/env'
@@ -38,6 +38,8 @@ import {
   GraduationCap,
   Upload,
   FileText,
+  FileClock,
+  Notebook,
 } from 'lucide-vue-next'
 
 import { getImgInitials } from '@/lib/helpers'
@@ -114,15 +116,81 @@ const menuConfig: {
   ],
 }
 
+// Check if current route is an add-teacher route
+const isAddTeacherRoute = computed(() => {
+  const name = route.name?.toString() || ''
+  return name.startsWith('AddTeacher')
+})
+
+// Check if current route is an edit-teacher route
+const isEditTeacherRoute = computed(() => {
+  const name = route.name?.toString() || ''
+  return name.startsWith('EditTeacher')
+})
+
+// Show teacher sub-menu on add or edit routes
+const showTeacherSubMenu = computed(() => isAddTeacherRoute.value || isEditTeacherRoute.value)
+
+// Dynamic label for the teacher sub-menu group
+const teacherSubMenuLabel = computed(() => {
+  if (isEditTeacherRoute.value) {
+    const teacherName = (route.query.name as string) || ''
+    return teacherName ? `แก้ไขข้อมูล [${teacherName}]` : 'แก้ไขข้อมูล'
+  }
+  return 'เพิ่มข้อมูลคุณครู'
+})
+
+// Add teacher sidebar menu config (shown when on add-teacher routes)
+const addTeacherMenu: MenuItem[] = [
+  {
+    id: 'add-personal',
+    label: 'ข้อมูลบุคคล',
+    icon: User,
+    routeName: null,
+    children: [
+      { id: 'add-personal-details', label: 'ข้อมูลส่วนบุคคล', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_PERSONAL },
+      { id: 'add-address', label: 'ข้อมูลที่อยู่', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_ADDRESS },
+      { id: 'add-family', label: 'ข้อมูลครอบครัว', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_FAMILY },
+      { id: 'add-education', label: 'ข้อมูลการศึกษา', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_EDUCATION },
+      { id: 'add-professional-license', label: 'ใบประกอบวิชาชีพ', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_PROFESSIONAL_LICENSE },
+    ],
+  },
+  {
+    id: 'add-work-history',
+    label: 'ข้อมูลประวัติการทำงาน',
+    icon: FileClock,
+    routeName: null,
+    children: [
+      { id: 'add-position-history', label: 'ข้อมูลการดำรงตำแหน่ง', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_POSITION_HISTORY },
+      { id: 'add-royal-decorations', label: 'เครื่องราชอิสริยาภรณ์', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_ROYAL_DECORATIONS },
+      { id: 'add-academic-rank', label: 'ประวัติวิทยฐานะ', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_ACADEMIC_RANK },
+      { id: 'add-employment', label: 'ข้อมูลการจ้างงาน', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_EMPLOYMENT },
+      { id: 'add-contract-position', label: 'ประวัติการดำรงตำแหน่ง', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_CONTRACT_POSITION },
+    ],
+  },
+  {
+    id: 'add-achievements',
+    label: 'ข้อมูลการอบรม / ข้อมูลผลงาน',
+    icon: Notebook,
+    routeName: null,
+    children: [
+      { id: 'add-training', label: 'ข้อมูลการอบรม/ศึกษาดูงาน', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_TRAINING },
+      { id: 'add-innovations', label: 'ข้อมูลผลงานและนวัตกรรม', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_INNOVATIONS },
+    ],
+  },
+]
+
 const collapsibleStates = ref<Record<string, boolean>>({})
 const initializeCollapsibleStates = () => {
   const states: Record<string, boolean> = {}
-  menuConfig.main.forEach((item: MenuItem) => {
+  const allMenus = [...menuConfig.main, ...addTeacherMenu]
+  allMenus.forEach((item: MenuItem) => {
     if (item.children && Array.isArray(item.children) && item.children.length > 0) {
       const hasActiveChild = item.children.some(
         (child: MenuChild) =>
-          route.name === child.routeName ||
-          route.name?.toString().startsWith(child.routeName || ''),
+          child.routeName &&
+          (route.name === child.routeName ||
+            route.name?.toString().startsWith(child.routeName)),
       )
       states[item.id] = hasActiveChild
     }
@@ -256,6 +324,71 @@ const handleLogout = async () => {
               </RouterLink>
             </SidebarMenuButton>
           </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarGroup>
+
+      <!-- Add/Edit Teacher sub-menu -->
+      <SidebarGroup v-if="showTeacherSubMenu">
+        <SidebarGroupLabel class="text-[#1C509F] text-xs font-medium tracking-[0.015em]">{{ teacherSubMenuLabel }}</SidebarGroupLabel>
+        <SidebarMenu>
+          <template v-for="menuItem in addTeacherMenu" :key="menuItem.id">
+            <SidebarMenuItem
+              v-if="
+                !menuItem.children ||
+                !Array.isArray(menuItem.children) ||
+                menuItem.children.length === 0
+              "
+            >
+              <SidebarMenuButton
+                :is-active="isActiveRoute(menuItem.routeName)"
+                as-child
+                v-if="menuItem.routeName"
+              >
+                <RouterLink :to="{ name: menuItem.routeName }">
+                  <component :is="menuItem.icon" class="size-4" />
+                  <span>{{ menuItem.label }}</span>
+                </RouterLink>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <template v-else>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  :is-active="isActiveMenuItem(menuItem)"
+                  @click="toggleCollapsible(menuItem.id)"
+                >
+                  <component :is="menuItem.icon" class="size-4" />
+                  <span>{{ menuItem.label }}</span>
+                  <ChevronRight
+                    class="ml-auto transition-transform duration-200"
+                    :class="{ 'rotate-90': collapsibleStates[menuItem.id] }"
+                  />
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              <template v-if="collapsibleStates[menuItem.id]">
+                <SidebarMenuSub>
+                  <SidebarMenuSubItem
+                    v-for="child in menuItem.children"
+                    :key="child.id"
+                    v-show="!child.showCondition || child.showCondition()"
+                  >
+                    <SidebarMenuSubButton
+                      v-if="child.routeName"
+                      :is-active="isActiveRoute(child.routeName)"
+                      as-child
+                    >
+                      <RouterLink :to="{ name: child.routeName }">
+                        <span>{{ child.label }}</span>
+                      </RouterLink>
+                    </SidebarMenuSubButton>
+                    <SidebarMenuSubButton v-else class="cursor-default opacity-50">
+                      <span>{{ child.label }}</span>
+                    </SidebarMenuSubButton>
+                  </SidebarMenuSubItem>
+                </SidebarMenuSub>
+              </template>
+            </template>
+          </template>
         </SidebarMenu>
       </SidebarGroup>
     </SidebarContent>

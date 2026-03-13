@@ -18,6 +18,7 @@ import {
   User,
   Database,
   FileText,
+  UserPlus,
 } from 'lucide-vue-next'
 import AppSidebar from '@/layouts/manage/AppSidebar.vue'
 import ModeToggle from '@/components/ModeToggle.vue'
@@ -29,6 +30,7 @@ const breadcrumbConfig = {
   Settings: { label: 'ตั้งค่าระบบ', icon: Settings },
   Profile: { label: 'โปรไฟล์', icon: User },
   ManageTeachers: { label: 'รายชื่อคุณครู', icon: Users },
+  AddTeacher: { label: 'ข้อมูลบุคคล', icon: UserPlus },
   ManageStudents: { label: 'รายชื่อนักเรียน', icon: Users },
   ImportData: { label: 'นำเข้าข้อมูล', icon: Database },
   Requests: { label: 'คำร้อง', icon: FileText },
@@ -76,6 +78,22 @@ const currentBreadcrumbs = computed(() => {
       label: breadcrumbConfig.ManageTeachers.label,
       icon: breadcrumbConfig.ManageTeachers.icon,
       to: { name: ROUTE_NAMES.MANAGE_TEACHERS },
+      isLast: true,
+    })
+  } else if (routeName?.startsWith('AddTeacher')) {
+    const addTeacherLabel = route.meta.label?.toString() || breadcrumbConfig.AddTeacher.label
+
+    breadcrumbs.push({
+      label: breadcrumbConfig.ManageTeachers.label,
+      icon: breadcrumbConfig.ManageTeachers.icon,
+      to: { name: ROUTE_NAMES.MANAGE_TEACHERS },
+      isLast: false,
+    })
+
+    breadcrumbs.push({
+      label: addTeacherLabel,
+      icon: breadcrumbConfig.AddTeacher.icon,
+      to: null,
       isLast: true,
     })
   } else if (routeName === ROUTE_NAMES.MANAGE_STUDENTS) {

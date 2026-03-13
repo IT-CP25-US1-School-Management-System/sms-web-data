@@ -6,7 +6,7 @@ import type {
 } from '@/types/dataset'
 
 export const DATASET_ID = 'capstone'
-export const DATASET_VERSION = 'v1.0.2'
+export const DATASET_VERSION = 'v1.1.0'
 
 /**
  * Generic function to list rows from a dataset version

@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { type DateValue, CalendarDate } from '@internationalized/date'
-import { h, ref } from 'vue'
+import { h, ref, watch } from 'vue'
 
 const formSchema = toTypedSchema(
   z.object({
@@ -72,11 +72,35 @@ type FieldItem = {
   multiple?: boolean
 }
 
-defineProps<{
+const props = defineProps<{
   topic?: string
   fields?: FieldItem[]
   values?: Record<string, any>
 }>()
+
+const emit = defineEmits<{
+  (e: 'update:values', value: Record<string, any>): void
+}>()
+
+const localValues = ref<Record<string, any>>(props.values ?? {})
+
+watch(
+  () => props.values,
+  (newValues) => {
+    if (newValues) {
+      localValues.value = { ...newValues }
+    }
+  },
+  { deep: true },
+)
+
+function updateFieldValue(fieldName: string, value: any) {
+  localValues.value = {
+    ...localValues.value,
+    [fieldName]: value,
+  }
+  emit('update:values', localValues.value)
+}
 
 const isOpen = ref(true)
 
@@ -182,7 +206,7 @@ function formatDisplayDate(str: string | undefined): string {
                 v-slot="{ field, errors }"
                 :name="fieldItem.name"
                 
-                :model-value="values?.[fieldItem.name] ?? undefined"
+                :model-value="localValues?.[fieldItem.name] ?? undefined"
               >
                 <Field :data-invalid="!!errors.length">
                   <FieldLabel :for="`form-field-${fieldItem.name}`">
@@ -201,6 +225,7 @@ function formatDisplayDate(str: string | undefined): string {
                     :aria-invalid="!!errors.length"
                     :disabled="fieldItem.disabled"
                     class="disabled:opacity-50"
+                    @update:model-value="(val) => updateFieldValue(fieldItem.name, val)"
                   />
 
                   <!-- date (Popover + Calendar) -->
@@ -235,6 +260,7 @@ function formatDisplayDate(str: string | undefined): string {
                           (val: DateValue | undefined) => {
                             if (val) {
                               field['onUpdate:modelValue']?.(dateValueToString(val))
+                              updateFieldValue(fieldItem.name, dateValueToString(val))
                               datePopoverOpen[fieldItem.name] = false
                             }
                           }
@@ -248,7 +274,12 @@ function formatDisplayDate(str: string | undefined): string {
                     v-else-if="fieldItem.type === 'select'"
                     :model-value="(field.value as string) || ''"
                     :disabled="fieldItem.disabled"
-                    @update:model-value="(val: any) => field['onUpdate:modelValue']?.(val)"
+                    @update:model-value="
+                      (val: any) => {
+                        field['onUpdate:modelValue']?.(val)
+                        updateFieldValue(fieldItem.name, val)
+                      }
+                    "
                   >
                     <SelectTrigger
                       :id="`form-field-${fieldItem.name}`"
@@ -277,6 +308,7 @@ function formatDisplayDate(str: string | undefined): string {
                     :disabled="fieldItem.disabled"
                     class="min-h-20 resize-none disabled:opacity-50"
                     :aria-invalid="!!errors.length"
+                    @update:model-value="(val) => updateFieldValue(fieldItem.name, val)"
                   />
                   <FieldError v-if="errors.length" :errors="errors" />
                 </Field>
