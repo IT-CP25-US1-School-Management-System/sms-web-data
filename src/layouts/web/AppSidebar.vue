@@ -29,7 +29,6 @@ import {
   SidebarMenuSubItem,
 } from '@/components/ui/sidebar'
 import {
-  Home,
   Settings,
   User,
   ChevronsUpDown,
@@ -165,14 +164,14 @@ const menuConfig: {
         },
         {
           id: 'achievements-innovations',
-          label: 'ข้อมูลผลงานและนวัตกรรม',
+          label: 'ข้อมูลผลงาน/นวัตกรรม',
           icon: null,
           routeName: ROUTE_NAMES.ACHIEVEMENTS_INNOVATIONS,
           showCondition: () => true, // optional condition
         },
       ],
     },
-     {
+    {
       id: 'documents',
       label: 'คำร้อง',
       icon: TicketSlash,
@@ -288,7 +287,7 @@ const handleLogout = async () => {
           <SidebarMenuButton size="lg" as-child>
             <div class="flex items-center gap-2">
               <div
-                class="flex aspect-square h-10 items-center justify-center rounded-lg bg-background"
+                class="bg-background flex aspect-square h-10 items-center justify-center rounded-lg"
               >
                 <!-- <img src="/" alt="Logo" class="h-9" /> -->
               </div>

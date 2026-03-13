@@ -37,14 +37,31 @@ const formSchema = toTypedSchema(
   }),
 )
 
+
+
+
+type FieldItem = {
+  name: string
+  label?: string
+  type: 'text' | 'date' | 'select' | 'number' | 'email' | 'textarea' | 'file'
+  placeholder?: string
+  disabled?: boolean
+  required?: boolean
+  options?: { label: string; value: string }[]
+  accept?: string
+  multiple?: boolean
+}
+
+const props = defineProps<{
+  topic?: string
+  fields?: FieldItem[]
+  values?: Record<string, any>
+}>()
+
 const { handleSubmit } = useForm({
   validationSchema: formSchema,
-  initialValues: {
-    title: '',
-    description: '',
-  },
+  initialValues: props.values ?? {},
 })
-
 const onSubmit = handleSubmit((data) => {
   toast('You submitted the following values:', {
     description: h(
@@ -59,23 +76,6 @@ const onSubmit = handleSubmit((data) => {
     },
   })
 })
-
-type FieldItem = {
-  name: string
-  label?: string
-  type: 'text' | 'date' | 'select' | 'number' | 'email' | 'textarea' | 'file'
-  placeholder?: string
-  disabled?: boolean
-  required?: boolean
-  options?: { label: string; value: string }[]
-  accept?: string
-  multiple?: boolean
-}
-
-defineProps<{
-  topic?: string
-  fields?: FieldItem[]
-}>()
 
 // File upload state
 const fileMap = ref<Record<string, File[]>>({})
@@ -149,6 +149,8 @@ function formatDisplayDate(str: string | undefined): string {
   if (!y || !m || !d) return ''
   return `${d}/${m}/${y}`
 }
+
+
 </script>
 
 <template>
@@ -170,6 +172,7 @@ function formatDisplayDate(str: string | undefined): string {
                 :key="fieldItem.name"
                 v-slot="{ field, errors }"
                 :name="fieldItem.name"
+                :model-value="values?.[fieldItem.name]"
               >
                 <Field :data-invalid="!!errors.length">
                   <FieldLabel :for="`form-field-${fieldItem.name}`">
@@ -187,7 +190,8 @@ function formatDisplayDate(str: string | undefined): string {
                     autocomplete="off"
                     :aria-invalid="!!errors.length"
                     :disabled="fieldItem.disabled"
-                    class="disabled:opacity-50"
+                    class="disabled:opacity-80"
+                    :model-value="values?.[fieldItem.name]"
                   />
 
                   <!-- date (Popover + Calendar) -->
@@ -203,7 +207,7 @@ function formatDisplayDate(str: string | undefined): string {
                         :class="[
                           'w-full justify-start text-left font-normal',
                           !field.value && 'text-muted-foreground',
-                          fieldItem.disabled && 'opacity-50',
+                          fieldItem.disabled && 'disabled:opacity-80',
                         ]"
                       >
                         <CalendarIcon class="mr-2 h-4 w-4" />
@@ -262,7 +266,7 @@ function formatDisplayDate(str: string | undefined): string {
                     v-bind="field"
                     :placeholder="fieldItem.placeholder || fieldItem.label || fieldItem.name"
                     :disabled="fieldItem.disabled"
-                    class="min-h-20 resize-none disabled:opacity-50"
+                    class="min-h-20 resize-none disabled:opacity-80"
                     :aria-invalid="!!errors.length"
                   />
                   <FieldError v-if="errors.length" :errors="errors" />
@@ -280,10 +284,10 @@ function formatDisplayDate(str: string | undefined): string {
               v-for="fieldItem in fields?.filter((f: FieldItem) => f.type === 'file')"
               :key="fieldItem.name"
             >
-              <FieldLabel v-if="fieldItem.label" :for="`form-field-${fieldItem.name}`">
+              <!-- <FieldLabel v-if="fieldItem.label" :for="`form-field-${fieldItem.name}`">
                 {{ fieldItem.label }}
                 <span v-if="fieldItem.required" class="text-red-500">*</span>
-              </FieldLabel>
+              </FieldLabel> -->
               <p v-if="fieldItem.placeholder" class="text-xs text-muted-foreground mb-2">
                 {{ fieldItem.placeholder }}
               </p>

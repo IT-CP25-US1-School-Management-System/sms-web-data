@@ -19,25 +19,25 @@ interface DocumentRequest {
 /* ──────────────────── Mock data ──────────────────── */
 const mockData: DocumentRequest[] = [
   {
-    title: 'AAAAAAAA',
+    title: 'ยื่นคำร้องขอใบรับรองเงินเดือน',
     type: 'ใบรับรองเงินเดือน',
     status: 'กำลังดำเนินการ',
     datetime: '8/2/2026 19:28',
   },
   {
-    title: 'AAAAAAAA',
+    title: 'ยื่นคำร้องขอใบรับรองการปฏิบัติงาน',
     type: 'ใบรับรองการปฏิบัติงาน',
     status: 'กำลังดำเนินการ',
-    datetime: 'dd/mm/yyyy hh:mm',
+    datetime: '10/2/2026 19:00',
   },
   {
-    title: 'AAAAAAAA',
+    title: 'ยื่นคำร้องขอเอกสารหนังสือผ่านสิทธิ์',
     type: 'เอกสารหนังสือผ่านสิทธิ์',
     status: 'ไม่ผ่าน',
-    datetime: 'dd/mm/yyyy hh:mm',
+    datetime: '18/2/2026 19:45',
   },
   {
-    title: 'AAAAAAAA',
+    title: 'ยื่นคำร้องขอใบรับรองการปฏิบัติงาน',
     type: 'ใบรับรองการปฏิบัติงาน',
     status: 'เสร็จสิ้น',
     datetime: '3/1/2026 9:00',

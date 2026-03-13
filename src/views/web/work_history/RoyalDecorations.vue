@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import CreateForm from '@/components/form/CreateForm.vue'
-import { Button } from '@/components/ui/button'
 import { toast } from 'vue-sonner'
 
 const isEditMode = true
@@ -15,7 +14,7 @@ function handleDelete(groupIndex: number) {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 mx-6">
+  <div class="mx-6 flex flex-col gap-4">
     <CreateForm
       :isDropdown="false"
       :readonly="!isEditMode"
@@ -95,16 +94,5 @@ function handleDelete(groupIndex: number) {
       @save="handleSave"
       @delete="handleDelete"
     />
-  </div>
-
-  <!-- ปุ่มบันทึก -->
-  <div
-    class="shrink-0 flex justify-end border-t border-gray-200 bg-white dark:bg-background rounded-b-xl p-3 mx-4 sm:mx-6"
-  >
-    <Button
-      class="bg-[#16A34A] hover:bg-[#15803D] text-white px-8 py-2 rounded-lg font-semibold shadow-sm"
-    >
-      บันทึก
-    </Button>
   </div>
 </template>

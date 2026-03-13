@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import CreateForm from '@/components/form/CreateForm.vue'
-import { Button } from '@/components/ui/button'
 import { toast } from 'vue-sonner'
 // TODO: เปลี่ยนเป็น false เมื่อต้องการดูอย่างเดียว (readonly)
 const isEditMode = true
@@ -17,7 +16,7 @@ function handleDelete(groupIndex: number) {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 mx-6">
+  <div class="mx-6 flex flex-col gap-4">
     <CreateForm
       :isDropdown="false"
       :readonly="!isEditMode"
@@ -26,7 +25,7 @@ function handleDelete(groupIndex: number) {
           {
             content: [
               {
-                name: 'education-level',
+                name: 'education_level',
                 label: 'ระดับการศึกษา',
                 type: 'select',
                 required: true,
@@ -35,7 +34,7 @@ function handleDelete(groupIndex: number) {
                 options: [],
               },
               {
-                name: 'degree',
+                name: 'qualification',
                 label: 'วุฒิการศึกษา',
                 type: 'text',
                 required: true,
@@ -43,21 +42,21 @@ function handleDelete(groupIndex: number) {
                 placeholder: '',
               },
               {
-                name: 'degree-name',
+                name: 'qualification_name',
                 label: 'ชื่อวุฒิการศึกษา',
                 type: 'text',
                 required: true,
                 placeholder: '',
               },
               {
-                name: 'major',
+                name: 'major_group',
                 label: 'สาขาวิชาเอก',
                 type: 'text',
                 required: true,
                 placeholder: '',
               },
               {
-                name: 'minor',
+                name: 'minor_group',
                 label: 'สาขาวิชาโท',
                 type: 'text',
                 placeholder: '',
@@ -69,14 +68,14 @@ function handleDelete(groupIndex: number) {
                 placeholder: '',
               },
               {
-                name: 'enrollment-date',
+                name: 'start_date',
                 label: 'วันที่เข้าศึกษา',
                 type: 'date',
                 required: true,
                 placeholder: 'วว / ดด / ปปปป',
               },
               {
-                name: 'graduation-date',
+                name: 'graduation_date',
                 label: 'วันที่สำเร็จการศึกษา',
                 type: 'date',
                 required: true,
@@ -91,7 +90,7 @@ function handleDelete(groupIndex: number) {
                 options: [],
               },
               {
-                name: 'honors',
+                name: 'honor_type',
                 label: 'เกียรตินิยม',
                 type: 'select',
                 required: true,
@@ -101,8 +100,15 @@ function handleDelete(groupIndex: number) {
               {
                 name: 'qualification-used',
                 label: 'วุฒิที่ใช้บรรจุ /วุฒิการศึกษาสูงสุด',
-                type: 'text',
+                type: 'select',
                 placeholder: '',
+                options: [
+                  { label: 'ใช้บรรจุครั้งแรก', value: 'is_used_for_first_appointment' },
+                  { label: 'วุฒิการศึกษาสูงสุด', value: 'is_highest_degree' },
+                  { label: 'วุฒิตรงตามมาตรฐานตำแหน่ง', value: 'is_meets_position_standard' },
+                  { label: 'วุฒิ กคศ./คุรุสภา รับรอง', value: 'is_recognized_by_kksa' },
+                  { label: 'วุฒิ ก.พ. รับรอง', value: 'is_recognized_by_ocsc' },
+                ],
               },
             ],
           },
@@ -111,15 +117,5 @@ function handleDelete(groupIndex: number) {
       @save="handleSave"
       @delete="handleDelete"
     />
-  </div>
-  <!-- ปุ่มบันทึก - อยู่ข้างล่างตลอด -->
-  <div
-    class="shrink-0 flex justify-end border-t border-gray-200 bg-white dark:bg-background rounded-b-xl p-3 mx-4 sm:mx-6"
-  >
-    <Button
-      class="bg-[#16A34A] hover:bg-[#15803D] text-white px-8 py-2 rounded-lg font-semibold shadow-sm"
-    >
-      บันทึก
-    </Button>
   </div>
 </template>

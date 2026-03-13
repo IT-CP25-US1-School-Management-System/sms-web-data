@@ -1,9 +1,6 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { Field, FieldLabel } from '@/components/ui/field'
-import { Input } from '@/components/ui/input'
-import { FileText } from 'lucide-vue-next'
+import NormalForm from '@/components/form/NormalForm.vue'
 
 // Mock data — readonly
 const mockData = [
@@ -11,60 +8,77 @@ const mockData = [
     date: '2568-01-15',
     position: 'ครูผู้ช่วย',
     salary: '15,050',
-    contractNo: 'คส.001/2568',
-    fileName: 'สัญญาจ้าง_2568.pdf',
+    contract_number: 'คส.001/2568',
+    file_name: 'สัญญาจ้าง_2568.pdf',
   },
   {
     date: '2567-05-01',
     position: 'ครูอัตราจ้าง',
     salary: '12,000',
-    contractNo: 'คส.045/2567',
-    fileName: 'สัญญาจ้าง_2567.pdf',
+    contract_number: 'คส.045/2567',
+    file_name: 'สัญญาจ้าง_2567.pdf',
   },
 ]
 </script>
 
 <template>
   <div class="flex flex-col gap-4 mx-6">
-    <Card v-for="(item, index) in mockData" :key="index" class="w-full gap-3 pb-6">
-      <CardContent>
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-4">
-          <Field>
-            <FieldLabel> วันเดือนปี <span class="text-red-500">*</span> </FieldLabel>
-            <Input type="date" :model-value="item.date" disabled class="disabled:opacity-70" />
-          </Field>
-          <Field>
-            <FieldLabel> ตำแหน่ง <span class="text-red-500">*</span> </FieldLabel>
-            <Input type="text" :model-value="item.position" disabled class="disabled:opacity-70" />
-          </Field>
-          <Field>
-            <FieldLabel> เงินเดือน <span class="text-red-500">*</span> </FieldLabel>
-            <Input type="text" :model-value="item.salary" disabled class="disabled:opacity-70" />
-          </Field>
-          <Field>
-            <FieldLabel> เลขที่คำสั่ง/สัญญาจ้าง <span class="text-red-500">*</span> </FieldLabel>
-            <Input
-              type="text"
-              :model-value="item.contractNo"
-              disabled
-              class="disabled:opacity-70"
-            />
-          </Field>
-        </div>
+    <div v-for="(item, idx) in mockData" :key="idx">
+      <NormalForm
+        :values="item"
+        :fields="[
+          {
+            name: 'date',
+            label: 'วันเดือนปี',
+            type: 'date',
+            required: true,
+            placeholder: '',
+            disabled: true,
+          },
+          {
+            name: 'position',
+            label: 'ตำแหน่ง',
+            type: 'text',
+            required: true,
+            placeholder: '',
+            disabled: true,
+          },
+          {
+            name: 'salary',
+            label: 'เงินเดือน',
+            type: 'text',
+            required: true,
+            placeholder: '',
+            disabled: true,
+          },
+          {
+            name: 'contract_number',
+            label: 'เลขที่คำสั่ง/สัญญาจ้าง',
+            type: 'text',
+            required: true,
+            placeholder: '',
+            disabled: true,
+          },
+        ]"
+       
+      />
+      <div class="mt-2 flex items-center gap-2">
+        <Button type="button" class="px-4 py-2 rounded-lg font-semibold text-sm cursor-pointer">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 mr-1 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4" /></svg>
+          ดาวน์โหลดไฟล์
+        </Button>
+  <span class="text-sm text-muted-foreground">{{ item.file_name }}</span>
+      </div>
 
-        <!-- เอกสารเอกสารสัญญาจ้าง -->
-        <div class="mt-4">
-          <FieldLabel>เอกสารเอกสารสัญญาจ้าง</FieldLabel>
-          <Button
-            type="button"
-            class="mt-1 px-4 py-2 rounded-lg font-semibold text-sm"
-            @click="() => {}"
-          >
-            <FileText class="w-4 h-4 mr-1" />
-            ดาวโหลดไฟล์
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+    </div>
   </div>
+      <div
+      class="sticky bottom-0 right-0 z-40 flex justify-end border-t border-gray-200 bg-white p-3 w-full"
+    >
+      <Button
+        class="bg-[#16A34A] hover:bg-[#15803D] text-white px-8 py-2 rounded-lg font-semibold shadow-sm"
+      >
+        บันทึก
+      </Button>
+    </div>
 </template>

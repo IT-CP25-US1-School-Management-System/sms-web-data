@@ -16,7 +16,7 @@ const addressTypes = ref<string[]>([])
           <input
             type="checkbox"
             v-model="addressTypes"
-            value="registered"
+            value="is_house_registered"
             class="rounded border-gray-300"
           />
           <span class="text-sm">ที่อยู่ตามทะเบียนบ้าน</span>
@@ -25,7 +25,7 @@ const addressTypes = ref<string[]>([])
           <input
             type="checkbox"
             v-model="addressTypes"
-            value="current"
+            value="is_current"
             class="rounded border-gray-300"
           />
           <span class="text-sm">ที่อยู่ปัจจุบัน</span>
@@ -34,7 +34,7 @@ const addressTypes = ref<string[]>([])
           <input
             type="checkbox"
             v-model="addressTypes"
-            value="retirement"
+            value="is_retired_residence"
             class="rounded border-gray-300"
           />
           <span class="text-sm">ที่อยู่หลังเกษียณอายุราชการ</span>
@@ -57,7 +57,7 @@ const addressTypes = ref<string[]>([])
             ],
           },
           {
-            name: 'postal-code',
+            name: 'postal_code',
             label: 'รหัสไปรษณีย์',
             type: 'text',
             required: true,
@@ -72,7 +72,7 @@ const addressTypes = ref<string[]>([])
             options: [],
           },
           {
-            name: 'sub-district',
+            name: 'subdistrict',
             label: 'ตำบล/แขวง',
             type: 'select',
             required: true,
@@ -92,7 +92,7 @@ const addressTypes = ref<string[]>([])
             placeholder: 'กรุณาระบุตรอก/ซอย',
           },
           {
-            name: 'village',
+            name: 'building',
             label: 'หมู่บ้าน/อาคาร',
             type: 'text',
             placeholder: 'กรุณาระบุหมู่บ้าน/อาคาร',
@@ -104,13 +104,13 @@ const addressTypes = ref<string[]>([])
             placeholder: 'กรุณาระบุหมู่ที่',
           },
           {
-            name: 'house-no',
+            name: 'house_no',
             label: 'บ้านเลขที่',
             type: 'text',
             placeholder: 'กรุณาระบุบ้านเลขที่',
           },
           {
-            name: 'house-reg-code',
+            name: 'house_registry_no',
             label: 'รหัสทะเบียนบ้าน',
             type: 'text',
             placeholder: 'กรุณาระบุรหัสทะเบียนบ้าน',
@@ -120,8 +120,8 @@ const addressTypes = ref<string[]>([])
     </div>
 
     <!-- ปุ่มบันทึก - อยู่ข้างล่างตลอด -->
-    <div
-      class="shrink-0 flex justify-end border-t border-gray-200 bg-white dark:bg-background rounded-b-xl p-3 mx-4 sm:mx-6"
+      <div
+      class="sticky bottom-0 right-0 z-40 flex justify-end border-t border-gray-200 bg-white p-3 w-full"
     >
       <Button
         class="bg-[#16A34A] hover:bg-[#15803D] text-white px-8 py-2 rounded-lg font-semibold shadow-sm"
