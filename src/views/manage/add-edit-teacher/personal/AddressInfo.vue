@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import DropDownForm from '@/components/form/DropDownForm.vue'
 import { Button } from '@/components/ui/button'
 import { ROUTE_NAMES } from '@/lib/constants'
@@ -10,11 +10,20 @@ import type { PersonAddressCreateDTO } from '@/types/teacher'
 import { useToast } from '@/composables/useToast'
 
 const router = useRouter()
+const route = useRoute()
 const { showError, showSuccess } = useToast()
 const teacherStore = useTeacherStore()
 
 const isSubmitting = ref(false)
 const formValues = ref<Record<string, any>>({})
+// Load personId from URL query on mount
+onMounted(() => {
+  const idFromUrl = route.query.id as string
+  if (idFromUrl && !teacherStore.personId) {
+    teacherStore.setPersonId(idFromUrl)
+  }
+})
+
 const addressTypes = ref<string[]>([])
 
 const handleValuesUpdate = (values: Record<string, any>) => {
@@ -24,7 +33,9 @@ const handleValuesUpdate = (values: Record<string, any>) => {
 const handleSave = async () => {
   if (isSubmitting.value) return
 
-  const personId = teacherStore.personId
+  const idFromUrl = route.query.id as string
+  const personId = idFromUrl || teacherStore.personId
+
   if (!personId) {
     showError('ไม่พบข้อมูลครู', { description: 'กรุณากรอกข้อมูลส่วนบุคคลก่อน' })
     await router.push({ name: ROUTE_NAMES.ADD_TEACHER_PERSONAL })
@@ -54,7 +65,7 @@ const handleSave = async () => {
     await createPersonAddress(payload)
 
     showSuccess('บันทึกข้อมูลที่อยู่สำเร็จ', { description: 'กรุณากรอกข้อมูลครอบครัวต่อไป' })
-    await router.push({ name: ROUTE_NAMES.ADD_TEACHER_FAMILY })
+    await router.push({ name: ROUTE_NAMES.ADD_TEACHER_FAMILY, query: { id: personId } })
   } catch (error: any) {
     showError('ไม่สามารถบันทึกข้อมูลที่อยู่ได้', {
       description: error?.response?.data?.message || error?.message,

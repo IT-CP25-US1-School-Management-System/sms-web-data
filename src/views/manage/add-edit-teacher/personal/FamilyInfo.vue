@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import DropDownForm from '@/components/form/DropDownForm.vue'
 import { Button } from '@/components/ui/button'
 import { Plus, Trash2 } from 'lucide-vue-next'
@@ -11,8 +11,17 @@ import type { FamilyMemberCreateDTO } from '@/types/teacher'
 import { useToast } from '@/composables/useToast'
 
 const router = useRouter()
+const route = useRoute()
 const { showError, showSuccess } = useToast()
 const teacherStore = useTeacherStore()
+
+// Load personId from URL query on mount
+onMounted(() => {
+  const idFromUrl = route.query.id as string
+  if (idFromUrl && !teacherStore.personId) {
+    teacherStore.setPersonId(idFromUrl)
+  }
+})
 
 type EntryValues = Record<string, any>
 
@@ -34,7 +43,8 @@ function handleEntryUpdate(index: number, values: Record<string, any>) {
 const prefixMap: Record<string, number> = { นาย: 1, นาง: 2, นางสาว: 3 }
 
 async function saveEntry(index: number) {
-  const personId = teacherStore.personId
+  const idFromUrl = route.query.id as string
+  const personId = idFromUrl || teacherStore.personId
   if (!personId) {
     showError('ไม่พบข้อมูลครู', { description: 'กรุณากรอกข้อมูลส่วนบุคคลก่อน' })
     return
@@ -77,7 +87,9 @@ async function saveEntry(index: number) {
 }
 
 const handleNext = () => {
-  router.push({ name: ROUTE_NAMES.ADD_TEACHER_EDUCATION })
+  const idFromUrl = route.query.id as string
+  const personId = idFromUrl || teacherStore.personId
+  router.push({ name: ROUTE_NAMES.ADD_TEACHER_EDUCATION, query: { id: personId } })
 }
 </script>
 
@@ -162,7 +174,11 @@ const handleNext = () => {
   </div>
 
   <div class="sticky bottom-0 right-0 z-40 flex w-full justify-end border-t border-gray-200 bg-white p-3">
-    <Button variant="outline" class="mr-2" @click="router.push({ name: ROUTE_NAMES.ADD_TEACHER_ADDRESS })">
+    <Button variant="outline" class="mr-2" @click="() => {
+      const idFromUrl = route.query.id as string
+      const personId = idFromUrl || teacherStore.personId
+      router.push({ name: ROUTE_NAMES.ADD_TEACHER_ADDRESS, query: { id: personId } })
+    }">
       ย้อนกลับ
     </Button>
     <Button class="rounded-lg bg-[#16A34A] px-8 py-2 font-semibold text-white shadow-sm hover:bg-[#15803D]" @click="handleNext">

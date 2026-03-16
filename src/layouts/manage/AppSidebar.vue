@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useTeacherStore } from '@/stores/teachers'
+import { getTeacherById } from '@/stores/teachers'
 import { env } from '@/lib/env'
 import { ROUTE_NAMES } from '@/lib/constants'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -63,6 +65,7 @@ interface MenuItem {
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const teacherStore = useTeacherStore()
 
 const menuConfig: {
   main: MenuItem[]
@@ -116,7 +119,7 @@ const menuConfig: {
   ],
 }
 
-// Check if current route is an add-teacher route
+// Check if current route is an add-edit-teacher route
 const isAddTeacherRoute = computed(() => {
   const name = route.name?.toString() || ''
   return name.startsWith('AddTeacher')
@@ -133,14 +136,19 @@ const showTeacherSubMenu = computed(() => isAddTeacherRoute.value || isEditTeach
 
 // Dynamic label for the teacher sub-menu group
 const teacherSubMenuLabel = computed(() => {
-  if (isEditTeacherRoute.value) {
-    const teacherName = (route.query.name as string) || ''
-    return teacherName ? `แก้ไขข้อมูล [${teacherName}]` : 'แก้ไขข้อมูล'
+  if (teacherStore.currentTeacher?.id) {
+    const firstName = teacherStore.currentTeacher.first_name_th || ''
+    const lastName = teacherStore.currentTeacher.last_name_th || ''
+    const fullName = `${firstName}${lastName ? ` ${lastName}` : ''}`
+    return fullName ? `แก้ไขข้อมูล [${fullName}]` : 'แก้ไขข้อมูล'
   }
   return 'เพิ่มข้อมูลคุณครู'
 })
-
-// Add teacher sidebar menu config (shown when on add-teacher routes)
+const isPersonIdAvailable = () => {
+  const idFromUrl = route.query.id as string
+  return !!(idFromUrl || teacherStore.personId)
+}
+// Add edit teacher sidebar menu config (shown when on add-edit-teacher routes)
 const addTeacherMenu: MenuItem[] = [
   {
     id: 'add-personal',
@@ -149,10 +157,10 @@ const addTeacherMenu: MenuItem[] = [
     routeName: null,
     children: [
       { id: 'add-personal-details', label: 'ข้อมูลส่วนบุคคล', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_PERSONAL },
-      { id: 'add-address', label: 'ข้อมูลที่อยู่', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_ADDRESS },
-      { id: 'add-family', label: 'ข้อมูลครอบครัว', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_FAMILY },
-      { id: 'add-education', label: 'ข้อมูลการศึกษา', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_EDUCATION },
-      { id: 'add-professional-license', label: 'ใบประกอบวิชาชีพ', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_PROFESSIONAL_LICENSE },
+      { id: 'add-address', label: 'ข้อมูลที่อยู่', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_ADDRESS, showCondition: isPersonIdAvailable },
+      { id: 'add-family', label: 'ข้อมูลครอบครัว', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_FAMILY, showCondition: isPersonIdAvailable },
+      { id: 'add-education', label: 'ข้อมูลการศึกษา', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_EDUCATION, showCondition: isPersonIdAvailable },
+      { id: 'add-professional-license', label: 'ใบประกอบวิชาชีพ', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_PROFESSIONAL_LICENSE, showCondition: isPersonIdAvailable },
     ],
   },
   {
@@ -161,11 +169,11 @@ const addTeacherMenu: MenuItem[] = [
     icon: FileClock,
     routeName: null,
     children: [
-      { id: 'add-position-history', label: 'ข้อมูลการดำรงตำแหน่ง', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_POSITION_HISTORY },
-      { id: 'add-royal-decorations', label: 'เครื่องราชอิสริยาภรณ์', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_ROYAL_DECORATIONS },
-      { id: 'add-academic-rank', label: 'ประวัติวิทยฐานะ', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_ACADEMIC_RANK },
-      { id: 'add-employment', label: 'ข้อมูลการจ้างงาน', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_EMPLOYMENT },
-      { id: 'add-contract-position', label: 'ประวัติการดำรงตำแหน่ง', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_CONTRACT_POSITION },
+      { id: 'add-position-history', label: 'ข้อมูลการดำรงตำแหน่ง', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_POSITION_HISTORY, showCondition: isPersonIdAvailable },
+      { id: 'add-royal-decorations', label: 'เครื่องราชอิสริยาภรณ์', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_ROYAL_DECORATIONS, showCondition: isPersonIdAvailable },
+      { id: 'add-academic-rank', label: 'ประวัติวิทยฐานะ', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_ACADEMIC_RANK, showCondition: isPersonIdAvailable },
+      { id: 'add-employment', label: 'ข้อมูลการจ้างงาน', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_EMPLOYMENT, showCondition: isPersonIdAvailable },
+      { id: 'add-contract-position', label: 'ประวัติการดำรงตำแหน่ง', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_CONTRACT_POSITION, showCondition: isPersonIdAvailable },
     ],
   },
   {
@@ -174,8 +182,8 @@ const addTeacherMenu: MenuItem[] = [
     icon: Notebook,
     routeName: null,
     children: [
-      { id: 'add-training', label: 'ข้อมูลการอบรม/ศึกษาดูงาน', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_TRAINING },
-      { id: 'add-innovations', label: 'ข้อมูลผลงานและนวัตกรรม', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_INNOVATIONS },
+      { id: 'add-training', label: 'ข้อมูลการอบรม/ศึกษาดูงาน', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_TRAINING, showCondition: isPersonIdAvailable },
+      { id: 'add-innovations', label: 'ข้อมูลผลงานและนวัตกรรม', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_INNOVATIONS, showCondition: isPersonIdAvailable },
     ],
   },
 ]
@@ -216,6 +224,13 @@ const isActiveRoute = (routeName: string | null) => {
   return route.name === routeName || route.name?.toString().startsWith(routeName)
 }
 
+const getTeacherIdForNavigation = () => {
+  const idFromUrl = route.query.id as string
+  return idFromUrl || teacherStore.personId || ''
+}
+
+
+
 const isActiveMenuItem = (menuItem: MenuItem) => {
   if (menuItem.children && Array.isArray(menuItem.children) && menuItem.children.length > 0) {
     return menuItem.children.some((child: MenuChild) => isActiveRoute(child.routeName))
@@ -226,6 +241,21 @@ const isActiveMenuItem = (menuItem: MenuItem) => {
 const handleLogout = async () => {
   await authStore.logout()
 }
+
+// Load teacher data from URL ID on mount
+onMounted(async () => {
+  const idFromUrl = route.query.id as string
+  if (idFromUrl && !teacherStore.currentTeacher?.id) {
+    try {
+      const response = await getTeacherById(idFromUrl)
+      if (response.data) {
+        teacherStore.setCurrentTeacher(response.data)
+      }
+    } catch (error) {
+      console.error('Failed to load teacher data:', error)
+    }
+  }
+})
 </script>
 
 <template>
@@ -344,7 +374,7 @@ const handleLogout = async () => {
                 as-child
                 v-if="menuItem.routeName"
               >
-                <RouterLink :to="{ name: menuItem.routeName }">
+                <RouterLink :to="{ name: menuItem.routeName, query: getTeacherIdForNavigation() ? { id: getTeacherIdForNavigation() } : {} }">
                   <component :is="menuItem.icon" class="size-4" />
                   <span>{{ menuItem.label }}</span>
                 </RouterLink>
@@ -370,16 +400,21 @@ const handleLogout = async () => {
                   <SidebarMenuSubItem
                     v-for="child in menuItem.children"
                     :key="child.id"
-                    v-show="!child.showCondition || child.showCondition()"
+                    :class="{ 'opacity-50 cursor-not-allowed': child.showCondition && !child.showCondition() }"
                   >
                     <SidebarMenuSubButton
                       v-if="child.routeName"
                       :is-active="isActiveRoute(child.routeName)"
                       as-child
+                      :disabled="child.showCondition && !child.showCondition()"
                     >
-                      <RouterLink :to="{ name: child.routeName }">
+                      <RouterLink 
+                        v-if="!child.showCondition || child.showCondition()"
+                        :to="{ name: child.routeName, query: getTeacherIdForNavigation() ? { id: getTeacherIdForNavigation() } : {} }"
+                      >
                         <span>{{ child.label }}</span>
                       </RouterLink>
+                      <span v-else class="cursor-not-allowed">{{ child.label }}</span>
                     </SidebarMenuSubButton>
                     <SidebarMenuSubButton v-else class="cursor-default opacity-50">
                       <span>{{ child.label }}</span>

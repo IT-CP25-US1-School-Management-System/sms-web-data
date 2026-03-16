@@ -1075,7 +1075,7 @@ src/stores/
 src/types/
 └── teacher.ts ← DTOs: TeacherCreateDTO, PersonAddressCreateDTO, etc.
 
-src/views/manage/add-teacher/personal/
+src/views/manage/add-edit-teacher/personal/
 ├── PersonalDetail.vue ← Creates person_data row → saves personId to store
 ├── AddressInfo.vue ← Creates person_addresses row → uses personId from store
 ├── FamilyInfo.vue ← Creates person_family rows → uses personId from store

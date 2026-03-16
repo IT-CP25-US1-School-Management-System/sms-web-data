@@ -113,24 +113,38 @@ export async function createProfessionalLicense(
 
 /**
  * Add Teacher Wizard Store
- * Stores the person_id created during the Add Teacher flow.
- * Set after PersonalDetail creates the teacher row.
+ * Stores the person_id and teacher data during the Add/Edit Teacher flow.
+ * Set after PersonalDetail creates or loads the teacher row.
  * Used by Address / Family / Education / ProfessionalLicense pages.
  */
 export const useTeacherStore = defineStore('teacher', () => {
   const personId = ref<string | null>(null)
+  const currentTeacher = ref<Partial<PersonData> | null>(null)
 
   function setPersonId(id: string) {
     personId.value = id
+  }
+
+  function setCurrentTeacher(teacher: Partial<PersonData>) {
+    personId.value = teacher.id || null
+    currentTeacher.value = teacher
   }
 
   function clearPersonId() {
     personId.value = null
   }
 
+  function clearCurrentTeacher() {
+    personId.value = null
+    currentTeacher.value = null
+  }
+
   return {
     personId: readonly(personId),
+    currentTeacher: readonly(currentTeacher),
     setPersonId,
+    setCurrentTeacher,
     clearPersonId,
+    clearCurrentTeacher,
   }
 })

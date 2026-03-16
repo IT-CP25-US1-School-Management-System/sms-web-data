@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import DropDownForm from '@/components/form/DropDownForm.vue'
 import { Button } from '@/components/ui/button'
 import { ROUTE_NAMES } from '@/lib/constants'
@@ -10,8 +10,17 @@ import type { ProfessionalLicenseCreateDTO } from '@/types/teacher'
 import { useToast } from '@/composables/useToast'
 
 const router = useRouter()
+const route = useRoute()
 const { showError, showSuccess } = useToast()
 const teacherStore = useTeacherStore()
+
+// Load personId from URL query on mount
+onMounted(() => {
+  const idFromUrl = route.query.id as string
+  if (idFromUrl && !teacherStore.personId) {
+    teacherStore.setPersonId(idFromUrl)
+  }
+})
 
 const formValues = ref<Record<string, any>>({})
 const isSaving = ref(false)
@@ -21,7 +30,8 @@ function handleValuesUpdate(values: Record<string, any>) {
 }
 
 async function handleSave() {
-  const personId = teacherStore.personId
+  const idFromUrl = route.query.id as string
+  const personId = idFromUrl || teacherStore.personId
   if (!personId) {
     showError('ไม่พบข้อมูลครู', { description: 'กรุณากรอกข้อมูลส่วนบุคคลก่อน' })
     router.push({ name: ROUTE_NAMES.ADD_TEACHER_PERSONAL })
@@ -81,7 +91,11 @@ async function handleSave() {
   </div>
 
   <div class="sticky bottom-0 right-0 z-40 flex w-full justify-end border-t border-gray-200 bg-white p-3">
-    <Button variant="outline" class="mr-2" @click="router.push({ name: ROUTE_NAMES.ADD_TEACHER_EDUCATION })">
+    <Button variant="outline" class="mr-2" @click="() => {
+      const idFromUrl = route.query.id as string
+      const personId = idFromUrl || teacherStore.personId
+      router.push({ name: ROUTE_NAMES.ADD_TEACHER_EDUCATION, query: { id: personId } })
+    }">
       ย้อนกลับ
     </Button>
     <Button

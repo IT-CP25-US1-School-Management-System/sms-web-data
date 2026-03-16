@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import DropDownForm from '@/components/form/DropDownForm.vue'
 import { Button } from '@/components/ui/button'
 import { ROUTE_NAMES } from '@/lib/constants'
@@ -11,6 +11,7 @@ import { useToast } from '@/composables/useToast'
 import { generateUUID } from '@/lib/helpers'
 
 const router = useRouter()
+const route = useRoute()
 const { showError, showSuccess } = useToast()
 const teacherStore = useTeacherStore()
 
@@ -29,6 +30,14 @@ const prefixMap: Record<string, number> = {
   นาง: 2,
   นางสาว: 3,
 }
+
+// Load personId from URL query on mount
+onMounted(() => {
+  const idFromUrl = route.query.id as string
+  if (idFromUrl && !teacherStore.personId) {
+    teacherStore.setPersonId(idFromUrl)
+  }
+})
 
 const genderMap: Record<string, string> = {
   male: 'ชาย',
@@ -98,9 +107,15 @@ const handleSave = async () => {
 
     await createTeacher(payload)
 
-    teacherStore.setPersonId(personId)
+    // Store the created teacher data for use in sidebar and other pages
+    teacherStore.setCurrentTeacher({
+      id: personId,
+      first_name_th: firstName,
+      last_name_th: lastName,
+      prefix_id: prefixMap[formValues.value.prefix_id] ?? 1,
+    })
     showSuccess('เพิ่มข้อมูลส่วนบุคคลสำเร็จ', { description: 'กรุณากรอกข้อมูลที่อยู่ต่อไป' })
-    await router.push({ name: ROUTE_NAMES.ADD_TEACHER_ADDRESS })
+    await router.push({ name: ROUTE_NAMES.ADD_TEACHER_ADDRESS, query: { id: personId } })
   } catch (error: any) {
     showError('ไม่สามารถเพิ่มข้อมูลคุณครูได้', {
       description: error?.response?.data?.message || error?.message || 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ',

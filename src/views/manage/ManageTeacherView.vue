@@ -11,6 +11,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Search, Plus, MoreHorizontal, Pencil, Trash2, Loader2 } from 'lucide-vue-next'
 import { usePagination } from '@/composables/usePagination'
 import type { PaginationData } from '@/composables/usePagination'
@@ -28,6 +38,9 @@ const teachers = ref<PersonData[]>([])
 const loading = ref(false)
 const activeTab = ref<TabType>('all')
 const searchQuery = ref('')
+const showDeleteDialog = ref(false)
+const teacherToDelete = ref<PersonData | null>(null)
+const deleting = ref(false)
 
 // Pagination state
 const pagination = ref<PaginationData>({
@@ -149,13 +162,17 @@ const handleEdit = (teacher: PersonData) => {
   // TODO: Implement edit functionality
 }
 
-const handleDelete = async (teacher: PersonData) => {
-  if (!confirm(`คุณต้องการลบคุณครู ${teacher.first_name_th} ${teacher.last_name_th} ใช่หรือไม่?`)) {
-    return
-  }
+const handleDelete = (teacher: PersonData) => {
+  teacherToDelete.value = teacher
+  showDeleteDialog.value = true
+}
 
+const confirmDelete = async () => {
+  if (!teacherToDelete.value) return
+
+  deleting.value = true
   try {
-    await deleteTeacher(teacher.id)
+    await deleteTeacher(teacherToDelete.value.id)
     toast.success('สำเร็จ', {
       description: 'ลบข้อมูลคุณครูเรียบร้อยแล้ว',
     })
@@ -165,7 +182,16 @@ const handleDelete = async (teacher: PersonData) => {
     toast.error('เกิดข้อผิดพลาด', {
       description: error.message || 'ไม่สามารถลบข้อมูลคุณครูได้',
     })
+  } finally {
+    deleting.value = false
+    showDeleteDialog.value = false
+    teacherToDelete.value = null
   }
+}
+
+const cancelDelete = () => {
+  showDeleteDialog.value = false
+  teacherToDelete.value = null
 }
 
 const handleAddTeacher = () => {
@@ -352,5 +378,29 @@ const getTeacherType = (teacher: PersonData) => {
       </div>
     </div>
   </div>
+
+  <!-- Delete Confirmation Dialog -->
+  <AlertDialog :open="showDeleteDialog" @update:open="showDeleteDialog = $event">
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <AlertDialogTitle>ยืนยันการลบ</AlertDialogTitle>
+        <AlertDialogDescription>
+          คุณต้องการลบคุณครู
+          <span class="font-semibold">{{ teacherToDelete?.first_name_th }} {{ teacherToDelete?.last_name_th }}</span>
+          ใช่หรือไม่?
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel @click="cancelDelete">ยกเลิก</AlertDialogCancel>
+        <AlertDialogAction
+          @click="confirmDelete"
+          :disabled="deleting"
+          class="bg-red-600 hover:bg-red-700"
+        >
+          {{ deleting ? 'กำลังลบ...' : 'ลบ' }}
+        </AlertDialogAction>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
   </MainLayout>
 </template>
