@@ -26,7 +26,7 @@ import { usePagination } from '@/composables/usePagination'
 import type { PaginationData } from '@/composables/usePagination'
 import { toast } from 'vue-sonner'
 import type { PersonData } from '@/types/teacher'
-import { getTeachers, deleteTeacher } from '@/stores/teachers'
+import { getTeachers, deleteTeacher, useTeacherStore } from '@/stores/teachers'
 
 // Tab types
 type TabType = 'all' | 'government' | 'contract'
@@ -155,11 +155,7 @@ const nextPage = () => {
 
 // Action handlers
 const handleEdit = (teacher: PersonData) => {
-  console.log('Edit teacher:', teacher)
-  toast.info('ฟีเจอร์กำลังพัฒนา', {
-    description: 'ระบบแก้ไขข้อมูลคุณครูกำลังอยู่ระหว่างการพัฒนา',
-  })
-  // TODO: Implement edit functionality
+  router.push({ name: ROUTE_NAMES.ADD_TEACHER_PERSONAL, query: { id: teacher.id } })
 }
 
 const handleDelete = (teacher: PersonData) => {
@@ -195,6 +191,8 @@ const cancelDelete = () => {
 }
 
 const handleAddTeacher = () => {
+  const teacherStore = useTeacherStore()
+  teacherStore.clearCurrentTeacher()
   router.push({ name: ROUTE_NAMES.ADD_TEACHER_PERSONAL })
 }
 

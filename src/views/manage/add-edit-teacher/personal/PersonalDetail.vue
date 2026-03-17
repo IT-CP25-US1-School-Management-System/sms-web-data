@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import DropDownForm from '@/components/form/DropDownForm.vue'
 import { Button } from '@/components/ui/button'
 import { ROUTE_NAMES } from '@/lib/constants'
-import { createTeacher, getTeachers } from '@/stores/teachers'
+import { createTeacher, getTeachers, getTeacherById, updateTeacher } from '@/stores/teachers'
 import { useTeacherStore } from '@/stores/teachers'
-import type { TeacherCreateDTO } from '@/types/teacher'
+import type { TeacherCreateDTO, TeacherUpdateDTO } from '@/types/teacher'
 import { useToast } from '@/composables/useToast'
 import { generateUUID } from '@/lib/helpers'
 
@@ -16,14 +16,34 @@ const { showError, showSuccess } = useToast()
 const teacherStore = useTeacherStore()
 
 const isSubmitting = ref(false)
+const isEditing = ref(false)
 const formValues = ref<Record<string, any>>({
   is_government: true,
 
 })
+const originalFormValues = ref<Record<string, any>>({})
 
 const handleValuesUpdate = (values: Record<string, any>) => {
   formValues.value = { ...formValues.value, ...values }
 }
+
+// Check if form has changes
+const isFormModified = computed(() => {
+  if (!isEditing.value) {
+    // In add mode, check if user has entered any data
+    return Object.values(formValues.value).some(v => v && v !== true)
+  }
+  // In edit mode, check if any field differs from original
+  for (const key in formValues.value) {
+    if (formValues.value[key] !== originalFormValues.value[key]) {
+      return true
+    }
+  }
+  return false
+})
+
+// Button should be enabled only if form is modified
+const canSave = computed(() => isFormModified.value)
 
 const prefixMap: Record<string, number> = {
   นาย: 1,
@@ -32,10 +52,46 @@ const prefixMap: Record<string, number> = {
 }
 
 // Load personId from URL query on mount
-onMounted(() => {
+onMounted(async () => {
   const idFromUrl = route.query.id as string
-  if (idFromUrl && !teacherStore.personId) {
+  if (idFromUrl) {
+    // Edit mode: load teacher data from API
+    isEditing.value = true
     teacherStore.setPersonId(idFromUrl)
+    try {
+      const response = await getTeacherById(idFromUrl)
+      if (response.data) {
+        const teacher = response.data
+        // Populate form with existing data
+        formValues.value = {
+          prefix_id: ['นาย', 'นาง', 'นางสาว'][teacher.prefix_id - 1],
+          first_name_th: teacher.first_name_th,
+          middle_name_th: teacher.middle_name_th,
+          last_name_th: teacher.last_name_th,
+          first_name_en: teacher.first_name_en,
+          middle_name_en: teacher.middle_name_en,
+          last_name_en: teacher.last_name_en,
+          'id-card': teacher.national_id,
+          'blood-type': teacher.blood_type,
+          birth_date: teacher.birth_date,
+          gender: teacher.gender === 'ชาย' ? 'male' : teacher.gender === 'หญิง' ? 'female' : '',
+          religion: teacher.religion,
+          nationality: teacher.nationality,
+          ethnicity: teacher.ethnicity,
+          'physical-status': teacher.physical_status,
+          phone: teacher.phone,
+          email: teacher.personal_email,
+          'marital-status': teacher.marital_status === 'โสด' ? 'single' : teacher.marital_status === 'สมรส' ? 'married' : teacher.marital_status === 'หม้าย' ? 'widowed' : teacher.marital_status === 'หย่า' ? 'divorced' : '',
+          'spouse-name': teacher.spouse_name,
+          is_government: teacher.is_government,
+        }
+        originalFormValues.value = { ...formValues.value }
+        teacherStore.setCurrentTeacher(teacher)
+      }
+    } catch (error) {
+      console.error('Failed to load teacher data:', error)
+      showError('ไม่สามารถโหลดข้อมูลคุณครูได้')
+    }
   }
 })
 
@@ -51,7 +107,12 @@ const maritalStatusMap: Record<string, string> = {
   divorced: 'หย่า',
 }
 
-async function getFallbackRoleId(): Promise<string> {
+async function getRoleId(): Promise<string> {
+  // In edit mode, use the existing role_id from loaded data
+  if (isEditing.value && teacherStore.currentTeacher?.role_id) {
+    return teacherStore.currentTeacher.role_id
+  }
+  // In add mode, fetch fallback role_id from first teacher
   const response = await getTeachers({ page: 1, per_page: 1 })
   const firstRoleId = response.data?.[0]?.role_id
   if (!firstRoleId) {
@@ -74,15 +135,15 @@ const handleSave = async () => {
   try {
     isSubmitting.value = true
 
-    const roleId = await getFallbackRoleId()
+    const roleId = await getRoleId()
     const now = new Date().toISOString()
-    const personId = generateUUID()
+    const personId = isEditing.value ? teacherStore.personId! : generateUUID()
 
-    const payload: TeacherCreateDTO = {
+    const payload = {
       id: personId,
       prefix_id: prefixMap[formValues.value.prefix_id] ?? 1,
       role_id: roleId,
-      is_government: true,
+      is_government: formValues.value.is_government ?? true,
       first_name_th: firstName,
       middle_name_th: formValues.value.middle_name_th || undefined,
       last_name_th: lastName,
@@ -101,23 +162,30 @@ const handleSave = async () => {
       personal_email: formValues.value.email || undefined,
       marital_status: maritalStatusMap[formValues.value['marital-status']] || undefined,
       spouse_name: formValues.value['spouse-name'] || undefined,
-      created_at: now,
+      created_at: isEditing.value ? (teacherStore.currentTeacher?.created_at || now) : now,
       updated_at: now,
     }
 
-    await createTeacher(payload)
+    if (isEditing.value) {
+      await updateTeacher(personId, payload)
+      showSuccess('แก้ไขข้อมูลส่วนบุคคลสำเร็จ', { description: 'กรุณากรอกข้อมูลที่อยู่ต่อไป' })
+    } else {
+      await createTeacher(payload)
+      showSuccess('เพิ่มข้อมูลส่วนบุคคลสำเร็จ', { description: 'กรุณากรอกข้อมูลที่อยู่ต่อไป' })
+    }
 
-    // Store the created teacher data for use in sidebar and other pages
+    // Store the teacher data for use in sidebar and other pages
     teacherStore.setCurrentTeacher({
       id: personId,
       first_name_th: firstName,
       last_name_th: lastName,
       prefix_id: prefixMap[formValues.value.prefix_id] ?? 1,
     })
-    showSuccess('เพิ่มข้อมูลส่วนบุคคลสำเร็จ', { description: 'กรุณากรอกข้อมูลที่อยู่ต่อไป' })
+
     await router.push({ name: ROUTE_NAMES.ADD_TEACHER_ADDRESS, query: { id: personId } })
   } catch (error: any) {
-    showError('ไม่สามารถเพิ่มข้อมูลคุณครูได้', {
+    const action = isEditing.value ? 'แก้ไข' : 'เพิ่ม'
+    showError(`ไม่สามารถ${action}ข้อมูลคุณครูได้`, {
       description: error?.response?.data?.message || error?.message || 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ',
     })
   } finally {
@@ -291,11 +359,11 @@ const handleSave = async () => {
 
   <div class="sticky bottom-0 right-0 z-40 flex w-full justify-end border-t border-gray-200 bg-white p-3">
     <Button
-      class="rounded-lg bg-[#16A34A] px-8 py-2 font-semibold text-white shadow-sm hover:bg-[#15803D]"
-      :disabled="isSubmitting"
+      class="rounded-lg bg-[#16A34A] px-8 py-2 font-semibold text-white shadow-sm hover:bg-[#15803D] disabled:opacity-50 disabled:cursor-not-allowed"
+      :disabled="isSubmitting || !canSave"
       @click="handleSave"
     >
-      {{ isSubmitting ? 'กำลังบันทึก...' : 'บันทึก' }}
+      {{ isSubmitting ? (isEditing ? 'กำลังแก้ไข...' : 'กำลังบันทึก...') : (isEditing ? 'แก้ไข' : 'บันทึก') }}
     </Button>
   </div>
 </template>

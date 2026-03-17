@@ -55,7 +55,6 @@ async function handleSave() {
     }
     await createProfessionalLicense(payload)
     showSuccess('บันทึกข้อมูลใบอนุญาตสำเร็จ')
-    teacherStore.clearPersonId()
     router.push({ name: ROUTE_NAMES.MANAGE_TEACHERS })
   } catch (error: any) {
     showError('ไม่สามารถบันทึกข้อมูลได้', {

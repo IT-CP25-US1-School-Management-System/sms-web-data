@@ -82,9 +82,55 @@
   - ปุ่ม "ยกเลิก" (แดง)
   - ปุ่ม "ลบ" (เขียว)
 
+## 5. Edit Teacher Feature (Add/Edit Unified)
+
+### ManageTeacherView.vue
+- ปุ่ม "แก้ไข" ใน dropdown menu เรียก `handleEdit(teacher)`:
+  - ```typescript
+    const handleEdit = (teacher: PersonData) => {
+      router.push({ name: ROUTE_NAMES.ADD_TEACHER_PERSONAL, query: { id: teacher.id } })
+    }
+    ```
+  - ส่ง teacher ID ไปยัง PersonalDetail ผ่าน query parameter (เหมือน add ส่งไปแต่ add ไม่มี ID)
+
+### PersonalDetail.vue
+- ใส่ `isEditing` ref: ตั้งค่า true เมื่อ URL มี ID
+- Enhanced `onMounted`:
+  - อ่าน ID จาก `route.query.id`
+  - ถ้ามี ID: เซต `isEditing = true` และ fetch teacher data จาก API
+  - Map API response fields กลับไปเป็น form format:
+    - `gender`: 'ชาย' → 'male', 'หญิง' → 'female'
+    - `marital_status`: 'โสด' → 'single', 'สมรส' → 'married', 'หม้าย' → 'widowed', 'หย่า' → 'divorced'
+    - `prefix_id`: 1 → 'นาย', 2 → 'นาง', 3 → 'นางสาว'
+  - เซต `teacherStore.setCurrentTeacher(teacher)` เก็บ data สำหรับ sidebar
+- Unified `handleSave`:
+  - Create commonPayload object (field สำหรับทั้ง create และ update)
+  - ถ้า `isEditing = true`: 
+    - เรียก `updateTeacher(personId, payload)` พร้อม preserve `created_at` จาก store
+    - Set `updated_at` เป็นเวลาปัจจุบัน
+    - Toast: 'แก้ไขข้อมูลส่วนบุคคลสำเร็จ'
+  - ไม่ใช่: 
+    - สร้าง new ID แล้วเรียก `createTeacher(payload)`
+    - ตั้ง `created_at` และ `updated_at` เป็นเวลาปัจจุบัน
+    - Toast: 'เพิ่มข้อมูลส่วนบุคคลสำเร็จ'
+- ปุ่ม Save แสดง:
+  - Loading state: 'กำลังแก้ไข...' (edit) หรือ 'กำลังบันทึก...' (add)
+  - Normal state: 'แก้ไข' (edit) หรือ 'บันทึก' (add)
+
+### AddressInfo.vue onwards
+- ไม่มีการเปลี่ยนแปลง: ID ต่อไปจาก PersonalDetail ผ่าน URL ดังเดิม
+- Pattern: `const idFromUrl = route.query.id as string` + `const personId = idFromUrl || teacherStore.personId`
+- ทำงานเหมือนเดิมสำหรับทั้ง add และ edit flow
+
+### Key: ID Persistence is Identical
+- **Add**: No ID in initial URL → generateUUID() on PersonalDetail save → Pass ID to next pages
+- **Edit**: ID in initial URL → Load data on PersonalDetail mount → Pass ID to next pages  
+- **Result**: Both flows persist ID through entire wizard using same mechanism
+
 ## Summary
 
 ✅ **URL Persistence**: ID ถูกผ่านใน query parameter ทั่วทั้ง add teacher flow
 ✅ **Sidebar Sync**: Sidebar โหลด teacher data จาก API เมื่อ refresh หน้า
 ✅ **Disabled Menu**: Menu items ถูก disable จนกว่าจะสร้าง personal data (ได้ ID)
 ✅ **Delete Modal**: Delete ใช้ confirm modal แทน browser confirm()
+✅ **Edit Feature**: Edit mode ใช้ query parameter เพื่อ load data และ populate form, unified CREATE/UPDATE logic
