@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
 import MainLayout from '@/layouts/manage/MainLayout.vue'
+import CreateStudentModal from '@/views/manage/CreateStudentModal.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -20,6 +21,7 @@ import { getStudents, deleteStudent } from '@/stores/students'
 const students = ref<Student[]>([])
 const loading = ref(false)
 const searchQuery = ref('')
+const showCreateModal = ref(false)
 
 // Pagination state
 const pagination = ref<PaginationData>({
@@ -139,10 +141,12 @@ const handleDelete = async (student: Student) => {
 }
 
 const handleAddStudent = () => {
-  toast.info('ฟีเจอร์กำลังพัฒนา', {
-    description: 'ระบบเพิ่มนักเรียนกำลังอยู่ระหว่างการพัฒนา',
-  })
-  // TODO: Implement add student functionality
+  showCreateModal.value = true
+}
+
+const handleModalSuccess = () => {
+  // Refetch students after successful creation
+  fetchStudents()
 }
 </script>
 
@@ -177,24 +181,24 @@ const handleAddStudent = () => {
         <h2 class="text-base font-semibold">รายชื่อนักเรียน</h2>
       </div>
 
-      <div class="flex min-h-0 flex-1 flex-col border rounded-lg">
+      <div class="flex min-h-0 flex-1 flex-col border rounded-lg px-4">
         <!-- Table header (fixed, not scrollable) -->
-        <table class="w-full">
+        <table class="w-full" style="table-layout: fixed">
           <thead class="bg-muted/50">
             <tr>
-              <th class="text-left py-2 px-2 font-medium">ชื่อ</th>
-              <th class="text-left py-2 px-2 font-medium">นามสกุล</th>
-              <th class="text-center py-2 px-2 font-medium">เลขประจำตัว</th>
-              <th class="text-center py-2 px-2 font-medium">ชั้น</th>
-              <th class="text-center py-2 px-2 font-medium">ห้อง</th>
-              <th class="text-center py-2 px-2 font-medium">การดำเนินการ</th>
+              <th class="text-left py-2 font-medium">ชื่อ</th>
+              <th class="text-left py-2 font-medium">นามสกุล</th>
+              <th class="text-center py-2 font-medium">เลขประจำตัว</th>
+              <th class="text-center py-2 font-medium">ชั้น</th>
+              <th class="text-center py-2 font-medium">ห้อง</th>
+              <th class="text-center py-2 font-medium">การดำเนินการ</th>
             </tr>
           </thead>
         </table>
 
         <!-- Table body (scrollable) -->
         <div class="min-h-0 flex-1 overflow-auto">
-          <table class="w-full">
+          <table class="w-full" style="table-layout: fixed">
             <tbody>
               <!-- Loading state -->
               <tr v-if="loading">
@@ -218,12 +222,12 @@ const handleAddStudent = () => {
                 :key="student.id"
                 class="border-t hover:bg-muted/30 transition-colors"
               >
-                <td class="py-2 px-2 align-middle">{{ student.first_name_th }}</td>
-                <td class="py-2 px-2 align-middle">{{ student.last_name_th }}</td>
-                <td class="py-2 px-2 text-center align-middle">{{ student.student_id }}</td>
-                <td class="py-2 px-2 text-center align-middle">{{ student.grade_level }}</td>
-                <td class="py-2 px-2 text-center align-middle">{{ student.class_section }}</td>
-                <td class="py-2 px-2 align-middle">
+                <td class="py-2 align-middle">{{ student.first_name_th }}</td>
+                <td class="py-2 align-middle">{{ student.last_name_th }}</td>
+                <td class="py-2 text-center align-middle">{{ student.student_id }}</td>
+                <td class="py-2 text-center align-middle">{{ student.grade_level }}</td>
+                <td class="py-2 text-center align-middle">{{ student.class_section }}</td>
+                <td class="py-2 align-middle">
                   <div class="flex justify-center">
                     <DropdownMenu>
                       <DropdownMenuTrigger as-child>
@@ -253,7 +257,7 @@ const handleAddStudent = () => {
         </div>
 
         <!-- Pagination — always visible at bottom -->
-        <div v-if="!loading && students.length > 0" class="shrink-0 flex items-center justify-end gap-2 border-t px-4 py-2">
+        <div v-if="!loading && students.length > 0" class="shrink-0 flex items-center justify-end gap-2 border-t py-2">
           <span class="mr-auto text-sm text-muted-foreground">
             แสดง {{ students.length }} รายการจาก {{ pagination.total_rows }} รายการทั้งหมด
           </span>
@@ -292,6 +296,13 @@ const handleAddStudent = () => {
     </div>
   </div>
   </MainLayout>
+
+  <!-- Create Student Modal -->
+  <CreateStudentModal
+    v-if="showCreateModal"
+    @close="showCreateModal = false"
+    @success="handleModalSuccess"
+  />
 </template>
 
 <style scoped>

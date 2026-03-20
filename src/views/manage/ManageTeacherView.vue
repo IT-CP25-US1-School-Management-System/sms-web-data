@@ -265,22 +265,22 @@ const getTeacherType = (teacher: PersonData) => {
         <h2 class="text-base font-semibold">รายชื่อคุณครู</h2>
       </div>
 
-      <div class="flex min-h-0 flex-1 flex-col border rounded-lg">
+      <div class="flex min-h-0 flex-1 flex-col border rounded-lg px-4">
         <!-- Table header (fixed, not scrollable) -->
-        <table class="w-full">
+        <table class="w-full" style="table-layout: fixed">
           <thead class="bg-muted/50">
             <tr>
-              <th class="text-left py-2 px-2 font-medium">ชื่อ</th>
-              <th class="text-left py-2 px-2 font-medium">นามสกุล</th>
-              <th class="text-center py-2 px-2 font-medium">ประเภท</th>
-              <th class="text-center py-2 px-2 font-medium">การดำเนินการ</th>
+              <th class="text-left py-2 font-medium">ชื่อ</th>
+              <th class="text-left py-2 font-medium">นามสกุล</th>
+              <th class="text-center py-2 font-medium">ประเภท</th>
+              <th class="text-center py-2 font-medium">การดำเนินการ</th>
             </tr>
           </thead>
         </table>
 
         <!-- Table body (scrollable) -->
         <div class="min-h-0 flex-1 overflow-auto">
-          <table class="w-full">
+          <table class="w-full" style="table-layout: fixed">
             <tbody>
               <!-- Loading state -->
               <tr v-if="loading">
@@ -304,11 +304,11 @@ const getTeacherType = (teacher: PersonData) => {
                 :key="teacher.id"
                 class="border-t hover:bg-muted/30 transition-colors"
               >
-                <td class="py-2 px-2 align-middle">{{teacher.prefixes?.prefixes_name_th || ''}}{{ teacher.first_name_th }}</td>
+                <td class="py-2 align-middle">{{teacher.prefixes?.prefixes_name_th || ''}}{{ teacher.first_name_th }}</td>
 
-                <td class="py-2 px-2 align-middle">{{ teacher.last_name_th }}</td>
-                <td class="py-2 px-2 text-center align-middle">{{ getTeacherType(teacher) }}</td>
-                <td class="py-2 px-2 align-middle">
+                <td class="py-2 align-middle">{{ teacher.last_name_th }}</td>
+                <td class="py-2 text-center align-middle">{{ getTeacherType(teacher) }}</td>
+                <td class="py-2 align-middle">
                   <div class="flex justify-center">
                     <DropdownMenu>
                       <DropdownMenuTrigger as-child>
@@ -338,7 +338,7 @@ const getTeacherType = (teacher: PersonData) => {
         </div>
 
         <!-- Pagination - fixed at bottom -->
-        <div v-if="!loading && teachers.length > 0" class="shrink-0 flex items-center justify-end gap-2 border-t px-4 py-2">
+        <div v-if="!loading && teachers.length > 0" class="shrink-0 flex items-center justify-end gap-2 border-t py-2">
           <span class="mr-auto text-sm text-muted-foreground">
             แสดง {{ teachers.length }} รายการจาก {{ pagination.total_rows }} รายการทั้งหมด
           </span>
