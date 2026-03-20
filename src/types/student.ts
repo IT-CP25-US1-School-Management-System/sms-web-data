@@ -103,3 +103,34 @@ export interface StudentCreateDTO {
 }
 
 export interface StudentUpdateDTO extends Partial<StudentCreateDTO> {}
+
+export interface AddressCreateDTO {
+  student_id: string
+  house_registry_no?: string
+  house_no?: string
+  moo?: string
+  building?: string
+  soi?: string
+  road?: string
+  subdistrict_code?: string
+  subdistrict?: string
+  district_code?: string
+  district?: string
+  province_code?: string
+  province?: string
+  postal_code?: string
+  is_house_registered?: boolean
+  is_current?: boolean
+}
+
+export interface ParentCreateDTO {
+  student_id: string
+  prefixe_id: string
+  first_name_th: string
+  last_name_th: string
+  first_name_en?: string
+  last_name_en?: string
+  occupation?: string
+  phone_number?: string
+  relation: string
+}
