@@ -1,25 +1,21 @@
 <script setup lang="ts">
 import CreateForm from '@/components/form/CreateForm.vue'
-import { Button } from '@/components/ui/button'
 import { getDatasetRows } from '@/stores/dataset'
 import { onMounted, ref } from 'vue'
-import { f } from 'vue-router/dist/router-CWoNjPRp.mjs'
 import { toast } from 'vue-sonner'
 
-const isEditMode = ref(true)
 const loading = ref(false)
 const familyData = ref<Record<string, any>[]>([])
 async function getFamilyData() {
   loading.value = true
   try {
-
-    const response = await getDatasetRows( {
+    const response = await getDatasetRows({
       view: 'family_get',
       page: 1,
       per_page: 50,
     })
     familyData.value = response.data[0]?.family_members || []
-    familyData.value = familyData.value.map(member => ({
+    familyData.value = familyData.value.map((member) => ({
       ...member,
       is_alive: member.is_alive ? 'มีชีวิต' : 'ไม่มีชีวิต',
     }))
@@ -34,14 +30,13 @@ async function getFamilyData() {
     toast.error(`โหลดข้อมูลครอบครัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
       position: 'bottom-right',
     })
-  } 
+  }
   loading.value = false
 }
 
 onMounted(() => {
   getFamilyData()
 })
-
 
 function handleSave(groupIndex: number) {
   // TODO: เรียก API บันทึกข้อมูล
@@ -55,10 +50,8 @@ function handleDelete(groupIndex: number) {
 </script>
 
 <template>
-
-  <div class="flex flex-col gap-4 mx-6"
-  >
-    แก้ไม่ได้  ยกเว้นที่ เบอร์โทร อีเมล , ที่อยู่ update ได้
+  <div class="mx-6 flex flex-col gap-4">
+    แก้ไม่ได้ ยกเว้นที่ เบอร์โทร อีเมล , ที่อยู่ update ได้
     <CreateForm
       :isDropdown="true"
       :readonly="true"
@@ -173,7 +166,7 @@ function handleDelete(groupIndex: number) {
                 required: true,
                 placeholder: '',
               },
-          
+
               {
                 name: 'district',
                 label: 'อำเภอ/เขต',
@@ -187,9 +180,8 @@ function handleDelete(groupIndex: number) {
                 type: 'text',
                 required: true,
                 placeholder: '',
-  
               },
-                  {
+              {
                 name: 'postal_code',
                 label: 'รหัสไปรษณีย์',
                 type: 'text',
@@ -234,5 +226,4 @@ function handleDelete(groupIndex: number) {
       @delete="handleDelete"
     />
   </div>
-
 </template>

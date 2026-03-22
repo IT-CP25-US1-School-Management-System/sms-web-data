@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import CreateForm from '@/components/form/CreateForm.vue'
-import { Button } from '@/components/ui/button'
 import { getDatasetRows } from '@/stores/dataset'
 import { onMounted, ref } from 'vue'
 import { toast } from 'vue-sonner'
@@ -10,13 +9,12 @@ const professionalLicenseData = ref<Record<string, any>[]>([])
 async function getProfessionalLicenseData() {
   loading.value = true
   try {
-
     const response = await getDatasetRows({
       view: 'license_get',
       page: 1,
       per_page: 50,
     })
-    professionalLicenseData.value =  response.data[0]?.professional_license || [] 
+    professionalLicenseData.value = response.data[0]?.professional_license || []
     console.log('Professional License API Response:', response)
     console.log('Professional License Data:', response.data)
     toast.success(`โหลดข้อมูลใบประกอบวิชาชีพสำเร็จ (${response.total_rows} รายการ)`, {
@@ -28,27 +26,25 @@ async function getProfessionalLicenseData() {
     toast.error(`โหลดข้อมูลครอบครัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
       position: 'bottom-right',
     })
-  } 
+  }
   loading.value = false
 }
 
 onMounted(() => {
-  console.log("professional license");
+  console.log('professional license')
   getProfessionalLicenseData()
 })
-
-
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 mx-6">
-    แก้ไขได้เลย  -> ใช้ CreateForm เพราะมีการเพิ่มกลุ่มข้อมูลใหม่
+  <div class="mx-6 flex flex-col gap-4">
+    แก้ไขได้เลย -> ใช้ CreateForm เพราะมีการเพิ่มกลุ่มข้อมูลใหม่
     <CreateForm
       :values="professionalLicenseData"
       :fields="[
         [
           {
-          content:[
+            content: [
               {
                 name: 'license-type',
                 label: 'ใบประกอบวิชาชีพ',
@@ -59,7 +55,7 @@ onMounted(() => {
                   { label: 'ใบอนุญาตปฏิบัติหน้าที่ครู (P-License)', value: 'P-License' },
                   { label: 'ใบอนุญาตประกอบวิชาชีพครูชั้นต้น (B-License)', value: 'B-License' },
                   { label: 'ใบอนุญาตประกอบวิชาชีพครูชั้นสูง (A-License)', value: 'A-License' },
-                  { label: 'ใบอนุญาตสอน', value: 'ใบอนุญาตสอน' }
+                  { label: 'ใบอนุญาตสอน', value: 'ใบอนุญาตสอน' },
                 ],
               },
               {
@@ -90,11 +86,10 @@ onMounted(() => {
                 accept: '.pdf,.jpg,.png',
                 multiple: true,
               },
-           ]
-          }
-        ]
+            ],
+          },
+        ],
       ]"
     />
   </div>
-
 </template>

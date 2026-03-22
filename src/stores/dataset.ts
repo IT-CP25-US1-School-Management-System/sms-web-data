@@ -1,18 +1,12 @@
 import { dataApiInstance } from '@/stores/api'
-import type {
-  DatasetListResponse,
-  DatasetRowResponse,
-  DatasetQueryParams,
-} from '@/types/dataset'
+import type { DatasetListResponse, DatasetRowResponse, DatasetQueryParams } from '@/types/dataset'
 
-
-const DATASET_ID = import.meta.env.VITE_DATASET_ID
-const DATASET_VERSION = import.meta.env.VITE_DATASET_VERSION
+export const DATASET_ID = import.meta.env.VITE_DATASET_ID
+export const DATASET_VERSION = import.meta.env.VITE_DATASET_VERSION
 /**
  * Generic function to list rows from a dataset version
  */
 export async function getDatasetRows<T = Record<string, any>>(
-
   params?: DatasetQueryParams,
 ): Promise<DatasetListResponse<T>> {
   const queryParams: Record<string, any> = {

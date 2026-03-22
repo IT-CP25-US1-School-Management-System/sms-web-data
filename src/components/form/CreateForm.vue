@@ -26,7 +26,6 @@ import { type DateValue, CalendarDate } from '@internationalized/date'
 import type { DateRange } from 'reka-ui'
 import { ref, watch } from 'vue'
 
-
 // (removed example global form - using per-entry VeeForm instead)
 
 type FieldItem = {
@@ -80,14 +79,12 @@ const emit = defineEmits<{
   (e: 'delete', index: number): void
 }>()
 
-
 // localEntries: FieldSection[][] — แต่ละ entry คือ 1 การ์ด ที่มีหลาย section
 const localEntries = ref<FieldSection[][]>([])
 // localValues: เก็บค่าของแต่ละ entry (แยก object)
 const localValues = ref<Record<string, any>[]>([])
 // per-entry version to force VeeForm re-render when initial values change
 const localValuesVersions = ref<number[]>([])
-
 
 // Sync localEntries & localValues with props.fields/values
 // ซิงก์ค่า `props.fields` และ `props.values` เข้ากับ state ภายใน (localEntries/localValues)
@@ -143,7 +140,7 @@ watch(
 
 watch(
   () => props.values,
-  (newValues, oldValues) => {
+  (newValues) => {
     console.log('Values prop changed:', newValues)
   },
 )
@@ -322,28 +319,27 @@ function formatDisplayDateRange(str: string | undefined): string {
     <!-- ปุ่มเพิ่มข้อมูล (ซ่อนเมื่อ readonly) -->
     <div
       v-if="!readonly"
-      class="border-4 rounded-lg mx-2 py-2 sm:mx-6 sm:py-6 gap-1 flex flex-col items-center justify-center cursor-pointer hover:bg-muted/40 transition-colors duration-200"
+      class="hover:bg-muted/40 mx-2 flex cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-4 py-2 transition-colors duration-200 sm:mx-6 sm:py-6"
       @click="addEntry()"
     >
       <button
         type="button"
-        class="sm:w-14 sm:h-14 rounded-full flex items-center justify-center cursor-pointer"
+        class="flex cursor-pointer items-center justify-center rounded-full sm:h-14 sm:w-14"
         aria-label="เพิ่มข้อมูล"
       >
-        <CirclePlus class="w-5 h-5 sm:w-10 sm:h-10" stroke-width="3" />
+        <CirclePlus class="h-5 w-5 sm:h-10 sm:w-10" stroke-width="3" />
       </button>
-      <div><p class="font-semibold text-sm">เพิ่มข้อมูล</p></div>
+      <div><p class="text-sm font-semibold">เพิ่มข้อมูล</p></div>
     </div>
 
-    <div class="grid transition-all duration-300 ease-in-out overflow-hidden"
-    >
+    <div class="grid overflow-hidden transition-all duration-300 ease-in-out">
       <div class="overflow-hidden">
         <CardContent class="flex flex-col gap-4">
           <!-- แต่ละ entry = 1 การ์ด -->
           <Card
             v-for="(entry, entryIndex) in localEntries"
             :key="entryIndex"
-            class="w-full gab-3"
+            class="gab-3 w-full"
             :class="{ 'pb-0': !isEntryOpen(entryIndex) }"
           >
             <!-- แต่ละ section ภายใน entry -->
@@ -359,88 +355,90 @@ function formatDisplayDateRange(str: string | undefined): string {
                 :key="sectionIndex"
                 :class="{ hidden: sectionIndex > 0 && !isEntryOpen(entryIndex) }"
               >
-              <CardHeader :class="{ 'pb-0': !isEntryOpen(entryIndex) }">
+                <CardHeader :class="{ 'pb-0': !isEntryOpen(entryIndex) }">
+                  <div
+                    class="flex flex-row items-center justify-between pb-2"
+                    :class="
+                      isEntryOpen(entryIndex) && section.topic
+                        ? 'mb-2 border-b-2'
+                        : 'hidden border-b-0'
+                    "
+                  >
+                    <slot name="header">
+                      <CardTitle
+                        v-if="section.topic && isEntryOpen(entryIndex)"
+                        class="text-base font-semibold"
+                      >
+                        {{ section.topic }}
+                      </CardTitle>
+                    </slot>
+                    <!-- ปุ่ม toggle แสดงเฉพาะ section แรก -->
+                    <button
+                      v-if="sectionIndex === 0 && isDropdown === true"
+                      type="button"
+                      class="hover:bg-muted rounded-md p-1 transition-colors duration-150"
+                      @click="toggleEntry(entryIndex)"
+                    >
+                      <ChevronUp
+                        class="text-muted-foreground h-5 w-5 transition-transform duration-300"
+                        :class="isEntryOpen(entryIndex) ? 'rotate-0' : 'hidden'"
+                      />
+                    </button>
+                  </div>
+                </CardHeader>
+
+                <!-- Collapsed: แสดงสรุปข้อมูล -->
                 <div
-                  class="flex flex-row pb-2 justify-between items-center"
+                  class="grid overflow-hidden transition-all duration-300 ease-in-out"
                   :class="
-                    isEntryOpen(entryIndex) && section.topic
-                      ? 'border-b-2 mb-2'
-                      : 'border-b-0 hidden'
+                    !isEntryOpen(entryIndex) && isDropdown === true
+                      ? 'grid-rows-[1fr] opacity-100'
+                      : 'hidden grid-rows-[0fr]'
                   "
                 >
-                  <slot name="header">
-                    <CardTitle
-                      v-if="section.topic && isEntryOpen(entryIndex)"
-                      class="text-base font-semibold"
-                    >
-                      {{ section.topic }}
-                    </CardTitle>
-                  </slot>
-                  <!-- ปุ่ม toggle แสดงเฉพาะ section แรก -->
-                  <button
-                    v-if="sectionIndex === 0 && isDropdown === true"
-                    type="button"
-                    class="p-1 rounded-md hover:bg-muted transition-colors duration-150"
-                    @click="toggleEntry(entryIndex)"
-                  >
-                    <ChevronUp
-                      class="w-5 h-5 text-muted-foreground transition-transform duration-300"
-                      :class="isEntryOpen(entryIndex) ? 'rotate-0 ' : 'hidden'"
-                    />
-                  </button>
-                </div>
-              </CardHeader>
-
-              <!-- Collapsed: แสดงสรุปข้อมูล -->
-              <div
-                class="grid transition-all duration-300 ease-in-out overflow-hidden"
-                :class="
-                  !isEntryOpen(entryIndex) && isDropdown === true
-                    ? 'grid-rows-[1fr] opacity-100'
-                    : 'grid-rows-[0fr] hidden'
-                "
-              >
-                <div class="overflow-hidden">
-                  <CardContent class="pt-0">
-                    <div class="flex flex-col gap-1 pb-4">
-                      <!-- รวมสรุปจากทุก section ใน entry -->
-                      <template v-for="(sec, secIdx) in entry" :key="secIdx">
-                        <template v-for="value in sec.content" :key="value.name">
-                          <p v-if="value.isShow" class="text-sm text-muted-foreground">
-                            <span class="font-medium text-foreground">{{ value.label }}</span> :
-                            {{ value.label }}
-                          </p>
+                  <div class="overflow-hidden">
+                    <CardContent class="pt-0">
+                      <div class="flex flex-col gap-1 pb-4">
+                        <!-- รวมสรุปจากทุก section ใน entry -->
+                        <template v-for="(sec, secIdx) in entry" :key="secIdx">
+                          <template v-for="value in sec.content" :key="value.name">
+                            <p v-if="value.isShow" class="text-muted-foreground text-sm">
+                              <span class="text-foreground font-medium">{{ value.label }}</span> :
+                              {{ value.label }}
+                            </p>
+                          </template>
                         </template>
-                      </template>
-                      <button
-                        v-if="sectionIndex === 0 && isDropdown === true"
-                        type="button"
-                        class="p-1 rounded-md hover:bg-muted transition-colors duration-150 self-end"
-                        @click="toggleEntry(entryIndex)"
-                      >
-                        <ChevronUp
-                          class="w-5 h-5 text-muted-foreground transition-transform duration-300"
-                          :class="isEntryOpen(entryIndex) ? 'hidden' : 'rotate-180'"
-                        />
-                      </button>
-                    </div>
-                  </CardContent>
+                        <button
+                          v-if="sectionIndex === 0 && isDropdown === true"
+                          type="button"
+                          class="hover:bg-muted self-end rounded-md p-1 transition-colors duration-150"
+                          @click="toggleEntry(entryIndex)"
+                        >
+                          <ChevronUp
+                            class="text-muted-foreground h-5 w-5 transition-transform duration-300"
+                            :class="isEntryOpen(entryIndex) ? 'hidden' : 'rotate-180'"
+                          />
+                        </button>
+                      </div>
+                    </CardContent>
+                  </div>
                 </div>
-              </div>
 
-              <!-- Expanded: แสดงฟอร์ม -->
-              <div
-                class="grid transition-all duration-300 ease-in-out overflow-hidden"
-                :class="
-                  isEntryOpen(entryIndex)
-                    ? 'grid-rows-[1fr] opacity-100'
-                    : 'grid-rows-[0fr] opacity-0'
-                "
-              >
-                <div class="overflow-hidden">
-                  <CardContent class="pt-0">
+                <!-- Expanded: แสดงฟอร์ม -->
+                <div
+                  class="grid overflow-hidden transition-all duration-300 ease-in-out"
+                  :class="
+                    isEntryOpen(entryIndex)
+                      ? 'grid-rows-[1fr] opacity-100'
+                      : 'grid-rows-[0fr] opacity-0'
+                  "
+                >
+                  <div class="overflow-hidden">
+                    <CardContent class="pt-0">
                       <!-- non-file fields -->
-                      <div class="grid grid-cols-1 gap-4 lg:grid-cols-4 md:grid-cols-3 sm:grid-cols-2 items-start">
+                      <div
+                        class="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+                      >
                         <VeeField
                           v-for="fieldItem in section.content.filter((f) => f.type !== 'file')"
                           :key="fieldItem.name"
@@ -458,7 +456,9 @@ function formatDisplayDateRange(str: string | undefined): string {
                               v-if="['text', 'number', 'email'].includes(fieldItem.type)"
                               :id="`form-field-${fieldItem.name}`"
                               :model-value="veeField.value"
-                              @update:model-value="(val: any) => veeField['onUpdate:modelValue']?.(val)"
+                              @update:model-value="
+                                (val: any) => veeField['onUpdate:modelValue']?.(val)
+                              "
                               :type="fieldItem.type"
                               :placeholder="
                                 fieldItem.placeholder || fieldItem.label || fieldItem.name
@@ -466,7 +466,7 @@ function formatDisplayDateRange(str: string | undefined): string {
                               autocomplete="off"
                               :aria-invalid="!!errors.length"
                               :disabled="fieldItem.disabled"
-                              class="disabled:opacity-50 w-full"
+                              class="w-full disabled:opacity-50"
                             />
 
                             <!-- date (Popover + Calendar) -->
@@ -594,17 +594,19 @@ function formatDisplayDateRange(str: string | undefined): string {
                               v-else-if="fieldItem.type === 'textarea'"
                               :id="`form-field-${fieldItem.name}`"
                               :model-value="veeField.value"
-                              @update:model-value="(val: any) => veeField['onUpdate:modelValue']?.(val)"
+                              @update:model-value="
+                                (val: any) => veeField['onUpdate:modelValue']?.(val)
+                              "
                               :placeholder="
                                 fieldItem.placeholder || fieldItem.label || fieldItem.name
                               "
                               :disabled="fieldItem.disabled"
-                              class="min-h-20 resize-none disabled:opacity-50 w-full"
+                              class="min-h-20 w-full resize-none disabled:opacity-50"
                               :aria-invalid="!!errors.length"
                             />
 
                             <div class="min-h-6">
-                              <FieldError v-if="errors.length" :errors="errors" class="ml-0 mt-1" />
+                              <FieldError v-if="errors.length" :errors="errors" class="mt-1 ml-0" />
                             </div>
                           </Field>
                         </VeeField>
@@ -613,19 +615,23 @@ function formatDisplayDateRange(str: string | undefined): string {
                       <!-- file fields -->
                       <div
                         v-if="section.content.some((f) => f.type === 'file')"
-                        class="grid grid-cols-1 gap-4 sm:grid-cols-2 mt-4"
+                        class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2"
                       >
                         <div
                           v-for="fieldItem in section.content.filter((f) => f.type === 'file')"
                           :key="fieldItem.name"
                         >
-                          <FieldLabel v-if="fieldItem.label" :for="`form-field-${fieldItem.name}`" class="mb-2 block text-sm font-medium" >
+                          <FieldLabel
+                            v-if="fieldItem.label"
+                            :for="`form-field-${fieldItem.name}`"
+                            class="mb-2 block text-sm font-medium"
+                          >
                             {{ fieldItem.label }}
                             <span v-if="fieldItem.required" class="text-red-500">*</span>
                           </FieldLabel>
                           <p
                             v-if="fieldItem.placeholder"
-                            class="text-xs text-muted-foreground mb-2"
+                            class="text-muted-foreground mb-2 text-xs"
                           >
                             {{ fieldItem.placeholder }}
                           </p>
@@ -644,7 +650,7 @@ function formatDisplayDateRange(str: string | undefined): string {
                           />
                           <Button
                             type="button"
-                            class="px-4 py-2 rounded-lg font-semibold text-sm"
+                            class="rounded-lg px-4 py-2 text-sm font-semibold"
                             :disabled="fieldItem.disabled"
                             @click="fileInputRefs[fieldItem.name]?.click()"
                           >
@@ -659,19 +665,19 @@ function formatDisplayDateRange(str: string | undefined): string {
                             <div
                               v-for="(file, fileIdx) in getFiles(fieldItem.name)"
                               :key="fileIdx"
-                              class="flex items-center gap-2 text-sm border-2 rounded-2xl p-2 w-max h-10 justify-between border-muted bg-muted/50"
+                              class="border-muted bg-muted/50 flex h-10 w-max items-center justify-between gap-2 rounded-2xl border-2 p-2 text-sm"
                             >
                               <span class="truncate">{{ file.name }}</span>
-                              <span class="text-xs text-muted-foreground shrink-0">
+                              <span class="text-muted-foreground shrink-0 text-xs">
                                 {{ formatFileSize(file.size) }}
                               </span>
                               <button
                                 v-if="!fieldItem.disabled"
                                 type="button"
-                                class="p-0.5 rounded hover:text-destructive text-muted-foreground transition-colors"
+                                class="hover:text-destructive text-muted-foreground rounded p-0.5 transition-colors"
                                 @click.stop="removeFile(fieldItem.name, fileIdx)"
                               >
-                                <X class="w-3.5 h-3.5" />
+                                <X class="h-3.5 w-3.5" />
                               </button>
                             </div>
                           </div>
@@ -683,26 +689,28 @@ function formatDisplayDateRange(str: string | undefined): string {
                         <!-- ปุ่มเพิ่มข้อมูล sub-entry -->
                         <div
                           v-if="!readonly"
-                          class="border-2 rounded-lg py-2 gap-1 flex flex-col items-center justify-center cursor-pointer hover:bg-muted/40 transition-colors duration-200"
+                          class="hover:bg-muted/40 flex cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border-2 py-2 transition-colors duration-200"
                           @click="addSubEntry(entryIndex, sectionIndex)"
                         >
                           <button
                             type="button"
-                            class="rounded-full flex items-center justify-center"
+                            class="flex items-center justify-center rounded-full"
                             aria-label="เพิ่มข้อมูล"
                           >
-                            <CirclePlus class="w-5 h-5 sm:w-8 sm:h-8" stroke-width="3" />
+                            <CirclePlus class="h-5 w-5 sm:h-8 sm:w-8" stroke-width="3" />
                           </button>
-                          <p class="font-semibold text-xs">เพิ่มข้อมูล</p>
+                          <p class="text-xs font-semibold">เพิ่มข้อมูล</p>
                         </div>
 
                         <!-- sub-entries list -->
                         <div
                           v-for="(subEntry, subIdx) in getSubEntries(entryIndex, sectionIndex)"
                           :key="subIdx"
-                          class="flex items-end gap-4 mt-3"
+                          class="mt-3 flex items-end gap-4"
                         >
-                          <div class="grid grid-cols-1 gap-4 lg:grid-cols-4 md:grid-cols-3 sm:grid-cols-2 flex-1 items-end">
+                          <div
+                            class="grid flex-1 grid-cols-1 items-end gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+                          >
                             <Field v-for="subField in section.subFields" :key="subField.name">
                               <FieldLabel>
                                 {{ subField.label || subField.name }}
@@ -840,37 +848,36 @@ function formatDisplayDateRange(str: string | undefined): string {
                             type="button"
                             variant="destructive"
                             size="icon"
-                            class="shrink-0 mb-0.5"
+                            class="mb-0.5 shrink-0"
                             @click="deleteSubEntry(entryIndex, sectionIndex, subIdx)"
                           >
-                            <Trash2 class="w-4 h-4" />
+                            <Trash2 class="h-4 w-4" />
                           </Button>
                         </div>
                       </div>
-                    
-                  </CardContent>
+                    </CardContent>
+                  </div>
                 </div>
               </div>
-              </div>
-              </VeeForm>
+            </VeeForm>
 
             <!-- ปุ่มบันทึก / ลบ -->
             <CardFooter
-              class="gap-2 pt-0 px-6"
+              class="gap-2 px-6 pt-0"
               :class="!isEntryOpen(entryIndex) ? 'hidden' : 'flex justify-end'"
             >
               <Button
                 type="button"
                 variant="destructive"
-                class="px-6 py-2 rounded-lg font-semibold shadow-sm"
+                class="rounded-lg px-6 py-2 font-semibold shadow-sm"
                 @click="deleteEntry(entryIndex)"
               >
-                <Trash2 class="w-4 h-4 mr-1" />
+                <Trash2 class="mr-1 h-4 w-4" />
                 ลบ
               </Button>
               <Button
                 type="button"
-                class="bg-[#16A34A] hover:bg-[#15803D] text-white px-6 py-2 rounded-lg font-semibold shadow-sm"
+                class="rounded-lg bg-[#16A34A] px-6 py-2 font-semibold text-white shadow-sm hover:bg-[#15803D]"
                 @click="saveEntry(entryIndex)"
               >
                 บันทึก

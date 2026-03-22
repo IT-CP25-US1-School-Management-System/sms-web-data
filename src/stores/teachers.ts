@@ -16,9 +16,9 @@ import type { PersonData, TeacherCreateDTO, TeacherUpdateDTO } from '@/types/tea
 export async function getTeachers(
   params?: DatasetQueryParams,
 ): Promise<DatasetListResponse<PersonData>> {
-  return getDatasetRows<PersonData>(DATASET_ID, DATASET_VERSION, {
+  return getDatasetRows<PersonData>({
     ...params,
-    view_name: 'Teacher',
+    view: 'Teacher',
   })
 }
 

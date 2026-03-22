@@ -193,7 +193,7 @@ async function submitPA2Form() {
                   @update:model-value="
                     (v) => {
                       field.onChange(v)
-                      pa2GroupSubject = v
+                      pa2GroupSubject = String(v ?? '')
                     }
                   "
                 >
@@ -217,7 +217,7 @@ async function submitPA2Form() {
                   @update:model-value="
                     (v) => {
                       field.onChange(v)
-                      pa2TeachLevel1 = v
+                      pa2TeachLevel1 = String(v ?? '')
                     }
                   "
                   type="text"
@@ -234,7 +234,7 @@ async function submitPA2Form() {
                   @update:model-value="
                     (v) => {
                       field.onChange(v)
-                      pa2TeachLevel2 = v
+                      pa2TeachLevel2 = String(v ?? '')
                     }
                   "
                   type="text"
@@ -251,7 +251,7 @@ async function submitPA2Form() {
                   @update:model-value="
                     (v) => {
                       field.onChange(v)
-                      pa2Subject = v
+                      pa2Subject = String(v ?? '')
                     }
                   "
                   type="text"
@@ -274,7 +274,7 @@ async function submitPA2Form() {
                   @update:model-value="
                     (v) => {
                       field.onChange(v)
-                      pa2TeachHours = v
+                      pa2TeachHours = String(v ?? '')
                     }
                   "
                   type="text"
@@ -294,7 +294,7 @@ async function submitPA2Form() {
                   @update:model-value="
                     (v) => {
                       field.onChange(v)
-                      pa2SupportHours = v
+                      pa2SupportHours = String(v ?? '')
                     }
                   "
                   type="text"
@@ -314,7 +314,7 @@ async function submitPA2Form() {
                   @update:model-value="
                     (v) => {
                       field.onChange(v)
-                      pa2QualityHours = v
+                      pa2QualityHours = String(v ?? '')
                     }
                   "
                   type="text"
@@ -333,7 +333,7 @@ async function submitPA2Form() {
                   @update:model-value="
                     (v) => {
                       field.onChange(v)
-                      pa2PolicyHours = v
+                      pa2PolicyHours = String(v ?? '')
                     }
                   "
                   type="text"
@@ -358,7 +358,7 @@ async function submitPA2Form() {
                   @update:model-value="
                     (v) => {
                       field.onChange(v)
-                      pa2Evaluator1 = v
+                      pa2Evaluator1 = String(v ?? '')
                     }
                   "
                   type="text"
@@ -378,7 +378,7 @@ async function submitPA2Form() {
                   @update:model-value="
                     (v) => {
                       field.onChange(v)
-                      pa2Evaluator2 = v
+                      pa2Evaluator2 = String(v ?? '')
                     }
                   "
                   type="text"
@@ -398,7 +398,7 @@ async function submitPA2Form() {
                   @update:model-value="
                     (v) => {
                       field.onChange(v)
-                      pa2Evaluator3 = v
+                      pa2Evaluator3 = String(v ?? '')
                     }
                   "
                   type="text"

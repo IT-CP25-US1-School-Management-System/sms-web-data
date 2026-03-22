@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import CreateForm from '@/components/form/CreateForm.vue'
 import { toast } from 'vue-sonner'
 import { onMounted, ref } from 'vue'
 import { getDatasetRows } from '@/stores/dataset'
@@ -41,16 +40,6 @@ onMounted(() => {
   console.log('education')
   getEducationRecordData()
 })
-
-function handleSave(groupIndex: number) {
-  // TODO: เรียก API บันทึกข้อมูล
-  toast(`บันทึกข้อมูลกลุ่มที่ ${groupIndex + 1} สำเร็จ`, { position: 'bottom-right' })
-}
-
-function handleDelete(groupIndex: number) {
-  // TODO: เรียก API ลบข้อมูล
-  toast(`ลบข้อมูลกลุ่มที่ ${groupIndex + 1} สำเร็จ`, { position: 'bottom-right' })
-}
 </script>
 
 <template>
@@ -127,7 +116,6 @@ function handleDelete(groupIndex: number) {
           placeholder: '-',
         },
       ]"
-      @delete="handleDelete"
     />
   </div>
 </template>

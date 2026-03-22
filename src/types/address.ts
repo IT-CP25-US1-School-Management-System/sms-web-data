@@ -66,3 +66,12 @@ export interface AddressDatasetResponse {
   total_pages: number
   total_rows: number
 }
+
+// Generic response type used by address store
+export interface AddressRowResponse<T = AddressDatasetRow> {
+  data: T[]
+  page: number
+  per_page: number
+  total_pages: number
+  total_rows: number
+}

@@ -16,9 +16,9 @@ import type { Student, StudentCreateDTO, StudentUpdateDTO } from '@/types/studen
 export async function getStudents(
   params?: DatasetQueryParams,
 ): Promise<DatasetListResponse<Student>> {
-  return getDatasetRows<Student>(DATASET_ID, DATASET_VERSION, {
+  return getDatasetRows<Student>({
     ...params,
-    view_name: 'Student',
+    view: 'Student',
   })
 }
 
@@ -32,9 +32,7 @@ export async function getStudentById(studentId: string): Promise<DatasetRowRespo
 /**
  * Create a new student
  */
-export async function createStudent(
-  data: StudentCreateDTO,
-): Promise<DatasetRowResponse<Student>> {
+export async function createStudent(data: StudentCreateDTO): Promise<DatasetRowResponse<Student>> {
   return createDatasetRow<Student>(DATASET_ID, DATASET_VERSION, data)
 }
 

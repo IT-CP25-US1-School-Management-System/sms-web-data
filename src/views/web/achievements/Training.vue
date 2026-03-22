@@ -3,9 +3,6 @@ import CreateForm from '@/components/form/CreateForm.vue'
 
 import { onMounted, ref } from 'vue'
 import { toast } from 'vue-sonner'
-import { getDatasetRows } from '@/stores/dataset'
-
-const loading = ref(false)
 
 const trainningData = ref<Record<string, any>[]>([])
 
@@ -21,43 +18,28 @@ function mapApiToForm(data: any) {
 }
 
 // Map form data: { start_date_end_date } => { start_date, end_date }
-function mapFormToApi(data: any) {
-  if (data.start_date_end_date) {
-    const [start, end] = data.start_date_end_date.split('~')
-    return {
-      ...data,
-      start_date: start,
-      end_date: end,
-    }
-  }
-  return data
-}
+// NOTE: เก็บโค้ดตัวอย่างไว้ในคอมเมนต์ เผื่อใช้ในอนาคต
+// function mapFormToApi(data: any) {
+//   if (data.start_date_end_date) {
+//     const [start, end] = data.start_date_end_date.split('~')
+//     return {
+//       ...data,
+//       start_date: start,
+//       end_date: end,
+//     }
+//   }
+//   return data
+// }
 
-async function getTrainingData() {
-  loading.value = true
-  try {
-
-    const response = await getDatasetRows({
-      view: 'training_get',
-      page: 1,
-      per_page: 50,
-    })
-    // Map all rows for form usage
-    trainningData.value = (response.data[0]?.trainings || []).map(mapApiToForm)
-    console.log('Address API Response:', response)
-    console.log('Address Data:', response.data)
-    toast.success(`โหลดข้อมูลที่อยู่สำเร็จ (${response.total_rows} รายการ)`, {
-      position: 'bottom-right',
-    })
-  } catch (error: any) {
-    console.error('Personal Detail API Error:', error)
-    console.error('Error Response:', error?.response?.data)
-    toast.error(`โหลดข้อมูลครอบครัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
-      position: 'bottom-right',
-    })
-  }
-  loading.value = false
-}
+// async function getTrainingData() {
+//   const response = await getDatasetRows({
+//     view: 'training_get',
+//     page: 1,
+//     per_page: 50,
+//   })
+//   // Map all rows for form usage
+//   trainningData.value = (response.data[0]?.trainings || []).map(mapApiToForm)
+// }
 
 onMounted(() => {
   // MOCK DATA สำหรับทดสอบ date-range
@@ -79,8 +61,6 @@ onMounted(() => {
   // getTrainingData() // ปิดไว้ชั่วคราว
 })
 
-const isEditMode = true
-
 function handleSave(groupIndex: number) {
   toast(`บันทึกข้อมูลกลุ่มที่ ${groupIndex + 1} สำเร็จ`, { position: 'bottom-right' })
 }
@@ -92,7 +72,7 @@ function handleDelete(groupIndex: number) {
 
 <template>
   <div class="mx-6 flex flex-col gap-4">
-     ไม่ต้องแก้อะไร ถูกแล้ว
+    ไม่ต้องแก้อะไร ถูกแล้ว
     <CreateForm
       :isDropdown="false"
       :fields="[
