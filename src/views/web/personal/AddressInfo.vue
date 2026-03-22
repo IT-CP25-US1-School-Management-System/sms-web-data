@@ -30,7 +30,10 @@ type AddressFormState = {
   lastProvince?: string
   lastDistrict?: string
 }
-
+onMounted(() => {
+  console.log('AddressInfo')
+  getAddressData()
+})
 const loading = ref(false)
 const addressForms = ref<AddressFormState[]>([])
 
@@ -341,9 +344,7 @@ async function onSaveAll() {
   })
 }
 
-onMounted(() => {
-  getAddressData()
-})
+
 </script>
 
 <template>

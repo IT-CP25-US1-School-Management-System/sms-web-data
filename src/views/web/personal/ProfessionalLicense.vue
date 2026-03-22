@@ -14,7 +14,7 @@ async function getProfessionalLicenseData() {
       page: 1,
       per_page: 50,
     })
-    professionalLicenseData.value = response.data[0]?.professional_license || []
+    professionalLicenseData.value = response.data[0]?.professional_licenses || []
     console.log('Professional License API Response:', response)
     console.log('Professional License Data:', response.data)
     toast.success(`โหลดข้อมูลใบประกอบวิชาชีพสำเร็จ (${response.total_rows} รายการ)`, {
@@ -46,7 +46,7 @@ onMounted(() => {
           {
             content: [
               {
-                name: 'license-type',
+                name: 'license_type',
                 label: 'ใบประกอบวิชาชีพ',
                 type: 'select',
                 required: true,
@@ -59,21 +59,21 @@ onMounted(() => {
                 ],
               },
               {
-                name: 'license-number',
+                name: 'license_no',
                 label: 'เลขที่ใบประกอบวิชาชีพ',
                 type: 'text',
                 required: true,
                 placeholder: '',
               },
               {
-                name: 'issue-date',
+                name: 'issue_date',
                 label: 'วันเดือนปีที่ออกบัตร',
                 type: 'date',
                 required: true,
                 placeholder: 'วว / ดด / ปปปป',
               },
               {
-                name: 'expiry-date',
+                name: 'expiry_date',
                 label: 'วันเดือนปีบัตรหมดอายุ',
                 type: 'date',
                 required: true,

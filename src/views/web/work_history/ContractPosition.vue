@@ -12,7 +12,7 @@ async function getContractPositionData() {
   try {
 
     const response = await getDatasetRows({
-      view: 'personal_view',
+      view: 'contract_get',
       page: 1,
       per_page: 50,
     })

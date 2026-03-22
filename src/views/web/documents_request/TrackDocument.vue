@@ -106,7 +106,6 @@ function goToPage(page: number | string) {
           <table class="w-full text-sm">
             <thead>
               <tr class="border-b bg-muted/40">
-                <th class="px-6 py-4 text-center font-semibold text-muted-foreground">หัวข้อ</th>
                 <th class="px-6 py-4 text-center font-semibold text-muted-foreground">
                   ประเภทคำร้อง
                 </th>
@@ -120,7 +119,6 @@ function goToPage(page: number | string) {
                 :key="idx"
                 class="border-b last:border-b-0 hover:bg-muted/20 transition-colors"
               >
-                <td class="px-6 py-4 text-center">{{ item.title }}</td>
                 <td class="px-6 py-4 text-center">{{ item.type }}</td>
                 <td class="px-6 py-4 text-center">
                   <Badge

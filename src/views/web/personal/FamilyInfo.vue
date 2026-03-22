@@ -125,7 +125,7 @@ function handleDelete(groupIndex: number) {
                 label: 'การมีชีวิต',
                 type: 'text',
                 placeholder: '-',
-                disabled: false,
+                disabled: true,
               },
               {
                 name: 'birth_date',

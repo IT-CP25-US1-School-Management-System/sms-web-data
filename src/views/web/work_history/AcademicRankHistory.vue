@@ -18,8 +18,8 @@ async function getAcadamicHistoryData() {
       per_page: 50,
     })
     acadamicHistoryData.value =  response.data[0]?.academic_rank || [] 
-    console.log('Address API Response:', response)
-    console.log('Address Data:', response.data)
+    console.log('Academic API Response:', response)
+    console.log('Academic Data:', response.data)
     toast.success(`โหลดข้อมูลที่อยู่สำเร็จ (${response.total_rows} รายการ)`, {
       position: 'bottom-right',
     })

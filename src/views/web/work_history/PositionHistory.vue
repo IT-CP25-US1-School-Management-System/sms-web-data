@@ -18,15 +18,15 @@ async function getPositionData() {
       per_page: 50,
     })
     positionData.value =  response.data[0]?.governments || [] 
-    console.log('Address API Response:', response)
-    console.log('Address Data:', response.data)
-    toast.success(`โหลดข้อมูลที่อยู่สำเร็จ (${response.total_rows} รายการ)`, {
+    console.log('position API Response:', response)
+    console.log('position Data:', response.data)
+    toast.success(`โหลดข้อมูลตำแหน่งสำเร็จ (${response.total_rows} รายการ)`, {
       position: 'bottom-right',
     })
   } catch (error: any) {
-    console.error('Personal Detail API Error:', error)
+    console.error('Position API Error:', error)
     console.error('Error Response:', error?.response?.data)
-    toast.error(`โหลดข้อมูลครอบครัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
+    toast.error(`โหลดข้อมูลตำแหน่งไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
       position: 'bottom-right',
     })
   } 
@@ -44,13 +44,14 @@ onMounted(() => {
   <div class="flex flex-col">
     <!-- Scrollable content area -->
     <div class="flex-1 overflow-y-auto px-4 sm:px-6 space-y-4"
-    v-for="item in positionData" :key="item.id"
+   
+    v-for="item in (positionData.length ? positionData : [{}])" :key="item.id"
     >
       <NormalForm
         :values="item"
         :fields="[
           {
-            name: 'work-group',
+            name: 'executive_group',
             label: 'กลุ่มงาน',
             type: 'select',
             required: true,
@@ -96,7 +97,7 @@ onMounted(() => {
             placeholder: '',
           },
           {
-            name: 'work-status',
+            name: 'work_status',
             label: 'สถานการทำงาน',
             type: 'text',
             required: true,
@@ -104,7 +105,7 @@ onMounted(() => {
             placeholder: '',
           },
           {
-            name: 'direct-payment-no',
+            name: 'direct_pay_no',
             label: 'เลขที่จ่ายตรง',
             type: 'text',
             required: true,
@@ -112,7 +113,7 @@ onMounted(() => {
             placeholder: '',
           },
           {
-            name: 'position-no',
+            name: 'position_number',
             label: 'เลขที่ตำแหน่ง',
             type: 'text',
             required: true,
@@ -157,7 +158,7 @@ onMounted(() => {
             placeholder: 'วว / ดด / ปปปป',
           },
           {
-            name: 'school-service-date',
+            name: 'school_entry_date',
             label: 'ว/ด/ป ที่ปฏิบัติหน้าที่ในโรงเรียนคณะราษฎร์ฯ',
             type: 'date',
             disabled: true,
@@ -180,7 +181,7 @@ onMounted(() => {
         ]"
       />
     </div>
-
+  
     <!-- ปุ่มบันทึก -->
     <div
       class="sticky bottom-0 right-0 z-40 flex justify-end border-t border-gray-200 bg-white p-3 w-full"

@@ -16,13 +16,11 @@ async function getRoyalDecorationData() {
       per_page: 50,
     })
     royalDecorationData.value =  response.data[0]?.decorations || [] 
-    console.log('Address API Response:', response)
-    console.log('Address Data:', response.data)
-    toast.success(`โหลดข้อมูลที่อยู่สำเร็จ (${response.total_rows} รายการ)`, {
-      position: 'bottom-right',
-    })
+    console.log('royalDecorationData API Response:', response)
+    console.log('royalDecorationData Data:', response.data)
+
   } catch (error: any) {
-    console.error('Personal Detail API Error:', error)
+    console.error('royalDecorationData API Error:', error)
     console.error('Error Response:', error?.response?.data)
     toast.error(`โหลดข้อมูลครอบครัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
       position: 'bottom-right',
@@ -59,7 +57,7 @@ function handleDelete(groupIndex: number) {
           {
             content: [
               {
-                name: 'gazette-date',
+                name: 'gazette_publish_date',
                 label: 'วันที่ประกาศในราชกิจจา',
                 type: 'date',
                 required: true,
@@ -75,41 +73,41 @@ function handleDelete(groupIndex: number) {
                 placeholder: '',
               },
               {
-                name: 'class-rank',
+                name: 'class',
                 label: 'ชั้นตรา',
                 type: 'text',
                 required: true,
                 placeholder: '',
               },
               {
-                name: 'volume-no',
+                name: 'gazette_book_no',
                 label: 'เล่มที่',
                 type: 'text',
                 required: true,
                 placeholder: '',
               },
               {
-                name: 'section-no',
+                name: 'gazette_section',
                 label: 'ตอนที่',
                 type: 'text',
                 placeholder: '',
               },
               {
-                name: 'dated',
+                name: 'announce_date',
                 label: 'ลงวันที่',
                 type: 'date',
                 required: true,
                 placeholder: 'วว / ดด / ปปปป',
               },
               {
-                name: 'page',
+                name: 'gazette_page',
                 label: 'หน้า',
                 type: 'text',
                 required: true,
                 placeholder: 'กรอกหน้า',
               },
               {
-                name: 'important-no',
+                name: 'gazette_order_no',
                 label: 'ลำดับที่',
                 type: 'text',
                 required: true,
