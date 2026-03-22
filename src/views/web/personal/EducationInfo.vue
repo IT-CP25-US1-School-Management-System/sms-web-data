@@ -1,8 +1,48 @@
 <script setup lang="ts">
 import CreateForm from '@/components/form/CreateForm.vue'
 import { toast } from 'vue-sonner'
+import { onMounted, ref } from 'vue'
+import { getDatasetRows } from '@/stores/dataset'
+import NormalForm from '@/components/form/NormalForm.vue'
+
 // TODO: เปลี่ยนเป็น false เมื่อต้องการดูอย่างเดียว (readonly)
 const isEditMode = true
+
+const loading = ref(false)
+const educationData = ref<Record<string, any>[]>([])
+async function getEducationRecordData() {
+  loading.value = true
+  try {
+  
+    const response = await getDatasetRows( {
+      view: 'education_get',
+      page: 1,
+      per_page: 50,
+    })
+  // API returns an array in `response.data` — assign the whole array.
+  // Previously this used `response.data[0]` which is a single object and
+  // caused a type/assignment mismatch with `educationData: Ref<Record<string, any>[]>`.
+  educationData.value = response.data[0]?.education_records || []
+    console.log('Education API Response:', response)
+    console.log('Education Data:', educationData.value)
+    toast.success(`โหลดข้อมูลการศึกษาสำเร็จ (${response.total_rows} รายการ)`, {
+      position: 'bottom-right',
+    })
+  } catch (error: any) {
+    console.error('Personal Detail API Error:', error)
+    console.error('Error Response:', error?.response?.data)
+    toast.error(`โหลดข้อมูลครอบครัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
+      position: 'bottom-right',
+    })
+  } 
+  loading.value = false
+}
+
+onMounted(() => {
+  console.log("education");
+  getEducationRecordData()
+})
+
 
 function handleSave(groupIndex: number) {
   // TODO: เรียก API บันทึกข้อมูล
@@ -16,104 +56,83 @@ function handleDelete(groupIndex: number) {
 </script>
 
 <template>
-  <div class="mx-6 flex flex-col gap-4">
-    <CreateForm
+  <div class="mx-6 flex flex-col gap-4"
+  v-for="item in educationData" :key="item.id"
+  >
+    แก้ไขไม่ได้
+    <NormalForm
       :isDropdown="false"
+      :values="item"
       :readonly="!isEditMode"
       :fields="[
-        [
-          {
-            content: [
+      
               {
                 name: 'education_level',
                 label: 'ระดับการศึกษา',
-                type: 'select',
-                required: true,
-                isShow: true,
-                placeholder: 'เลือกระดับการศึกษา',
-                options: [],
+                type: 'text',
+                placeholder: '-',
               },
               {
                 name: 'qualification',
                 label: 'วุฒิการศึกษา',
                 type: 'text',
-                required: true,
-                isShow: true,
-                placeholder: '',
+                placeholder: '-',
               },
               {
                 name: 'qualification_name',
                 label: 'ชื่อวุฒิการศึกษา',
                 type: 'text',
-                required: true,
-                placeholder: '',
+                placeholder: '-',
               },
               {
                 name: 'major_group',
                 label: 'สาขาวิชาเอก',
                 type: 'text',
-                required: true,
-                placeholder: '',
+                placeholder: '-',
               },
               {
                 name: 'minor_group',
                 label: 'สาขาวิชาโท',
                 type: 'text',
-                placeholder: '',
+                placeholder: '-',
               },
               {
                 name: 'institution',
                 label: 'สถานศึกษา',
                 type: 'text',
-                placeholder: '',
+                placeholder: '-',
               },
               {
                 name: 'start_date',
                 label: 'วันที่เข้าศึกษา',
                 type: 'date',
-                required: true,
-                placeholder: 'วว / ดด / ปปปป',
+                placeholder: '-',
               },
               {
                 name: 'graduation_date',
                 label: 'วันที่สำเร็จการศึกษา',
                 type: 'date',
-                required: true,
-                placeholder: 'วว / ดด / ปปปป',
+                placeholder: '-',
               },
               {
                 name: 'country',
                 label: 'ประเทศ',
-                type: 'select',
-                required: true,
-                placeholder: '',
-                options: [],
+                type: 'text',
+                placeholder: '-',
               },
               {
                 name: 'honor_type',
                 label: 'เกียรตินิยม',
-                type: 'select',
-                required: true,
-                placeholder: 'เลือกเกียรตินิยม',
-                options: [],
+                type: 'text',
+                placeholder: '-',
               },
               {
                 name: 'qualification-used',
                 label: 'วุฒิที่ใช้บรรจุ /วุฒิการศึกษาสูงสุด',
-                type: 'select',
-                placeholder: '',
-                options: [
-                  { label: 'ใช้บรรจุครั้งแรก', value: 'is_used_for_first_appointment' },
-                  { label: 'วุฒิการศึกษาสูงสุด', value: 'is_highest_degree' },
-                  { label: 'วุฒิตรงตามมาตรฐานตำแหน่ง', value: 'is_meets_position_standard' },
-                  { label: 'วุฒิ กคศ./คุรุสภา รับรอง', value: 'is_recognized_by_kksa' },
-                  { label: 'วุฒิ ก.พ. รับรอง', value: 'is_recognized_by_ocsc' },
-                ],
-              },
-            ],
-          },
-        ],
-      ]"
+                type: 'text',
+                placeholder: '-',
+              }
+]"
       @save="handleSave"
       @delete="handleDelete"
     />

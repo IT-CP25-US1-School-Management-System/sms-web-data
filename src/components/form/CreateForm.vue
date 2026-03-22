@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { toTypedSchema } from '@vee-validate/zod'
-import { useForm, Field as VeeField } from 'vee-validate'
-import { toast } from 'vue-sonner'
+import { Form as VeeForm, Field as VeeField } from 'vee-validate'
+// toast unused in this component
 import { z } from 'zod'
 
 import { Button } from '@/components/ui/button'
@@ -24,43 +24,10 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { type DateValue, CalendarDate } from '@internationalized/date'
 import type { DateRange } from 'reka-ui'
-import { h, ref, watch } from 'vue'
+import { ref, watch } from 'vue'
 
-const formSchema = toTypedSchema(
-  z.object({
-    title: z
-      .string()
-      .min(5, 'Bug title must be at least 5 characters.')
-      .max(32, 'Bug title must be at most 32 characters.'),
-    description: z
-      .string()
-      .min(20, 'Description must be at least 20 characters.')
-      .max(100, 'Description must be at most 100 characters.'),
-  }),
-)
 
-const { handleSubmit } = useForm({
-  validationSchema: formSchema,
-  initialValues: {
-    title: '',
-    description: '',
-  },
-})
-
-const onSubmit = handleSubmit((data) => {
-  toast('You submitted the following values:', {
-    description: h(
-      'pre',
-      { class: 'bg-code text-code-foreground mt-2 w-[320px] overflow-x-auto rounded-md p-4' },
-      h('code', JSON.stringify(data, null, 2)),
-    ),
-    position: 'bottom-right',
-    class: 'flex flex-col gap-2',
-    style: {
-      '--border-radius': 'calc(var(--radius)  + 4px)',
-    },
-  })
-})
+// (removed example global form - using per-entry VeeForm instead)
 
 type FieldItem = {
   name: string
@@ -88,39 +55,132 @@ const props = defineProps<{
   values?: Record<string, any>[]
 }>()
 
+// Per-entry zod schemas (toTypedSchema) for vee-validate
+const schemas = ref<any[]>([])
+
+function buildSchemas() {
+  schemas.value = localEntries.value.map((entry) => {
+    const shape: Record<string, any> = {}
+    entry.forEach((section) => {
+      section.content.forEach((f) => {
+        // all fields treated as string for simplicity; required => nonempty
+        // NOTE: include disabled fields in the schema as optional so they are
+        // registered by vee-validate and receive initial-values from the form.
+        // We only enforce `min(1)` for required fields.
+        if (f.required) shape[f.name] = z.string().min(1)
+        else shape[f.name] = z.string().optional()
+      })
+    })
+    return toTypedSchema(z.object(shape))
+  })
+}
+
 const emit = defineEmits<{
-  (e: 'save', index: number): void
+  (e: 'save', index: number, values: Record<string, any>): void
   (e: 'delete', index: number): void
 }>()
 
+
 // localEntries: FieldSection[][] — แต่ละ entry คือ 1 การ์ด ที่มีหลาย section
 const localEntries = ref<FieldSection[][]>([])
+// localValues: เก็บค่าของแต่ละ entry (แยก object)
+const localValues = ref<Record<string, any>[]>([])
+// per-entry version to force VeeForm re-render when initial values change
+const localValuesVersions = ref<number[]>([])
 
+
+// Sync localEntries & localValues with props.fields/values
+// ซิงก์ค่า `props.fields` และ `props.values` เข้ากับ state ภายใน (localEntries/localValues)
+// เป้าหมาย:
+// - ให้มี template (localEntries) สำหรับแต่ละ value ที่รับมา
+// - ให้ localValues เก็บสำเนาของค่าที่ parent ส่งมา
+// - บังคับให้ VeeForm รีมอนต์เมื่อค่าเริ่มต้นเปลี่ยน (ด้วย localValuesVersions)
 watch(
-  () => props.fields,
-  (val) => {
-    if (val && localEntries.value.length === 0) {
-      localEntries.value = JSON.parse(JSON.stringify(val))
+  [() => props.fields, () => props.values],
+  ([fields, values]) => {
+    // 1) หากยังไม่มี template ให้ clone จาก props.fields (ครั้งแรกที่ mount)
+    if (fields && localEntries.value.length === 0) {
+      localEntries.value = JSON.parse(JSON.stringify(fields))
     }
+
+    // 2) หาก parent ส่ง values มาเป็นอาเรย์ ให้ใช้ค่านั้นเป็น localValues
+    if (Array.isArray(values) && values.length > 0) {
+      // เก็บสำเนา (ไม่ผูก reference ตรง ๆ)
+      localValues.value = values.map((v) => ({ ...v }))
+
+      // bump เวอร์ชันของแต่ละ entry เพื่อบังคับให้ VeeForm remount ถ้าจำเป็น
+      localValuesVersions.value = values.map((_, i) => (localValuesVersions.value[i] || 0) + 1)
+
+      // ถ้า template มีแค่ชุดเดียว แต่มีค่า values หลายรายการ ให้ clone template
+      // เพื่อให้มีการ์ด/ฟอร์มแยกกันสำหรับแต่ละค่า
+      const template = (fields && fields[0]) || localEntries.value[0]
+      if (template) {
+        while (localEntries.value.length < localValues.value.length) {
+          localEntries.value.push(JSON.parse(JSON.stringify(template)))
+        }
+      }
+
+      // (ถ้ามีค่ามา เราใช้ค่าที่ parent ให้มาเป็นหลัก จึงไม่ตั้งค่าเริ่มต้นอื่น)
+    } else if (localValues.value.length === 0) {
+      // กรณีไม่มี values จาก parent: สร้าง localValues ให้ตรงกับจำนวน localEntries
+      localValues.value = localEntries.value.map(() => ({}))
+      localValuesVersions.value = localEntries.value.map(() => 0)
+    }
+
+    // 3) ให้ความยาวของ localValues / localValuesVersions เท่ากับ localEntries เสมอ
+    const entriesCount = localEntries.value.length
+    while (localValues.value.length < entriesCount) localValues.value.push({})
+    while (localValues.value.length > entriesCount) localValues.value.pop()
+
+    while (localValuesVersions.value.length < entriesCount) localValuesVersions.value.push(0)
+    while (localValuesVersions.value.length > entriesCount) localValuesVersions.value.pop()
+
+    // 4) สร้าง/อัปเดต Zod schema สำหรับแต่ละ entry
+    buildSchemas()
   },
   { immediate: true },
 )
 
+watch(
+  () => props.values,
+  (newValues, oldValues) => {
+    console.log('Values prop changed:', newValues)
+  },
+)
 function addEntry() {
   if (!props.fields?.length) return
   // Clone template จาก entry แรก
   const template = props.fields[0]
   const cloned: FieldSection[] = JSON.parse(JSON.stringify(template))
   localEntries.value.push(cloned)
+  localValues.value.push({})
+  localValuesVersions.value.push(0)
+  // rebuild schemas so the new entry gets validation
+  buildSchemas()
 }
 
 function deleteEntry(entryIndex: number) {
   localEntries.value.splice(entryIndex, 1)
+  localValues.value.splice(entryIndex, 1)
+  localValuesVersions.value.splice(entryIndex, 1)
   emit('delete', entryIndex)
+  // rebuild schemas to keep schemas in sync
+  buildSchemas()
 }
 
 function saveEntry(entryIndex: number) {
-  emit('save', entryIndex)
+  // programmatically submit the whole-entry form for this entry
+  const el = document.getElementById('form-' + entryIndex) as HTMLFormElement | null
+  if (el) el.requestSubmit()
+  else emit('save', entryIndex, localValues.value[entryIndex] || {})
+}
+
+function onSubmitEntry(entryIndex: number, values: Record<string, any>) {
+  // update local values and emit save with validated data
+  localValues.value[entryIndex] = { ...(values || {}) }
+  // bump version so VeeForm will reinitialize with new values if needed
+  localValuesVersions.value[entryIndex] = (localValuesVersions.value[entryIndex] || 0) + 1
+  emit('save', entryIndex, { ...(values || {}) })
 }
 
 // Toggle state: key = entryIndex
@@ -267,7 +327,7 @@ function formatDisplayDateRange(str: string | undefined): string {
     >
       <button
         type="button"
-        class="sm:w-14 sm:h-14 rounded-full flex items-center justify-center"
+        class="sm:w-14 sm:h-14 rounded-full flex items-center justify-center cursor-pointer"
         aria-label="เพิ่มข้อมูล"
       >
         <CirclePlus class="w-5 h-5 sm:w-10 sm:h-10" stroke-width="3" />
@@ -275,7 +335,8 @@ function formatDisplayDateRange(str: string | undefined): string {
       <div><p class="font-semibold text-sm">เพิ่มข้อมูล</p></div>
     </div>
 
-    <div class="grid transition-all duration-300 ease-in-out overflow-hidden">
+    <div class="grid transition-all duration-300 ease-in-out overflow-hidden"
+    >
       <div class="overflow-hidden">
         <CardContent class="flex flex-col gap-4">
           <!-- แต่ละ entry = 1 การ์ด -->
@@ -286,11 +347,18 @@ function formatDisplayDateRange(str: string | undefined): string {
             :class="{ 'pb-0': !isEntryOpen(entryIndex) }"
           >
             <!-- แต่ละ section ภายใน entry -->
-            <div
-              v-for="(section, sectionIndex) in entry"
-              :key="sectionIndex"
-              :class="{ hidden: sectionIndex > 0 && !isEntryOpen(entryIndex) }"
+            <VeeForm
+              :key="'form-' + entryIndex + '-' + (localValuesVersions[entryIndex] ?? 0)"
+              :id="'form-' + entryIndex"
+              :initial-values="localValues[entryIndex]"
+              :validation-schema="schemas[entryIndex]"
+              @submit="(values) => onSubmitEntry(entryIndex, values)"
             >
+              <div
+                v-for="(section, sectionIndex) in entry"
+                :key="sectionIndex"
+                :class="{ hidden: sectionIndex > 0 && !isEntryOpen(entryIndex) }"
+              >
               <CardHeader :class="{ 'pb-0': !isEntryOpen(entryIndex) }">
                 <div
                   class="flex flex-row pb-2 justify-between items-center"
@@ -371,18 +439,16 @@ function formatDisplayDateRange(str: string | undefined): string {
               >
                 <div class="overflow-hidden">
                   <CardContent class="pt-0">
-                    <form :id="`form-${entryIndex}-${sectionIndex}`" @submit="onSubmit">
                       <!-- non-file fields -->
-                      <div class="grid grid-cols-1 gap-4 lg:grid-cols-4 md:grid-cols-3 sm:grid-cols-2 items-end">
+                      <div class="grid grid-cols-1 gap-4 lg:grid-cols-4 md:grid-cols-3 sm:grid-cols-2 items-start">
                         <VeeField
                           v-for="fieldItem in section.content.filter((f) => f.type !== 'file')"
                           :key="fieldItem.name"
                           v-slot="{ field: veeField, errors }"
                           :name="fieldItem.name"
-                          :model-value="props.values?.[entryIndex]?.[fieldItem.name] ?? undefined"
                         >
                           <Field :data-invalid="!!errors.length">
-                            <FieldLabel :for="`form-field-${fieldItem.name}`">
+                            <FieldLabel :for="`form-field-${fieldItem.name}`" class="mb-1 block">
                               {{ fieldItem.label || fieldItem.name }}
                               <span v-if="fieldItem.required" class="text-red-500">*</span>
                             </FieldLabel>
@@ -391,7 +457,8 @@ function formatDisplayDateRange(str: string | undefined): string {
                             <Input
                               v-if="['text', 'number', 'email'].includes(fieldItem.type)"
                               :id="`form-field-${fieldItem.name}`"
-                              v-bind="veeField"
+                              :model-value="veeField.value"
+                              @update:model-value="(val: any) => veeField['onUpdate:modelValue']?.(val)"
                               :type="fieldItem.type"
                               :placeholder="
                                 fieldItem.placeholder || fieldItem.label || fieldItem.name
@@ -399,7 +466,7 @@ function formatDisplayDateRange(str: string | undefined): string {
                               autocomplete="off"
                               :aria-invalid="!!errors.length"
                               :disabled="fieldItem.disabled"
-                              class="disabled:opacity-50"
+                              class="disabled:opacity-50 w-full"
                             />
 
                             <!-- date (Popover + Calendar) -->
@@ -526,16 +593,19 @@ function formatDisplayDateRange(str: string | undefined): string {
                             <Textarea
                               v-else-if="fieldItem.type === 'textarea'"
                               :id="`form-field-${fieldItem.name}`"
-                              v-bind="veeField"
+                              :model-value="veeField.value"
+                              @update:model-value="(val: any) => veeField['onUpdate:modelValue']?.(val)"
                               :placeholder="
                                 fieldItem.placeholder || fieldItem.label || fieldItem.name
                               "
                               :disabled="fieldItem.disabled"
-                              class="min-h-20 resize-none disabled:opacity-50"
+                              class="min-h-20 resize-none disabled:opacity-50 w-full"
                               :aria-invalid="!!errors.length"
                             />
 
-                            <FieldError v-if="errors.length" :errors="errors" />
+                            <div class="min-h-6">
+                              <FieldError v-if="errors.length" :errors="errors" class="ml-0 mt-1" />
+                            </div>
                           </Field>
                         </VeeField>
                       </div>
@@ -777,15 +847,15 @@ function formatDisplayDateRange(str: string | undefined): string {
                           </Button>
                         </div>
                       </div>
-                    </form>
+                    
                   </CardContent>
                 </div>
               </div>
-            </div>
+              </div>
+              </VeeForm>
 
-            <!-- ปุ่มบันทึก / ลบ (ซ่อนเมื่อ readonly) -->
+            <!-- ปุ่มบันทึก / ลบ -->
             <CardFooter
-              v-if="!readonly"
               class="gap-2 pt-0 px-6"
               :class="!isEntryOpen(entryIndex) ? 'hidden' : 'flex justify-end'"
             >

@@ -6,43 +6,49 @@ import { usePagination } from '@/composables/usePagination'
 import { ChevronLeft, ChevronRight, FileX2 } from 'lucide-vue-next'
 import { computed, reactive } from 'vue'
 
+import { onMounted, ref, watch } from 'vue'
+import { toast } from 'vue-sonner'
+import { getDatasetRows } from '@/stores/dataset'
+
+const loading = ref(false)
+const statusData = ref<Record<string, any>[]>([])
+async function trackStatusData() {
+  loading.value = true
+  try {
+
+    const response = await getDatasetRows({
+      view: 'track_documents',
+      page: 1,
+      per_page: 50,
+    })
+    // response.data may be an array of items, or an array where the first element
+    // contains a `document_requests` property. Support both shapes and fallback
+    // to an empty array to avoid runtime errors.
+    statusData.value = response?.data?.[0]?.document_requests ?? response?.data ?? []
+    console.log('Address API Response:', response)
+    console.log('Address Data:', response.data)
+    toast.success(`โหลดข้อมูลที่อยู่สำเร็จ (${response.total_rows} รายการ)`, {
+      position: 'bottom-right',
+    })
+  } catch (error: any) {
+    console.error('Personal Detail API Error:', error)
+    console.error('Error Response:', error?.response?.data)
+    toast.error(`โหลดข้อมูลครอบครัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
+      position: 'bottom-right',
+    })
+  } 
+  loading.value = false
+}
+
+onMounted(() => {
+  console.log("statusData");
+  trackStatusData()
+})
+
 /* ──────────────────── Types ──────────────────── */
 type DocumentStatus = 'กำลังดำเนินการ' | 'เสร็จสิ้น' | 'ไม่ผ่าน'
 
-interface DocumentRequest {
-  title: string
-  type: string
-  status: DocumentStatus
-  datetime: string
-}
-
-/* ──────────────────── Mock data ──────────────────── */
-const mockData: DocumentRequest[] = [
-  {
-    title: 'ยื่นคำร้องขอใบรับรองเงินเดือน',
-    type: 'ใบรับรองเงินเดือน',
-    status: 'กำลังดำเนินการ',
-    datetime: '8/2/2026 19:28',
-  },
-  {
-    title: 'ยื่นคำร้องขอใบรับรองการปฏิบัติงาน',
-    type: 'ใบรับรองการปฏิบัติงาน',
-    status: 'กำลังดำเนินการ',
-    datetime: '10/2/2026 19:00',
-  },
-  {
-    title: 'ยื่นคำร้องขอเอกสารหนังสือผ่านสิทธิ์',
-    type: 'เอกสารหนังสือผ่านสิทธิ์',
-    status: 'ไม่ผ่าน',
-    datetime: '18/2/2026 19:45',
-  },
-  {
-    title: 'ยื่นคำร้องขอใบรับรองการปฏิบัติงาน',
-    type: 'ใบรับรองการปฏิบัติงาน',
-    status: 'เสร็จสิ้น',
-    datetime: '3/1/2026 9:00',
-  },
-]
+/* ──────────────────── (example/mock data removed) ──────────────────── */
 
 /* ──────────────────── Status badge config ──────────────────── */
 const statusConfig: Record<DocumentStatus, { bg: string; text: string }> = {
@@ -51,19 +57,37 @@ const statusConfig: Record<DocumentStatus, { bg: string; text: string }> = {
   ไม่ผ่าน: { bg: 'bg-red-500 hover:bg-red-500', text: 'text-white' },
 }
 
+function getStatusClass(status: unknown) {
+  const cfg = statusConfig[status as DocumentStatus]
+  return [cfg?.bg ?? 'bg-gray-200', cfg?.text ?? 'text-black']
+}
+
 /* ──────────────────── Pagination ──────────────────── */
 const paginationData = reactive({
   page: 1,
   per_page: 10,
-  total_pages: Math.ceil(mockData.length / 10) || 1,
-  total_rows: mockData.length,
+  total_pages: 1,
+  total_rows: 0,
 })
+
+// keep pagination totals in sync when statusData changes
+watch(
+  statusData,
+  (val) => {
+    const total = Array.isArray(val) ? val.length : 0
+    paginationData.total_rows = total
+    paginationData.total_pages = Math.max(1, Math.ceil(total / paginationData.per_page))
+    // reset to first page when data changes
+    paginationData.page = 1
+  },
+  { immediate: true },
+)
 
 const { getVisiblePages, canPreviousPage, canNextPage } = usePagination(paginationData)
 
 const paginatedData = computed(() => {
   const start = (paginationData.page - 1) * paginationData.per_page
-  return mockData.slice(start, start + paginationData.per_page)
+  return statusData.value.slice(start, start + paginationData.per_page)
 })
 
 function goToPage(page: number | string) {
@@ -101,7 +125,7 @@ function goToPage(page: number | string) {
                 <td class="px-6 py-4 text-center">
                   <Badge
                     class="border-0 px-3 py-1 text-xs font-semibold"
-                    :class="[statusConfig[item.status].bg, statusConfig[item.status].text]"
+                    :class="getStatusClass(item.status)"
                   >
                     {{ item.status }}
                   </Badge>

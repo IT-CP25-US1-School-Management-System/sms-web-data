@@ -22,6 +22,8 @@ export const ROUTE_NAMES = {
   TRAINING: 'ข้อมูลการอบรม / ข้อมูลผลงาน',
   ACHIEVEMENTS_INNOVATIONS: 'ข้อมูลผลงาน / นวัตกรรม',
   SUBMIT_DOCUMENTS: 'ยื่นคำร้อง',
+  PA_DOCUMENT:'การส่งเอกสาร PA',
+  EVALUATION_PA: 'การประเมิน PA',
   TRACK_DOCUMENTS: 'ติดตามคำร้อง',
   EDUCATION: 'ข้อมูลการศึกษา',
   PROFESSIONAL_LICENSE: 'ใบประกอบวิชาชีพ',

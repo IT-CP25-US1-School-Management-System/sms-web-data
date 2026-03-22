@@ -1,7 +1,41 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button'
-import NormalForm from '@/components/form/NormalForm.vue'
+import CreateForm from '@/components/form/CreateForm.vue'
+import { onMounted, ref } from 'vue'
+import { toast } from 'vue-sonner'
+import { getDatasetRows } from '@/stores/dataset'
 
+const loading = ref(false)
+const contractPositionData = ref<Record<string, any>[]>([])
+async function getContractPositionData() {
+  loading.value = true
+  try {
+
+    const response = await getDatasetRows({
+      view: 'personal_view',
+      page: 1,
+      per_page: 50,
+    })
+    contractPositionData.value =  response.data[0]?.person_addresses || [] 
+    console.log('Address API Response:', response)
+    console.log('Address Data:', response.data)
+    toast.success(`โหลดข้อมูลที่อยู่สำเร็จ (${response.total_rows} รายการ)`, {
+      position: 'bottom-right',
+    })
+  } catch (error: any) {
+    console.error('Personal Detail API Error:', error)
+    console.error('Error Response:', error?.response?.data)
+    toast.error(`โหลดข้อมูลครอบครัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
+      position: 'bottom-right',
+    })
+  } 
+  loading.value = false
+}
+
+onMounted(() => {
+  console.log("ContractPosition");
+  getContractPositionData()
+})
 // Mock data — readonly
 const mockData = [
   {
@@ -19,56 +53,74 @@ const mockData = [
     file_name: 'สัญญาจ้าง_2567.pdf',
   },
 ]
+
+
 </script>
 
 <template>
   <div class="flex flex-col gap-4 mx-6">
-    <div v-for="(item, idx) in mockData" :key="idx">
-      <NormalForm
-        :values="item"
-        :fields="[
+    แก้ไขได้เลย  ทำเป็น CreateForm
+    <div>
+      <CreateForm
+        :values="mockData"
+        :fields="
+        [
+         [
           {
-            name: 'date',
-            label: 'วันเดือนปี',
-            type: 'date',
-            required: true,
-            placeholder: '',
-            disabled: true,
-          },
-          {
-            name: 'position',
-            label: 'ตำแหน่ง',
-            type: 'text',
-            required: true,
-            placeholder: '',
-            disabled: true,
-          },
-          {
-            name: 'salary',
-            label: 'เงินเดือน',
-            type: 'text',
-            required: true,
-            placeholder: '',
-            disabled: true,
-          },
-          {
-            name: 'contract_number',
-            label: 'เลขที่คำสั่ง/สัญญาจ้าง',
-            type: 'text',
-            required: true,
-            placeholder: '',
-            disabled: true,
-          },
-        ]"
+            content:[
+              {
+                name: 'date',
+                label: 'วันเดือนปี',
+                type: 'date',
+                required: true,
+                placeholder: '',
+                disabled: false,
+              },
+              {
+                name: 'position',
+                label: 'ตำแหน่ง',
+                type: 'text',
+                required: true,
+                placeholder: '',
+                disabled: false,
+              },
+              {
+                name: 'salary',
+                label: 'เงินเดือน',
+                type: 'text',
+                required: true,
+                placeholder: '',
+                disabled: false,
+              },
+              {
+                name: 'contract_number',
+                label: 'เลขที่คำสั่ง/สัญญาจ้าง',
+                type: 'text',
+                required: true,
+                placeholder: '',
+                disabled: false,
+              },
+              {
+                name: 'file',
+                label: 'ดาวน์โหลดไฟล์',
+                type: 'file',
+                accept: '.pdf,.jpg,.png',
+                multiple: true,
+              },
+            ]
+           }
+         ]
+        ]
+          "
        
       />
-      <div class="mt-2 flex items-center gap-2">
+      <!-- <div class="mt-2 flex items-center gap-2">
         <Button type="button" class="px-4 py-2 rounded-lg font-semibold text-sm cursor-pointer">
           <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 mr-1 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4" /></svg>
           ดาวน์โหลดไฟล์
         </Button>
   <span class="text-sm text-muted-foreground">{{ item.file_name }}</span>
-      </div>
+      </div> -->
 
     </div>
   </div>

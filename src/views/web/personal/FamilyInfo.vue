@@ -1,41 +1,47 @@
 <script setup lang="ts">
 import CreateForm from '@/components/form/CreateForm.vue'
+import { Button } from '@/components/ui/button'
+import { getDatasetRows } from '@/stores/dataset'
 import { onMounted, ref } from 'vue'
+import { f } from 'vue-router/dist/router-CWoNjPRp.mjs'
 import { toast } from 'vue-sonner'
 
-// TODO: เปลี่ยนเป็น false เมื่อต้องการดูอย่างเดียว (readonly)
-const isEditMode = true
+const isEditMode = ref(true)
+const loading = ref(false)
 const familyData = ref<Record<string, any>[]>([])
-
-/*async function fetchFamilyData() {
+async function getFamilyData() {
   loading.value = true
   try {
-    const response = await getDatasetRows(DATASET_ID, DATASET_VERSION, {
-      view: 'personal_view',
+
+    const response = await getDatasetRows( {
+      view: 'family_get',
       page: 1,
       per_page: 50,
     })
     familyData.value = response.data[0]?.family_members || []
-    console.log('📦 Family API Response:', response)
-    console.log('📋 Family Data:', response.data)
+    familyData.value = familyData.value.map(member => ({
+      ...member,
+      is_alive: member.is_alive ? 'มีชีวิต' : 'ไม่มีชีวิต',
+    }))
+    console.log('Family API Response:', response)
+    console.log('Family Data:', familyData.value)
     toast.success(`โหลดข้อมูลครอบครัวสำเร็จ (${response.total_rows} รายการ)`, {
       position: 'bottom-right',
     })
   } catch (error: any) {
-    console.error('❌ Family API Error:', error)
-    console.error('❌ Error Response:', error?.response?.data)
+    // console.error('Family API Error:', error)
+    // console.error('Error Response:', error?.response?.data)
     toast.error(`โหลดข้อมูลครอบครัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
       position: 'bottom-right',
     })
-  } finally {
-    loading.value = false
-  }
-}*/
+  } 
+  loading.value = false
+}
 
 onMounted(() => {
-  console.log('family')
-  // fetchFamilyData()
+  getFamilyData()
 })
+
 
 function handleSave(groupIndex: number) {
   // TODO: เรียก API บันทึกข้อมูล
@@ -49,10 +55,13 @@ function handleDelete(groupIndex: number) {
 </script>
 
 <template>
-  <div class="mx-6 flex flex-col gap-4">
+
+  <div class="flex flex-col gap-4 mx-6"
+  >
+    แก้ไม่ได้  ยกเว้นที่ เบอร์โทร อีเมล , ที่อยู่ update ได้
     <CreateForm
       :isDropdown="true"
-      :readonly="!isEditMode"
+      :readonly="true"
       :values="familyData"
       :fields="[
         [
@@ -62,88 +71,75 @@ function handleDelete(groupIndex: number) {
               {
                 name: 'relation_type',
                 label: 'ความสัมพันธ์',
-                type: 'select',
-                required: true,
+                type: 'text',
                 isShow: true,
-                placeholder: 'เลือกความสัมพันธ์',
-                options: [
-                  { label: 'บิดา', value: 'father' },
-                  { label: 'มารดา', value: 'mother' },
-                  { label: 'คู่สมรส', value: 'spouse' },
-                  { label: 'บุตร', value: 'child' },
-                  { label: 'อื่นๆ', value: 'other' },
-                ],
+                placeholder: '-',
+                disabled: true,
               },
               {
                 name: 'prefix_id',
                 label: 'คำนำหน้า',
-                type: 'select',
-                required: true,
-                placeholder: '',
-                options: [
-                  { label: 'นาย', value: 'mr' },
-                  { label: 'นาง', value: 'mrs' },
-                  { label: 'นางสาว', value: 'miss' },
-                ],
+                type: 'text',
+                placeholder: '-',
+                disabled: true,
               },
               {
                 name: 'first_name_th',
                 label: 'ชื่อ',
                 type: 'text',
-                required: true,
                 isShow: true,
-                placeholder: '',
+                placeholder: '-',
+                disabled: true,
               },
               {
                 name: 'last_name_th',
                 label: 'นามสกุล',
                 type: 'text',
-                required: true,
                 isShow: true,
-                placeholder: '',
+                placeholder: '-',
+                disabled: true,
               },
               {
                 name: 'former_last_name_th',
                 label: 'นามสกุลเดิม',
                 type: 'text',
-                placeholder: '',
+                placeholder: '-',
+                disabled: true,
               },
               {
                 name: 'middle_name_th',
                 label: 'ชื่อกลาง',
                 type: 'text',
-                placeholder: '',
+                placeholder: '-',
+                disabled: true,
               },
               {
                 name: 'national_id',
                 label: 'เลขบัตรประชาชน',
                 type: 'text',
-                required: true,
-                placeholder: '',
+                placeholder: '-',
+                disabled: true,
               },
               {
                 name: 'gender',
                 label: 'เพศ',
                 type: 'text',
-                required: true,
-                placeholder: '',
+                disabled: true,
+                placeholder: '-',
               },
               {
                 name: 'is_alive',
                 label: 'การมีชีวิต',
-                type: 'select',
-                required: true,
-                placeholder: '',
-                options: [
-                  { label: 'มีชีวิต', value: true },
-                  { label: 'เสียชีวิต', value: false },
-                ],
+                type: 'text',
+                placeholder: '-',
+                disabled: false,
               },
               {
                 name: 'birth_date',
                 label: 'วัน / เดือน / ปี เกิด',
                 type: 'date',
-                placeholder: 'วว / ดด / ปปปป',
+                placeholder: '-',
+                disabled: true,
               },
               {
                 name: 'phone',
@@ -158,17 +154,12 @@ function handleDelete(groupIndex: number) {
                 placeholder: '',
               },
               {
-                name: 'marital-status',
+                name: 'marital_status',
                 label: 'สถานภาพ',
-                type: 'select',
+                type: 'text',
                 required: true,
                 placeholder: '',
-                options: [
-                  { label: 'โสด', value: 'single' },
-                  { label: 'สมรส', value: 'married' },
-                  { label: 'หย่า', value: 'divorced' },
-                  { label: 'หม้าย', value: 'widowed' },
-                ],
+                disabled: true,
               },
             ],
           },
@@ -182,13 +173,7 @@ function handleDelete(groupIndex: number) {
                 required: true,
                 placeholder: '',
               },
-              {
-                name: 'postal_code',
-                label: 'รหัสไปรษณีย์',
-                type: 'text',
-                required: true,
-                placeholder: '',
-              },
+          
               {
                 name: 'district',
                 label: 'อำเภอ/เขต',
@@ -199,10 +184,17 @@ function handleDelete(groupIndex: number) {
               {
                 name: 'subdistrict',
                 label: 'ตำบล/แขวง',
-                type: 'select',
+                type: 'text',
                 required: true,
                 placeholder: '',
-                options: [],
+  
+              },
+                  {
+                name: 'postal_code',
+                label: 'รหัสไปรษณีย์',
+                type: 'text',
+                required: true,
+                placeholder: '',
               },
               {
                 name: 'road',
@@ -242,4 +234,5 @@ function handleDelete(groupIndex: number) {
       @delete="handleDelete"
     />
   </div>
+
 </template>

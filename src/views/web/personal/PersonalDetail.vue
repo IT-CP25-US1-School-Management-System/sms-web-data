@@ -1,120 +1,171 @@
 <script setup lang="ts">
 import DropDownForm from '@/components/form/DropDownForm.vue'
 import { Button } from '@/components/ui/button'
+import { getDatasetRows } from '@/stores/dataset'
+import { onMounted, ref } from 'vue'
+import type { v } from 'vue-router/dist/router-CWoNjPRp.mjs'
+import { toast } from 'vue-sonner'
+
+const isNotError = ref(true)
+const loading = ref(false)
+
+const personalData = ref<Record<string, any>>({})
+// refs to DropDownForm components so we can trigger validation from the parent save button
+const generalForm = ref<any>(null)
+const sensitiveForm = ref<any>(null)
+const contactForm = ref<any>(null)
+async function getPersonalDetailData() {
+  loading.value = true
+  try {
+
+    const response = await getDatasetRows( {
+      view: 'personal_get',
+      page: 1,
+      per_page: 50,
+    })
+    personalData.value = response.data[0] || {}
+    console.log('Personal Detail API Response:', response)
+    console.log('Personal Detail Data:', response.data)
+    console.log('Personal Detail Data:', personalData.value.prefixes.prefixes_name_th)
+    personalData.value.birth_date = personalData.value.birth_date ? personalData.value.birth_date.split('T')[0] : ''
+    personalData.value.prefix_id = response.data[0]?.prefixes?.prefixes_name_th || ''
+    personalData.value.prefix_en = response.data[0]?.prefixes?.prefixes_name_en || ''
+    isNotError.value = true
+  
+  } catch (error: any) {
+    console.error('Personal Detail API Error:', error)
+    console.error('Error Response:', error?.response?.data)
+    isNotError.value = false
+    toast.error(`โหลดข้อมูลส่วนตัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
+      position: 'bottom-right',
+    })
+  } 
+  loading.value = false
+}
+
+onMounted(() => {
+  console.log("family");
+  getPersonalDetailData()
+})
+
+function updatePersonalDetailData() {
+  // Implementation for updating personal detail data
+}
+
+async function onSaveAll() {
+  // trigger submit on all child forms; they expose submitForm()
+  const forms = [generalForm, sensitiveForm, contactForm]
+  for (const fRef of forms) {
+    try {
+      if (fRef.value && typeof fRef.value.submitForm === 'function') {
+        await fRef.value.submitForm()
+      }
+    } catch (err) {
+      console.error('Error submitting form', err)
+    }
+  }
+}
+
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 mx-6">
+  <div class="flex flex-col gap-4 mx-6" v-if="isNotError">
     <!-- ข้อมูลทั่วไป -->
     <DropDownForm
-      topic="ข้อมูลทั่วไป"
+      topic="ข้อมูลทั่วไป  แก้ไม่ได้  ยกเว้นช่องทางการติดต่อ update ไดเ"
+      :values="personalData"
+      ref="generalForm"
       :fields="[
         {
           name: 'prefix_id',
           label: 'คำนำหน้า',
-          type: 'select',
-          required: true,
-          placeholder: 'เลือกคำนำหน้า',
+          type: 'text',
+          placeholder: '-',
           disabled: true,
-          options: [
-            { label: 'นาย', value: 'นาย' },
-            { label: 'นาง', value: 'นาง' },
-            { label: 'นางสาว', value: 'นางสาว' },
-          ],
         },
         {
           name: 'first_name_th',
           label: 'ชื่อ',
           type: 'text',
-          required: true,
-          placeholder: 'กรุณาระบุชื่อ',
+          disabled: true,
+          placeholder: '-',
         },
         {
           name: 'middle_name_th',
           label: 'ชื่อกลาง',
           type: 'text',
-          required: true,
-          placeholder: 'กรุณาระบุชื่อกลาง',
+          disabled: true,
+          placeholder: '-',
         },
         {
           name: 'last_name_th',
           label: 'นามสกุล',
           type: 'text',
-          required: true,
-          placeholder: 'กรุณาระบุนามสกุล',
+          disabled: true,
+          placeholder: '-',
         },
         {
           name: 'prefix_en',
           label: 'Prefix',
-          type: 'select',
-          required: true,
-          placeholder: 'Select prefix',
-          options: [
-            { label: 'Mr.', value: 'Mr.' },
-            { label: 'Mrs.', value: 'Mrs.' },
-            { label: 'Miss', value: 'Miss' },
-          ],
+          type: 'text',
+          disabled: true,
+          placeholder: '-',
         },
         {
           name: 'middle_name_en',
           label: 'Middlename',
           type: 'text',
-          required: true,
-          placeholder: 'Enter middlename',
+          disabled: true,
+          placeholder: '-',
         },
         {
           name: 'first_name_en',
           label: 'Name',
           type: 'text',
-          required: true,
-          placeholder: 'Enter name',
+          disabled: true,
+          placeholder: '-',
         },
         {
           name: 'last_name_en',
           label: 'Lastname',
           type: 'text',
-          required: true,
-          placeholder: 'Enter lastname',
+          disabled: true,
+          placeholder: '-',
         },
         {
           name: 'birth_date',
           label: 'วัน / เดือน / ปี เกิด',
           type: 'date',
-          required: true,
-          placeholder: 'วว / ดด / ปปปป',
+          disabled: true,
+          placeholder: '-',
         },
         {
           name: 'age',
           label: 'อายุ (ปี)',
           type: 'number',
-          required: true,
-          placeholder: 'อายุ',
+          disabled: true,
+          placeholder: '-',
         },
         {
-          name: 'marital-status',
+          name: 'marital_status',
           label: 'สถานภาพการแต่งงาน',
-          type: 'select',
-          required: true,
-          placeholder: 'เลือกสถานภาพการแต่งงาน',
-          options: [
-            { label: 'โสด', value: 'single' },
-            { label: 'สมรส', value: 'married' },
-            { label: 'หม้าย', value: 'widowed' },
-            { label: 'หย่า', value: 'divorced' },
-          ],
+          type: 'text',
+          disabled: true,
+          placeholder: '-',
         },
         {
-          name: 'spouse-name',
+          name: 'spouse_name',
           label: 'คู่สมรส',
           type: 'text',
-          placeholder: 'กรุณาระบุชื่อคู่สมรส',
+          disabled: true,
+          placeholder: '-',
         },
         {
-          name: 'id-card',
+          name: 'national_id',
           label: 'เลขบัตรประจำตัวประชาชน',
           type: 'text',
-          required: true,
-          placeholder: 'กรุณาระบุเลขบัตรประชาชน',
+          disabled: true,
+          placeholder: '-',
         },
 
       ]"
@@ -122,97 +173,80 @@ import { Button } from '@/components/ui/button'
 
     <!-- ข้อมูล Sensitive -->
     <DropDownForm
+      ref="sensitiveForm"
       topic="ข้อมูล Sensitive"
+      :values="personalData"
       :fields="[
         {
           name: 'gender',
           label: 'เพศ',
-          type: 'select',
-          required: true,
-          placeholder: 'เลือกเพศ',
-          options: [
-            { label: 'ชาย', value: 'male' },
-            { label: 'หญิง', value: 'female' },
-          ],
+          type: 'text',
+          disabled: true,
+          placeholder: '-',
+         
         },
         {
           name: 'religion',
           label: 'ศาสนา',
-          type: 'select',
-          required: true,
-          placeholder: 'เลือกศาสนา',
-          options: [
-            { label: 'พุทธ', value: 'buddhism' },
-            { label: 'คริสต์', value: 'christianity' },
-            { label: 'อิสลาม', value: 'islam' },
-            { label: 'อื่นๆ', value: 'other' },
-          ],
+          type: 'text',
+          disabled: true,
+          placeholder: '-',
+         
         },
         {
           name: 'nationality',
           label: 'สัญชาติ',
-          type: 'select',
-          required: true,
-          placeholder: 'เลือกสัญชาติ',
-          options: [
-            { label: 'ไทย', value: 'thai' },
-            { label: 'อื่นๆ', value: 'other' },
-          ],
+          type: 'text',
+          disabled: true,
+          placeholder: '-',
+         
         },
         {
           name: 'ethnicity',
           label: 'เชื้อชาติ',
-          type: 'select',
-          required: true,
-          placeholder: 'เลือกเชื้อชาติ',
-          options: [
-            { label: 'ไทย', value: 'thai' },
-            { label: 'อื่นๆ', value: 'other' },
-          ],
+          type: 'text',
+          disabled: true,
+          placeholder: '-',
+        
         },
         {
-          name: 'blood-type',
+          name: 'blood_type',
           label: 'หมู่เลือด',
-          type: 'select',
-          required: true,
-          placeholder: 'เลือกหมู่เลือด',
-          options: [
-            { label: 'A', value: 'A' },
-            { label: 'B', value: 'B' },
-            { label: 'AB', value: 'AB' },
-            { label: 'O', value: 'O' },
-          ],
+          type: 'text',
+          disabled: true,
+          placeholder: '-',
         },
         {
-          name: 'physical-status',
+          name: 'physical_status',
           label: 'สถานภาพทางร่างกาย',
-          type: 'select',
-          required: true,
-          placeholder: 'เลือกสถานภาพทางร่างกาย',
-          options: [
-            { label: 'ปกติ', value: 'normal' },
-            { label: 'พิการ', value: 'disabled' },
-          ],
+          type: 'text',
+          disabled: true,
+          placeholder: '-',
+         
         },
       ]"
     />
 
     <!-- ช่องทางการติดต่อ -->
     <DropDownForm
+      ref="contactForm"
       topic="ช่องทางการติดต่อ"
+      :values="personalData"
       :fields="[
         {
           name: 'phone',
           label: 'เบอร์โทรศัพท์',
           type: 'text',
           required: true,
+          disabled: false,
           placeholder: 'กรุณาระบุเบอร์โทรศัพท์',
         },
         {
-          name: 'email',
+          name: 'personal_email',
           label: 'E-mail',
           type: 'email',
           required: true,
+          disabled: false,
           placeholder: 'กรุณาระบุอีเมล',
         },
         {
@@ -220,17 +254,24 @@ import { Button } from '@/components/ui/button'
           label: 'Line ID',
           type: 'text',
           required: true,
+          disabled: false,
           placeholder: 'กรุณาระบุ Line ID',
         },
       ]"
     />
   </div>
-  <!-- ปุ่มบันทึก -->
+ 
+  <div class="flex flex-col gap-4 mx-6" v-else>
+    เกิดข้อผิดพลาดในการโหลดข้อมูลส่วนตัว กรุณาลองใหม่อีกครั้งภายหลัง
+  </div>  
+   <!-- ปุ่มบันทึก -->
     <div
-      class="sticky bottom-0 right-0 z-40 flex justify-end border-t border-gray-200 bg-white p-3 w-full"
+      v-if="isNotError"
+      class="sticky bottom-0 right-0 z-40 flex justify-end border-t border-gray-200 bg-white p-3 w-full dark:bg-black dark:border-neutral-700"
     >
       <Button
         class="bg-[#16A34A] hover:bg-[#15803D] text-white px-8 py-2 rounded-lg font-semibold shadow-sm"
+        @click="onSaveAll"
       >
         บันทึก
       </Button>

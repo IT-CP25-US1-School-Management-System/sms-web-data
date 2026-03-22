@@ -1,43 +1,86 @@
 <script setup lang="ts">
 import DropDownForm from '@/components/form/DropDownForm.vue'
 import { Button } from '@/components/ui/button'
+
+import { onMounted, ref } from 'vue'
+import { toast } from 'vue-sonner'
+import { getDatasetRows } from '@/stores/dataset'
+
+const loading = ref(false)
+const employmentData = ref<Record<string, any>[]>([])
+async function getEmploymentData() {
+  loading.value = true
+  try {
+
+    const response = await getDatasetRows( {
+      view: 'employment_get',
+      page: 1,
+      per_page: 50,
+    })
+    employmentData.value =  response.data[0]?.employment_contracts || [] 
+    console.log('Address API Response:', response)
+    console.log('Address Data:', response.data)
+    toast.success(`โหลดข้อมูลที่อยู่สำเร็จ (${response.total_rows} รายการ)`, {
+      position: 'bottom-right',
+    })
+  } catch (error: any) {
+    console.error('Personal Detail API Error:', error)
+    console.error('Error Response:', error?.response?.data)
+    toast.error(`โหลดข้อมูลครอบครัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
+      position: 'bottom-right',
+    })
+  } 
+  loading.value = false
+}
+
+onMounted(() => {
+  console.log("Employment");
+  getEmploymentData()
+})
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 mx-6">
+  <div class="flex flex-col gap-4 mx-6"
+   v-for="item in employmentData" :key="item.id"
+   >
     <!-- ข้อมูลการทำงาน -->
+    แก้ไขไม่ได้
     <DropDownForm
       topic="ข้อมูลการทำงาน"
+      :values="item"
       :fields="[
         {
           name: 'position',
           label: 'ตำแหน่ง',
-          type: 'select',
+          type: 'text',
           required: true,
+          disabled: true,
           placeholder: '',
-          options: [],
         },
         {
-          name: 'work-status',
+          name: 'work_status',
           label: 'สถานะการทำงาน',
-          type: 'select',
+          type: 'text',
           required: true,
           placeholder: '',
-          options: [],
+          disabled: true,
+
         },
         {
-          name: 'employment-type',
+          name: 'hiring_nature',
           label: 'ลักษณะการจ้าง',
-          type: 'select',
+          type: 'text',
           required: true,
           placeholder: '',
-          options: [],
+          disabled: true,
         },
         {
           name: 'latest-transfer-type',
           label: 'ประเภทการเคลื่อนไหวล่าสุด',
           type: 'text',
           placeholder: '',
+          disabled: true,
+
         },
       ]"
     />
@@ -49,10 +92,10 @@ import { Button } from '@/components/ui/button'
         {
           name: 'salary',
           label: 'เงินค่าจ้าง',
-          type: 'select',
+          type: 'text',
           required: true,
           placeholder: '',
-          options: [],
+          disabled: true,
         },
         {
           name: 'social-security-contribution',
@@ -60,6 +103,8 @@ import { Button } from '@/components/ui/button'
           type: 'text',
           required: true,
           placeholder: '',
+          disabled: true,
+
         },
       ]"
     />
@@ -74,6 +119,8 @@ import { Button } from '@/components/ui/button'
           type: 'text',
           required: true,
           placeholder: '',
+          disabled: true,
+
         },
         {
           name: 'contract-count',
@@ -81,6 +128,7 @@ import { Button } from '@/components/ui/button'
           type: 'text',
           required: true,
           placeholder: '',
+          disabled: true,
         },
       ]"
     />
@@ -92,10 +140,10 @@ import { Button } from '@/components/ui/button'
         {
           name: 'first-contract-date',
           label: 'ว/ด/ป เริ่มสัญญาครั้งแรก',
-          type: 'select',
+          type: 'text',
           required: true,
           placeholder: '',
-          options: [],
+          disabled: true,
         },
         {
           name: 'total-work-years',
@@ -103,6 +151,8 @@ import { Button } from '@/components/ui/button'
           type: 'text',
           required: true,
           placeholder: '',
+          disabled: true,
+
         },
         {
           name: 'current-contract-start',
@@ -110,6 +160,8 @@ import { Button } from '@/components/ui/button'
           type: 'text',
           required: true,
           placeholder: '',
+          disabled: true,
+
         },
         {
           name: 'contract-end-date',
@@ -117,6 +169,7 @@ import { Button } from '@/components/ui/button'
           type: 'text',
           required: true,
           placeholder: '',
+          disabled: true,
         },
       ]"
     />
@@ -128,18 +181,19 @@ import { Button } from '@/components/ui/button'
         {
           name: 'budget-type',
           label: 'ประเภทเงินงบประมาณ',
-          type: 'select',
+          type: 'text',
           required: true,
           placeholder: '',
-          options: [],
+          disabled: true,
         },
         {
           name: 'school-income-type',
           label: 'ประเภทเงินรายได้สถานศึกษา',
-          type: 'select',
+          type: 'text',
           required: true,
           placeholder: '',
-          options: [],
+          disabled: true,
+
         },
       ]"
     />

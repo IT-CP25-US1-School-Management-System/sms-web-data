@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { toTypedSchema } from '@vee-validate/zod'
-import { useForm, Field as VeeField } from 'vee-validate'
+import { Form as VeeForm, Field as VeeField } from 'vee-validate'
 import { toast } from 'vue-sonner'
 import { z } from 'zod'
 
@@ -22,7 +22,8 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { type DateValue, CalendarDate } from '@internationalized/date'
-import { h, ref } from 'vue'
+import { h, ref ,computed  } from 'vue'
+import { label } from '@unovis/ts/components/axis/style'
 
 const formSchema = toTypedSchema(
   z.object({
@@ -37,28 +38,21 @@ const formSchema = toTypedSchema(
   }),
 )
 
-const { handleSubmit } = useForm({
-  validationSchema: formSchema,
-  initialValues: {
-    title: '',
-    description: '',
-  },
-})
 
-const onSubmit = handleSubmit((data) => {
-  toast('You submitted the following values:', {
-    description: h(
-      'pre',
-      { class: 'bg-code text-code-foreground mt-2 w-[320px] overflow-x-auto rounded-md p-4' },
-      h('code', JSON.stringify(data, null, 2)),
-    ),
-    position: 'bottom-right',
-    class: 'flex flex-col gap-2',
-    style: {
-      '--border-radius': 'calc(var(--radius)  + 4px)',
-    },
-  })
-})
+// const onSubmit = handleSubmit((data) => {
+//   toast('You submitted the following values:', {
+//     description: h(
+//       'pre',
+//       { class: 'bg-code text-code-foreground mt-2 w-[320px] overflow-x-auto rounded-md p-4' },
+//       h('code', JSON.stringify(data, null, 2)),
+//     ),
+//     position: 'bottom-right',
+//     class: 'flex flex-col gap-2',
+//     style: {
+//       '--border-radius': 'calc(var(--radius)  + 4px)',
+//     },
+//   })
+// })
 
 type FieldItem = {
   name: string
@@ -72,12 +66,64 @@ type FieldItem = {
   multiple?: boolean
 }
 
-defineProps<{
+const emit = defineEmits<{
+  (e: 'save', value: Record<string, any>): void
+  (e: 'delete', value: Record<string, any>): void
+}>()
+
+const props = defineProps<{
   topic?: string
   fields?: FieldItem[]
   values?: Record<string, any>
 }>()
 
+const schema = computed(() => {
+  const shape: Record<string, any> = {}
+
+  // do not include disabled fields in the validation schema
+  props.fields?.filter((f) => !f.disabled).forEach((f) => {
+    if (f.required) {
+      shape[f.name] = z.string().min(1, `${f.label || f.name} is required`)
+    } else {
+      shape[f.name] = z.string().optional()
+    }
+  })
+
+  return toTypedSchema(z.object(shape))
+})
+
+const initialValues = ref<Record<string, any>>({})
+initialValues.value = { ...(props.values || {}) }
+
+// ref to the internal VeeForm component so parent can trigger submit
+const formRef = ref<any>(null)
+
+async function submitForm() {
+  try {
+    if (formRef.value && typeof formRef.value.submitForm === 'function') {
+      await formRef.value.submitForm()
+      return true
+    }
+  } catch (err) {
+    console.warn('submitForm failed', err)
+  }
+  // fallback: try native form element by id
+  const el = document.getElementById('form-vee-demo') as HTMLFormElement | null
+  if (el) {
+    el.requestSubmit()
+    return true
+  }
+  return false
+}
+
+defineExpose({ submitForm })
+
+function onSubmit(values: Record<string, any>) {
+  initialValues.value = {  ...(values || {}) }
+  console.log('submit:', values)
+   emit('save', values)
+}
+//console.log('mapValueToOption', mapValueToOption())
 const isOpen = ref(true)
 
 // File upload state: key = fieldItem.name, value = File[]
@@ -174,18 +220,21 @@ function formatDisplayDate(str: string | undefined): string {
     >
       <div class="overflow-hidden flex flex-col gap-0">
         <CardContent>
-          <form id="form-vee-demo" @submit="onSubmit">
-            <div class="grid grid-cols-1 gap-4 lg:grid-cols-4 md:grid-cols-3 sm:grid-cols-2 items-end">
+          <VeeForm id="form-vee-demo"
+            :validation-schema="schema"
+            :initial-values="initialValues"
+            @submit="onSubmit"
+            :ref="formRef">
+            <div class="grid grid-cols-1 gap-3 lg:grid-cols-4 md:grid-cols-3 sm:grid-cols-2 items-start">
               <VeeField
                 v-for="fieldItem in fields"
                 :key="fieldItem.name"
                 v-slot="{ field, errors }"
                 :name="fieldItem.name"
-                
                 :model-value="values?.[fieldItem.name] ?? undefined"
               >
                 <Field :data-invalid="!!errors.length">
-                  <FieldLabel :for="`form-field-${fieldItem.name}`">
+                  <FieldLabel :for="`form-field-${fieldItem.name}`" class="mb-1 block">
                     {{ fieldItem.label || fieldItem.name }}
                     <span v-if="fieldItem.required" class="text-red-500">*</span>
                   </FieldLabel>
@@ -200,7 +249,7 @@ function formatDisplayDate(str: string | undefined): string {
                     autocomplete="off"
                     :aria-invalid="!!errors.length"
                     :disabled="fieldItem.disabled"
-                    class="disabled:opacity-50"
+                    class="disabled:opacity-50 w-full"
                   />
 
                   <!-- date (Popover + Calendar) -->
@@ -246,7 +295,7 @@ function formatDisplayDate(str: string | undefined): string {
                   <!-- select -->
                   <Select
                     v-else-if="fieldItem.type === 'select'"
-                    :model-value="(field.value as string) || ''"
+                    :model-value="field.value"
                     :disabled="fieldItem.disabled"
                     @update:model-value="(val: any) => field['onUpdate:modelValue']?.(val)"
                   >
@@ -275,14 +324,16 @@ function formatDisplayDate(str: string | undefined): string {
                     v-bind="field"
                     :placeholder="fieldItem.placeholder || fieldItem.label || fieldItem.name"
                     :disabled="fieldItem.disabled"
-                    class="min-h-20 resize-none disabled:opacity-50"
+                    class="min-h-20 resize-none disabled:opacity-50 w-full"
                     :aria-invalid="!!errors.length"
                   />
-                  <FieldError v-if="errors.length" :errors="errors" />
+                  <div class="min-h-6">
+                    <FieldError v-if="errors.length" :errors="errors" class="ml-0 mt-1" />
+                  </div>
                 </Field>
               </VeeField>
             </div>
-          </form>
+          </VeeForm>
           <!-- file fields -->
           <div
             v-if="fields?.some((f: FieldItem) => f.type === 'file')"
