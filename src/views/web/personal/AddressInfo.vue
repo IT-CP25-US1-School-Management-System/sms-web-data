@@ -1,203 +1,371 @@
 <script setup lang="ts">
-import NormalForm from '@/components/form/NormalForm.vue'
+import NormalForm, {
+  type NormalFormField,
+  type NormalFormChangePayload,
+  type NormalFormOption,
+} from '@/components/form/NormalForm.vue'
 import { Button } from '@/components/ui/button'
-import { onMounted, ref } from 'vue'
-import { toast } from 'vue-sonner'
 import { getDatasetRows } from '@/stores/dataset'
-import { listAddressRow } from '@/stores/address'
-const isaddressOneType = ref(false)
-const isaddressTwoTypes = ref(false)
-const isaddressThreeTypes = ref(false)
+import type {
+  AddressDatasetRow,
+  PersonAddress,
+  Province,
+  District,
+  SubDistrict,
+} from '@/types/address'
+import provincesJson from '@/assets/thai-province-data/provinces.json'
+import districtsJson from '@/assets/thai-province-data/districts.json'
+import subDistrictsJson from '@/assets/thai-province-data/sub_districts.json'
+import { onMounted, reactive, ref, computed } from 'vue'
+import { toast } from 'vue-sonner'
+
+type NormalFormInstance = InstanceType<typeof NormalForm>
+
+type AddressFormState = {
+  id: string
+  fields: NormalFormField[]
+  initialValues: Record<string, any>
+  formRef: NormalFormInstance | null
+  hasChanges: boolean
+  lastProvince?: string
+  lastDistrict?: string
+}
 
 const loading = ref(false)
-const addresslData = ref<Record<string, any>[]>([])
-const listAddress = ref<Record<string, any>[]>([])
+const addressForms = ref<AddressFormState[]>([])
+
+const provinceData = provincesJson as Province[]
+const districtData = districtsJson as District[]
+const subDistrictData = subDistrictsJson as SubDistrict[]
+
+const provinceOptions: NormalFormOption[] = provinceData.map((province) => ({
+  label: province.name_th,
+  value: String(province.id),
+}))
+
+const provinceNameMap = new Map(provinceOptions.map((opt) => [opt.value, opt.label]))
+
+const districtOptionsByProvince = new Map<string, NormalFormOption[]>()
+const districtNameMap = new Map<string, string>()
+districtData.forEach((district) => {
+  const option: NormalFormOption = { label: district.name_th, value: String(district.id) }
+  const provinceId = String(district.province_id)
+  if (!districtOptionsByProvince.has(provinceId)) {
+    districtOptionsByProvince.set(provinceId, [])
+  }
+  districtOptionsByProvince.get(provinceId)!.push(option)
+  districtNameMap.set(option.value, option.label)
+})
+
+const subDistrictOptionsByDistrict = new Map<string, NormalFormOption[]>()
+const subDistrictNameMap = new Map<string, string>()
+const postalCodeBySubDistrict = new Map<string, string>()
+
+subDistrictData.forEach((subDistrict) => {
+  const option: NormalFormOption = { label: subDistrict.name_th, value: String(subDistrict.id) }
+  const districtId = String(subDistrict.district_id)
+  if (!subDistrictOptionsByDistrict.has(districtId)) {
+    subDistrictOptionsByDistrict.set(districtId, [])
+  }
+  subDistrictOptionsByDistrict.get(districtId)!.push(option)
+  subDistrictNameMap.set(option.value, option.label)
+  if (subDistrict.zip_code) {
+    postalCodeBySubDistrict.set(option.value, String(subDistrict.zip_code))
+  }
+})
+
+const addressTypeOptions: NormalFormOption[] = [
+  { label: 'ที่อยู่ตามทะเบียนบ้าน', value: 'is_house_registered' },
+  { label: 'ที่อยู่ปัจจุบัน', value: 'is_current' },
+  { label: 'ที่อยู่หลังเกษียณอายุราชการ', value: 'is_retired_residence' },
+]
+
+const pendingPayloads = new Map<string, Record<string, any>>()
+
+function buildAddressValues(source?: PersonAddress) {
+  return {
+    address_types: [
+      ...(source?.is_house_registered ? ['is_house_registered'] : []),
+      ...(source?.is_current ? ['is_current'] : []),
+      ...(source?.is_retired_residence ? ['is_retired_residence'] : []),
+    ],
+    province_code: source?.province_code || '',
+    district_code: source?.district_code || '',
+    subdistrict_code: source?.subdistrict_code || '',
+    postal_code: source?.postal_code || '',
+    house_no: source?.house_no || '',
+    house_registry_no: source?.house_registry_no || '',
+    moo: source?.moo || '',
+    soi: source?.soi || '',
+    road: source?.road || '',
+    building: source?.building || '',
+  }
+}
+
+function cloneOptions(options?: NormalFormOption[]) {
+  return (options || []).map((opt) => ({ ...opt }))
+}
+
+function getDistrictOptions(provinceCode?: string) {
+  return cloneOptions(districtOptionsByProvince.get(String(provinceCode)) || [])
+}
+
+function getSubDistrictOptions(districtCode?: string) {
+  return cloneOptions(subDistrictOptionsByDistrict.get(String(districtCode)) || [])
+}
+
+function createAddressFields(values: Record<string, any>) {
+  return reactive<NormalFormField[]>([
+    {
+      name: 'address_types',
+      label: 'ประเภทที่อยู่',
+      type: 'checkbox-group',
+      required: true,
+      options: cloneOptions(addressTypeOptions),
+    },
+    {
+      name: 'province_code',
+      label: 'จังหวัด',
+      type: 'combobox',
+      required: true,
+      options: cloneOptions(provinceOptions),
+      placeholder: 'ค้นหาจังหวัด',
+    },
+    {
+      name: 'district_code',
+      label: 'อำเภอ/เขต',
+      type: 'combobox',
+      required: true,
+      options: getDistrictOptions(values.province_code),
+      placeholder: 'ค้นหาอำเภอ/เขต',
+      disabled: !values.province_code,
+    },
+    {
+      name: 'subdistrict_code',
+      label: 'ตำบล/แขวง',
+      type: 'combobox',
+      required: true,
+      options: getSubDistrictOptions(values.district_code),
+      placeholder: 'ค้นหาตำบล/แขวง',
+      disabled: !values.district_code,
+    },
+    {
+      name: 'postal_code',
+      label: 'รหัสไปรษณีย์',
+      type: 'text',
+      required: true,
+      placeholder: 'กรุณาระบุรหัสไปรษณีย์',
+    },
+    {
+      name: 'house_no',
+      label: 'บ้านเลขที่',
+      type: 'text',
+      required: true,
+      placeholder: 'กรุณาระบุบ้านเลขที่',
+    },
+    {
+      name: 'house_registry_no',
+      label: 'รหัสทะเบียนบ้าน',
+      type: 'text',
+      placeholder: 'กรุณาระบุรหัสทะเบียนบ้าน',
+    },
+    {
+      name: 'moo',
+      label: 'หมู่ที่',
+      type: 'text',
+      placeholder: 'กรุณาระบุหมู่ที่',
+    },
+    {
+      name: 'road',
+      label: 'ถนน',
+      type: 'text',
+      placeholder: 'กรุณาระบุถนน',
+    },
+    {
+      name: 'soi',
+      label: 'ตรอก/ซอย',
+      type: 'text',
+      placeholder: 'กรุณาระบุตรอก/ซอย',
+    },
+    {
+      name: 'building',
+      label: 'หมู่บ้าน/อาคาร',
+      type: 'text',
+      placeholder: 'กรุณาระบุหมู่บ้าน/อาคาร',
+    },
+  ])
+}
+
+function createAddressFormState(source?: PersonAddress, index = 0) {
+  const initialValues = buildAddressValues(source)
+  const generatedId =
+    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : `address-${Date.now()}-${index}`
+  const state = reactive<AddressFormState>({
+    id: source?.id || generatedId,
+    fields: createAddressFields(initialValues),
+    initialValues,
+    formRef: null,
+    hasChanges: false,
+    lastProvince: initialValues.province_code,
+    lastDistrict: initialValues.district_code,
+  })
+  syncCascade(state, initialValues, true)
+  return state
+}
+
+function syncCascade(form: AddressFormState, values: Record<string, any>, isInitial = false) {
+  const districtField = form.fields.find((field) => field.name === 'district_code')
+  if (districtField) {
+    districtField.options = getDistrictOptions(values.province_code)
+    districtField.disabled = !values.province_code
+  }
+
+  const subDistrictField = form.fields.find((field) => field.name === 'subdistrict_code')
+  if (subDistrictField) {
+    subDistrictField.options = getSubDistrictOptions(values.district_code)
+    subDistrictField.disabled = !values.district_code
+  }
+
+  if (!isInitial && form.formRef) {
+    if (form.lastProvince !== values.province_code) {
+      form.lastProvince = values.province_code
+      form.formRef.setFieldValue?.('district_code', '')
+      form.formRef.setFieldValue?.('subdistrict_code', '')
+    }
+    if (form.lastDistrict !== values.district_code) {
+      form.lastDistrict = values.district_code
+      form.formRef.setFieldValue?.('subdistrict_code', '')
+    }
+  } else {
+    form.lastProvince = values.province_code
+    form.lastDistrict = values.district_code
+  }
+
+  const subdistrictCode = values.subdistrict_code
+  const autoPostal = subdistrictCode
+    ? postalCodeBySubDistrict.get(String(subdistrictCode))
+    : undefined
+
+  if (autoPostal) {
+    if (isInitial) {
+      form.initialValues.postal_code = autoPostal
+    } else {
+      form.formRef?.setFieldValue?.('postal_code', autoPostal)
+    }
+  }
+}
+
 async function getAddressData() {
   loading.value = true
   try {
-    const response = await getDatasetRows( {
+    const response = await getDatasetRows<AddressDatasetRow>({
       view: 'address_get',
       page: 1,
       per_page: 50,
     })
-    addresslData.value =  response.data[0]?.person_addresses || [] 
-    console.log('Address API Response:', response)
-    console.log('Address Data:',   addresslData.value)
-     addresslData.value.forEach((item) => {
-      if (item.is_house_registered) {
-        isaddressOneType.value = true
-      }
-      if (item.is_current) {
-        isaddressTwoTypes.value = true
-      }
-      if (item.is_retired_residence) {
-        isaddressThreeTypes.value = true
-      }
-    })
-    toast.success(`โหลดข้อมูลที่อยู่สำเร็จ (${response.total_rows} รายการ)`, {
-      position: 'bottom-right',
-    })
+    const records = response.data?.[0]?.person_addresses || []
+    addressForms.value = (records.length ? records : [undefined]).map((address, index) =>
+      createAddressFormState(address, index),
+    )
   } catch (error: any) {
-    console.error('Personal Detail API Error:', error)
-    console.error('Error Response:', error?.response?.data)
-    toast.error(`โหลดข้อมูลครอบครัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
-      position: 'bottom-right',
-    })
-  } 
-  loading.value = false
+    console.error('Address API Error:', error)
+    toast.error(`โหลดข้อมูลที่อยู่ไม่สำเร็จ: ${error?.response?.data?.message || error.message}`)
+    addressForms.value = [createAddressFormState(undefined, 0)]
+  } finally {
+    loading.value = false
+  }
 }
 
-// async function listAddressSelect() {
-//   loading.value = true
-//   try {
-   
-//     const response = await listAddressRow()
-//     listAddress.value =  response.data[0] || []
-//     console.log('listAddressSelect:', response)
-//     console.log('listAddressSelect data:', response.data)
-  
-//   } catch (error: any) {
-//     console.error('listAddressSelect:', error)
-//     console.error('listAddressSelect:', error?.response?.data)
-//     toast.error(`โหลดข้อมูลที่อยู่ไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
-//       position: 'bottom-right',
-//     })
-//   } 
-//   loading.value = false
-// }
+function setFormRef(formId: string, instance: NormalFormInstance | null) {
+  const target = addressForms.value.find((entry) => entry.id === formId)
+  if (target) {
+    target.formRef = instance
+  }
+}
+
+function handleFormChange(formId: string, payload: NormalFormChangePayload) {
+  const target = addressForms.value.find((entry) => entry.id === formId)
+  if (!target) return
+  target.hasChanges = payload.isDirty
+  syncCascade(target, payload.values)
+}
+
+function normalizeAddressPayload(values: Record<string, any>) {
+  const selectedTypes = new Set<string>(values.address_types || [])
+  const provinceName = provinceNameMap.get(String(values.province_code)) || ''
+  const districtName = districtNameMap.get(String(values.district_code)) || ''
+  const subDistrictName = subDistrictNameMap.get(String(values.subdistrict_code)) || ''
+  const postal =
+    values.postal_code || postalCodeBySubDistrict.get(String(values.subdistrict_code)) || ''
+  return {
+    ...values,
+    province: provinceName,
+    district: districtName,
+    subdistrict: subDistrictName,
+    postal_code: postal,
+    is_house_registered: selectedTypes.has('is_house_registered'),
+    is_current: selectedTypes.has('is_current'),
+    is_retired_residence: selectedTypes.has('is_retired_residence'),
+  }
+}
+
+function handleFormSave(formId: string, values: Record<string, any>) {
+  const payload = normalizeAddressPayload(values)
+  pendingPayloads.set(formId, payload)
+}
+
+const hasAnyChanges = computed(() => addressForms.value.some((entry) => entry.hasChanges))
+const isSaveDisabled = computed(() => loading.value || !hasAnyChanges.value)
+
+async function onSaveAll() {
+  pendingPayloads.clear()
+  for (const form of addressForms.value) {
+    if (form.formRef?.submitForm) {
+      const valid = await form.formRef.submitForm()
+      if (!valid) {
+        toast.error('กรุณากรอกข้อมูลให้ครบถ้วนก่อนบันทึก')
+        return
+      }
+    }
+  }
+
+  if (!pendingPayloads.size) return
+
+  const payloadList = Array.from(pendingPayloads.values())
+  console.log('address payload', payloadList)
+  toast.success('บันทึกข้อมูลที่อยู่เรียบร้อย (mock)')
+  addressForms.value.forEach((form) => {
+    form.hasChanges = false
+  })
+}
 
 onMounted(() => {
-  console.log("address");
   getAddressData()
- // listAddressSelect()
 })
-
 </script>
 
 <template>
-  แก้ไขได้เลย
-  <div class="flex flex-col">
-    <!-- Checkboxes ประเภทที่อยู่ -->
-      <div class="flex flex-wrap gap-4 pb-2 mb-2 pl-2 ml-4">
-       
-          <label class="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              v-model="isaddressOneType"
-              value="is_house_registered"
-              class="rounded border-gray-300"
-            />
-            <span class="text-sm">ที่อยู่ตามทะเบียนบ้าน</span>
-          </label>
-          <label class="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              v-model="isaddressTwoTypes"
-              value="is_current"
-              class="rounded border-gray-300"
-            />
-            <span class="text-sm">ที่อยู่ปัจจุบัน</span>
-          </label>
-          <label class="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              v-model="isaddressThreeTypes"
-              value="is_retired_residence"
-              class="rounded border-gray-300"
-            />
-            <span class="text-sm">ที่อยู่หลังเกษียณอายุราชการ</span>
-          </label>
-      </div>
-    <!-- Scrollable content area -->
-    <div class="flex-1 overflow-y-auto px-4 sm:px-6 space-y-4" 
-    v-for="item in addresslData" :key="item.id"
-    >
-      
-      <!-- ข้อมูลที่อยู่ -->
+  <div class="flex flex-col gap-4">
+    <div v-for="(form, index) in addressForms" :key="form.id" class="px-4 sm:px-6">
       <NormalForm
-        :values="item"
-        :fields="[
-          {
-            name: 'province',
-            label: 'จังหวัด',
-            type: 'select',
-            required: true,
-            placeholder: 'เลือกจังหวัด',
-            options: [
-              { label: 'กรุงเทพมหานคร', value: 'bangkok' },
-              { label: 'เชียงใหม่', value: 'chiangmai' },
-              { label: 'ขอนแก่น', value: 'khonkaen' },
-            ],
-          },
-          {
-            name: 'postal_code',
-            label: 'รหัสไปรษณีย์',
-            type: 'text',
-            required: true,
-            placeholder: 'กรุณาระบุรหัสไปรษณีย์',
-          },
-          {
-            name: 'district',
-            label: 'อำเภอ/เขต',
-            type: 'select',
-            required: true,
-            placeholder: 'เลือกอำเภอ/เขต',
-            options: [],
-          },
-          {
-            name: 'subdistrict',
-            label: 'ตำบล/แขวง',
-            type: 'select',
-            required: true,
-            placeholder: 'เลือกตำบล/แขวง',
-            options: [],
-          },
-          {
-            name: 'road',
-            label: 'ถนน',
-            type: 'text',
-            placeholder: 'กรุณาระบุถนน',
-          },
-          {
-            name: 'soi',
-            label: 'ตรอก/ซอย',
-            type: 'text',
-            placeholder: 'กรุณาระบุตรอก/ซอย',
-          },
-          {
-            name: 'building',
-            label: 'หมู่บ้าน/อาคาร',
-            type: 'text',
-            placeholder: 'กรุณาระบุหมู่บ้าน/อาคาร',
-          },
-          {
-            name: 'moo',
-            label: 'หมู่ที่',
-            type: 'text',
-            placeholder: 'กรุณาระบุหมู่ที่',
-          },
-          {
-            name: 'house_no',
-            label: 'บ้านเลขที่',
-            type: 'text',
-            placeholder: 'กรุณาระบุบ้านเลขที่',
-          },
-          {
-            name: 'house_registry_no',
-            label: 'รหัสทะเบียนบ้าน',
-            type: 'text',
-            placeholder: 'กรุณาระบุรหัสทะเบียนบ้าน',
-          },
-        ]"
+        :topic="`ข้อมูลที่อยู่ #${index + 1}`"
+        :fields="form.fields"
+        :values="form.initialValues"
+        :ref="(instance) => setFormRef(form.id, instance as NormalFormInstance | null)"
+        @change="(payload) => handleFormChange(form.id, payload)"
+        @save="(values) => handleFormSave(form.id, values)"
       />
     </div>
 
-    <!-- ปุ่มบันทึก - อยู่ข้างล่างตลอด -->
-      <div
-      class="sticky bottom-0 right-0 z-40 flex justify-end border-t border-gray-200 bg-white p-3 w-full dark:bg-black dark:border-neutral-700"
+    <div
+      class="sticky right-0 bottom-0 z-40 flex w-full justify-end border-t border-gray-200 bg-white p-3 dark:border-neutral-700 dark:bg-black"
     >
       <Button
-        class="bg-[#16A34A] hover:bg-[#15803D] text-white px-8 py-2 rounded-lg font-semibold shadow-sm"
+        class="rounded-lg bg-[#16A34A] px-8 py-2 font-semibold text-white shadow-sm hover:bg-[#15803D]"
+        :disabled="isSaveDisabled"
+        @click="onSaveAll"
       >
         บันทึก
       </Button>
