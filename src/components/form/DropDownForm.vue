@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { toTypedSchema } from '@vee-validate/zod'
 import { Form as VeeForm, Field as VeeField } from 'vee-validate'
-import { toast } from 'vue-sonner'
 import { z } from 'zod'
 
 import { Button } from '@/components/ui/button'
@@ -22,37 +21,7 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { type DateValue, CalendarDate } from '@internationalized/date'
-import { h, ref ,computed  } from 'vue'
-import { label } from '@unovis/ts/components/axis/style'
-
-const formSchema = toTypedSchema(
-  z.object({
-    title: z
-      .string()
-      .min(5, 'Bug title must be at least 5 characters.')
-      .max(32, 'Bug title must be at most 32 characters.'),
-    description: z
-      .string()
-      .min(20, 'Description must be at least 20 characters.')
-      .max(100, 'Description must be at most 100 characters.'),
-  }),
-)
-
-
-// const onSubmit = handleSubmit((data) => {
-//   toast('You submitted the following values:', {
-//     description: h(
-//       'pre',
-//       { class: 'bg-code text-code-foreground mt-2 w-[320px] overflow-x-auto rounded-md p-4' },
-//       h('code', JSON.stringify(data, null, 2)),
-//     ),
-//     position: 'bottom-right',
-//     class: 'flex flex-col gap-2',
-//     style: {
-//       '--border-radius': 'calc(var(--radius)  + 4px)',
-//     },
-//   })
-// })
+import { ref, computed, watch } from 'vue'
 
 type FieldItem = {
   name: string
@@ -69,6 +38,7 @@ type FieldItem = {
 const emit = defineEmits<{
   (e: 'save', value: Record<string, any>): void
   (e: 'delete', value: Record<string, any>): void
+  (e: 'change', payload: { values: Record<string, any>; isDirty: boolean }): void
 }>()
 
 const props = defineProps<{
@@ -81,47 +51,112 @@ const schema = computed(() => {
   const shape: Record<string, any> = {}
 
   // do not include disabled fields in the validation schema
-  props.fields?.filter((f) => !f.disabled).forEach((f) => {
-    if (f.required) {
-      shape[f.name] = z.string().min(1, `${f.label || f.name} is required`)
-    } else {
-      shape[f.name] = z.string().optional()
-    }
-  })
+  props.fields
+    ?.filter((f) => !f.disabled)
+    .forEach((field) => {
+      const label = field.label || field.name
+      const baseRequiredMessage = `${label} จำเป็นต้องกรอก`
+
+      const allowEmptyString = <T extends z.ZodTypeAny>(validator: T) =>
+        validator.optional().or(z.literal(''))
+
+      if (field.required) {
+        let validator = z.string().min(1, baseRequiredMessage)
+        if (field.type === 'email') {
+          validator = validator.email('รูปแบบอีเมลไม่ถูกต้อง')
+        }
+        shape[field.name] = validator
+      } else {
+        let validator = allowEmptyString(z.string())
+        if (field.type === 'email') {
+          validator = allowEmptyString(z.string().email('รูปแบบอีเมลไม่ถูกต้อง'))
+        }
+        shape[field.name] = validator
+      }
+    })
 
   return toTypedSchema(z.object(shape))
 })
 
 const initialValues = ref<Record<string, any>>({})
-initialValues.value = { ...(props.values || {}) }
+const localValues = ref<Record<string, any>>({})
 
 // ref to the internal VeeForm component so parent can trigger submit
 const formRef = ref<any>(null)
 
-async function submitForm() {
-  try {
-    if (formRef.value && typeof formRef.value.submitForm === 'function') {
-      await formRef.value.submitForm()
-      return true
-    }
-  } catch (err) {
-    console.warn('submitForm failed', err)
-  }
-  // fallback: try native form element by id
-  const el = document.getElementById('form-vee-demo') as HTMLFormElement | null
-  if (el) {
-    el.requestSubmit()
-    return true
-  }
-  return false
+function cloneValues(source: Record<string, any> = {}) {
+  return JSON.parse(JSON.stringify(source))
 }
 
-defineExpose({ submitForm })
+function buildValuesFromProps() {
+  const result: Record<string, any> = {}
+  ;(props.fields || []).forEach((field) => {
+    const incoming = props.values?.[field.name]
+    result[field.name] = incoming ?? ''
+  })
+  return result
+}
+
+function syncFormState() {
+  const next = buildValuesFromProps()
+  initialValues.value = cloneValues(next)
+  localValues.value = cloneValues(next)
+
+  if (formRef.value?.resetForm) {
+    formRef.value.resetForm({
+      values: cloneValues(next),
+      keepDirty: false,
+      keepErrors: false,
+      keepTouched: false,
+    })
+  }
+}
+
+watch(
+  () => props.values,
+  () => {
+    syncFormState()
+  },
+  { immediate: true, deep: true },
+)
+
+watch(
+  () => (props.fields || []).map((field) => field.name).join('|'),
+  () => {
+    syncFormState()
+  },
+)
+
+const isDirty = computed(
+  () => JSON.stringify(localValues.value) !== JSON.stringify(initialValues.value),
+)
+
+watch(
+  localValues,
+  (vals) => {
+    emit('change', { values: cloneValues(vals || {}), isDirty: isDirty.value })
+  },
+  { deep: true },
+)
+
+async function submitForm() {
+  if (!formRef.value) return false
+
+  const result = await formRef.value.validate()
+
+  if (result.valid) {
+    await formRef.value.submitForm()
+  }
+
+  return result.valid
+}
+
+defineExpose({ submitForm, isDirty })
 
 function onSubmit(values: Record<string, any>) {
-  initialValues.value = {  ...(values || {}) }
-  console.log('submit:', values)
-   emit('save', values)
+  initialValues.value = cloneValues(values || {})
+  localValues.value = cloneValues(values || {})
+  emit('save', values)
 }
 //console.log('mapValueToOption', mapValueToOption())
 const isOpen = ref(true)
@@ -203,7 +238,7 @@ function formatDisplayDate(str: string | undefined): string {
   <Card class="w-full gap-3" :class="{ 'pb-0': !isOpen }">
     <CardHeader :class="{ 'pb-0': !isOpen }">
       <div
-        class="flex flex-row pb-2 justify-between items-center"
+        class="flex flex-row items-center justify-between pb-2"
         :class="isOpen ? 'border-b-2' : 'border-b-0'"
       >
         <slot name="header">
@@ -215,23 +250,26 @@ function formatDisplayDate(str: string | undefined): string {
       </div>
     </CardHeader>
     <div
-      class="grid transition-all duration-300 ease-in-out overflow-hidden"
+      class="grid overflow-hidden transition-all duration-300 ease-in-out"
       :class="isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'"
     >
-      <div class="overflow-hidden flex flex-col gap-0">
+      <div class="flex flex-col gap-0 overflow-hidden">
         <CardContent>
-          <VeeForm id="form-vee-demo"
+          <VeeForm
+            ref="formRef"
             :validation-schema="schema"
             :initial-values="initialValues"
             @submit="onSubmit"
-            :ref="formRef">
-            <div class="grid grid-cols-1 gap-3 lg:grid-cols-4 md:grid-cols-3 sm:grid-cols-2 items-start">
+          >
+            <div
+              class="grid grid-cols-1 items-start gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+            >
               <VeeField
                 v-for="fieldItem in fields"
                 :key="fieldItem.name"
                 v-slot="{ field, errors }"
                 :name="fieldItem.name"
-                :model-value="values?.[fieldItem.name] ?? undefined"
+                v-model="localValues[fieldItem.name]"
               >
                 <Field :data-invalid="!!errors.length">
                   <FieldLabel :for="`form-field-${fieldItem.name}`" class="mb-1 block">
@@ -249,7 +287,7 @@ function formatDisplayDate(str: string | undefined): string {
                     autocomplete="off"
                     :aria-invalid="!!errors.length"
                     :disabled="fieldItem.disabled"
-                    class="disabled:opacity-50 w-full"
+                    class="w-full disabled:opacity-50"
                   />
 
                   <!-- date (Popover + Calendar) -->
@@ -324,11 +362,11 @@ function formatDisplayDate(str: string | undefined): string {
                     v-bind="field"
                     :placeholder="fieldItem.placeholder || fieldItem.label || fieldItem.name"
                     :disabled="fieldItem.disabled"
-                    class="min-h-20 resize-none disabled:opacity-50 w-full"
+                    class="min-h-20 w-full resize-none disabled:opacity-50"
                     :aria-invalid="!!errors.length"
                   />
-                  <div class="min-h-6">
-                    <FieldError v-if="errors.length" :errors="errors" class="ml-0 mt-1" />
+                  <div class="min-h-4">
+                    <FieldError v-if="errors.length" :errors="errors" class="mt-1 ml-0" />
                   </div>
                 </Field>
               </VeeField>
@@ -337,17 +375,21 @@ function formatDisplayDate(str: string | undefined): string {
           <!-- file fields -->
           <div
             v-if="fields?.some((f: FieldItem) => f.type === 'file')"
-            class="grid grid-cols-1 gap-4 sm:grid-cols-2 mt-4"
+            class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2"
           >
             <div
               v-for="fieldItem in fields?.filter((f: FieldItem) => f.type === 'file')"
               :key="fieldItem.name"
             >
-              <FieldLabel v-if="fieldItem.label" :for="`form-field-${fieldItem.name}`" class="mb-2 block text-sm font-medium">
+              <FieldLabel
+                v-if="fieldItem.label"
+                :for="`form-field-${fieldItem.name}`"
+                class="mb-2 block text-sm font-medium"
+              >
                 {{ fieldItem.label }}
                 <span v-if="fieldItem.required" class="text-red-500">*</span>
               </FieldLabel>
-              <p v-if="fieldItem.placeholder" class="text-xs text-muted-foreground mb-2">
+              <p v-if="fieldItem.placeholder" class="text-muted-foreground mb-2 text-xs">
                 {{ fieldItem.placeholder }}
               </p>
               <input
@@ -365,7 +407,7 @@ function formatDisplayDate(str: string | undefined): string {
               />
               <Button
                 type="button"
-                class="px-4 py-2 rounded-lg font-semibold text-sm"
+                class="rounded-lg px-4 py-2 text-sm font-semibold"
                 :disabled="fieldItem.disabled"
                 @click="fileInputRefs[fieldItem.name]?.click()"
               >
@@ -377,19 +419,19 @@ function formatDisplayDate(str: string | undefined): string {
                 <div
                   v-for="(file, fileIdx) in getFiles(fieldItem.name)"
                   :key="fileIdx"
-                  class="flex items-center gap-2 text-sm border-2 rounded-2xl p-2 w-max h-10 justify-between border-muted bg-muted/50"
+                  class="border-muted bg-muted/50 flex h-10 w-max items-center justify-between gap-2 rounded-2xl border-2 p-2 text-sm"
                 >
                   <span class="truncate">{{ file.name }}</span>
-                  <span class="text-xs text-muted-foreground shrink-0">
+                  <span class="text-muted-foreground shrink-0 text-xs">
                     {{ formatFileSize(file.size) }}
                   </span>
                   <button
                     v-if="!fieldItem.disabled"
                     type="button"
-                    class="p-0.5 rounded hover:text-destructive text-muted-foreground transition-colors"
+                    class="hover:text-destructive text-muted-foreground rounded p-0.5 transition-colors"
                     @click.stop="removeFile(fieldItem.name, fileIdx)"
                   >
-                    <X class="w-3.5 h-3.5" />
+                    <X class="h-3.5 w-3.5" />
                   </button>
                 </div>
               </div>
