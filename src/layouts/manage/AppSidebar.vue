@@ -97,7 +97,7 @@ const menuConfig: {
       id: 'requests',
       label: 'คำร้อง',
       icon: FileText,
-      routeName: ROUTE_NAMES.REQUESTS,
+      routeName: ROUTE_NAMES.REQUEST_LIST,
       children: null,
     },
   ],

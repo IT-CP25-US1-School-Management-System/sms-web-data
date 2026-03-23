@@ -41,7 +41,8 @@ export const ROUTE_NAMES = {
   ADD_TEACHER_INNOVATIONS: 'AddTeacherInnovations',
   MANAGE_STUDENTS: 'ManageStudents',
   IMPORT_DATA: 'ImportData',
-  REQUESTS: 'Requests',
+  REQUEST_LIST: 'RequestList',
+  REQUEST_EDIT: 'RequestEdit',
 } as const
 
 export const DATASET_SENSITIVITY = {
@@ -52,3 +53,11 @@ export const DATASET_SENSITIVITY = {
 } as const
 
 export type DatasetSensitivity = (typeof DATASET_SENSITIVITY)[keyof typeof DATASET_SENSITIVITY]
+
+export const PREFIX_OPTIONS = {
+  1: 'นาย',
+  2: 'นาง',
+  3: 'นางสาว',
+} as const
+
+export type PrefixType = keyof typeof PREFIX_OPTIONS

@@ -45,6 +45,15 @@ export const generateUUID = (): string => {
     const v = c === 'x' ? r : (r & 0x3) | 0x8
     return v.toString(16)
   })
+}
+
+export const toDateInputFormat = (date: string | Date | undefined | null): string => {
+  if (!date) return ''
+  const d = new Date(date)
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 };
 
 export const debounce = <T extends (...args: any[]) => any>(
@@ -67,4 +76,14 @@ export const getImgInitials = (name: string) => {
     .join("")
     .toUpperCase()
     .slice(0, 2);
+};
+
+export const getPrefixName = (prefixId?: number | string | null): string => {
+  const prefixMap: Record<number | string, string> = {
+    1: 'นาย',
+    2: 'นาง',
+    3: 'นางสาว',
+  }
+  if (!prefixId) return ''
+  return prefixMap[prefixId] || ''
 };

@@ -187,3 +187,11 @@ export async function logout(): Promise<void> {
   setTokens(null)
   router.push({ name: ROUTE_NAMES.LOGIN })
 }
+
+/**
+ * Create a new user account
+ */
+export async function createUser(userData: { email: string; firstname: string; lastname: string }): Promise<any> {
+  const response = await authApiInstance.post('/v1/auth/users', userData)
+  return response.data
+}

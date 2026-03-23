@@ -9,6 +9,7 @@ import { useTeacherStore } from '@/stores/teachers'
 import type { TeacherCreateDTO, TeacherUpdateDTO } from '@/types/teacher'
 import { useToast } from '@/composables/useToast'
 import { generateUUID } from '@/lib/helpers'
+import { createUser } from '@/stores/api'
 
 const router = useRouter()
 const route = useRoute()
@@ -139,7 +140,7 @@ const handleSave = async () => {
     const now = new Date().toISOString()
     const personId = isEditing.value ? teacherStore.personId! : generateUUID()
 
-    const payload = {
+    const payload: TeacherCreateDTO = {
       id: personId,
       prefix_id: prefixMap[formValues.value.prefix_id] ?? 1,
       role_id: roleId,
@@ -171,6 +172,20 @@ const handleSave = async () => {
       showSuccess('แก้ไขข้อมูลส่วนบุคคลสำเร็จ', { description: 'กรุณากรอกข้อมูลที่อยู่ต่อไป' })
     } else {
       await createTeacher(payload)
+      
+      // Create user account with teacher's email
+      if (formValues.value.email) {
+        try {
+          await createUser({ email: formValues.value.email, firstname: firstName, lastname: lastName })
+        } catch (userError: any) {
+          console.error('Failed to create user account:', userError)
+          showError('สร้างบัญชีผู้ใช้ไม่สำเร็จ', {
+            description: userError?.response?.data?.message || 'อาจจำเป็นต้องสร้างบัญชีผู้ใช้ด้วยตนเองต่อมา',
+          })
+          // Continue even if user creation fails, as teacher record was created
+        }
+      }
+      
       showSuccess('เพิ่มข้อมูลส่วนบุคคลสำเร็จ', { description: 'กรุณากรอกข้อมูลที่อยู่ต่อไป' })
     }
 
@@ -207,7 +222,6 @@ const handleSave = async () => {
           type: 'select',
           required: true,
           placeholder: 'เลือกคำนำหน้า',
-          disabled: true,
           options: [
             { label: 'นาย', value: 'นาย' },
             { label: 'นาง', value: 'นาง' },

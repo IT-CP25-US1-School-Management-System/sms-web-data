@@ -6,7 +6,7 @@ import type {
 } from '@/types/dataset'
 
 export const DATASET_ID = 'capstone'
-export const DATASET_VERSION = 'v1.1.0'
+export const DATASET_VERSION = 'v1.2.1'
 
 /**
  * Generic function to list rows from a dataset version
@@ -21,7 +21,7 @@ export async function getDatasetRows<T = Record<string, any>>(
     per_page: params?.per_page || 15,
   }
 
-  if (params?.view_name) queryParams.view_name = params.view_name
+  if (params?.view) queryParams.view = params.view
   if (params?.filter) queryParams.filter = JSON.stringify(params.filter)
   if (params?.filter_logic) queryParams.filter_logic = params.filter_logic
   if (params?.sort_by) queryParams.sort_by = params.sort_by
@@ -43,7 +43,7 @@ export async function getDatasetRowByKey<T = Record<string, any>>(
   key: string,
   viewName?: string,
 ): Promise<DatasetRowResponse<T>> {
-  const params = viewName ? { view_name: viewName } : {}
+  const params = viewName ? { view: viewName } : {}
   const response = await dataApiInstance.get<DatasetRowResponse<T>>(
     `/v1/datasets/${datasetId}/versions/${version}/data/key/${key}`,
     { params },

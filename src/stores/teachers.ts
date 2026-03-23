@@ -38,7 +38,7 @@ export async function getTeachers(
 ): Promise<DatasetListResponse<PersonData>> {
   return getDatasetRows<PersonData>(DATASET_ID, DATASET_VERSION, {
     ...params,
-    view_name: 'personal_details',
+    view: 'person_detail',
   })
 }
 
@@ -46,7 +46,7 @@ export async function getTeachers(
  * Get a single teacher by ID
  */
 export async function getTeacherById(teacherId: string): Promise<DatasetRowResponse<PersonData>> {
-  return getDatasetRowByKey<PersonData>(DATASET_ID, DATASET_VERSION, teacherId, 'personal_details')
+  return getDatasetRowByKey<PersonData>(DATASET_ID, DATASET_VERSION, teacherId, 'person_detail')
 }
 
 /**

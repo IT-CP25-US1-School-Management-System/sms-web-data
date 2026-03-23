@@ -1,6 +1,23 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ROUTE_NAMES } from '@/lib/constants'
+import { getTeacherById } from '@/stores/teachers'
+
+const validateTeacherIdGuard = async (to: any) => {
+  const idFromUrl = to.query.id as string
+  if (idFromUrl) {
+    try {
+      await getTeacherById(idFromUrl)
+      // ID exists, allow navigation
+      return true
+    } catch (error) {
+      // ID not found or invalid
+      return { name: ROUTE_NAMES.HOME }
+    }
+  }
+  // No ID in URL, allow navigation (add mode)
+  return true
+}
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -167,6 +184,7 @@ const router = createRouter({
       component: () => import('@/views/manage/add-edit-teacher/AddTeacherView.vue'),
       meta: { requiresAuth: true, adminOnly: true },
       redirect: { name: ROUTE_NAMES.ADD_TEACHER_PERSONAL },
+      beforeEnter: validateTeacherIdGuard,
       children: [
         {
           path: 'personal',
@@ -255,9 +273,15 @@ const router = createRouter({
       meta: { requiresAuth: true, adminOnly: true },
     },
     {
-      path: '/requests',
-      name: ROUTE_NAMES.REQUESTS,
-      component: () => import('@/views/manage/RequestsView.vue'),
+      path: '/manage/requests',
+      name: ROUTE_NAMES.REQUEST_LIST,
+      component: () => import('@/views/manage/requests/RequestsListView.vue'),
+      meta: { requiresAuth: true, adminOnly: true },
+    },
+    {
+      path: '/manage/requests/:id',
+      name: ROUTE_NAMES.REQUEST_EDIT,
+      component: () => import('@/views/manage/requests/RequestEditView.vue'),
       meta: { requiresAuth: true, adminOnly: true },
     },
   ],

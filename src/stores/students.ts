@@ -24,7 +24,7 @@ export async function getStudents(
 ): Promise<DatasetListResponse<Student>> {
   return getDatasetRows<Student>(DATASET_ID, DATASET_VERSION, {
     ...params,
-    view_name: 'Student',
+    view: 'Student',
   })
 }
 
