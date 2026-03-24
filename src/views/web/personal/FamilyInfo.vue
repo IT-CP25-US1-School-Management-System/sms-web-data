@@ -18,6 +18,9 @@ async function getFamilyData() {
     familyData.value = familyData.value.map((member) => ({
       ...member,
       is_alive: member.is_alive ? 'มีชีวิต' : 'ไม่มีชีวิต',
+      road: member.address?.road || '-',
+      soi: member.address?.soi || '-',
+      building: member.address?.building || '-',
     }))
     console.log('Family API Response:', response)
     console.log('Family Data:', familyData.value)
@@ -38,7 +41,9 @@ onMounted(() => {
   getFamilyData()
 })
 
-function handleSave(groupIndex: number) {
+function handleSave(groupIndex: number, values?: Record<string, any>) {
+  // Log the emitted values from CreateForm for debugging
+  console.log('CreateForm save emitted:', { groupIndex, values })
   // TODO: เรียก API บันทึกข้อมูล
   toast(`บันทึกข้อมูลกลุ่มที่ ${groupIndex + 1} สำเร็จ`, { position: 'bottom-right' })
 }
@@ -56,6 +61,7 @@ function handleDelete(groupIndex: number) {
       :isDropdown="true"
       :readonly="true"
       :values="familyData"
+      
       :fields="[
         [
           {
@@ -138,20 +144,21 @@ function handleDelete(groupIndex: number) {
                 name: 'phone',
                 label: 'โทรศัพท์',
                 type: 'text',
-                placeholder: '',
+                required: true,
+                placeholder: '0xxxxxxxxx',
               },
               {
                 name: 'email',
                 label: 'อีเมล',
                 type: 'email',
-                placeholder: '',
+                required: true,
+                placeholder: 'example@email.com',
               },
               {
                 name: 'marital_status',
                 label: 'สถานภาพ',
                 type: 'text',
-                required: true,
-                placeholder: '',
+                placeholder: '-',
                 disabled: true,
               },
             ],
@@ -210,12 +217,14 @@ function handleDelete(groupIndex: number) {
                 name: 'moo',
                 label: 'หมู่ที่',
                 type: 'text',
+                required: true,
                 placeholder: '',
               },
               {
                 name: 'house_no',
                 label: 'บ้านเลขที่',
                 type: 'text',
+                required: true,
                 placeholder: '',
               },
             ],

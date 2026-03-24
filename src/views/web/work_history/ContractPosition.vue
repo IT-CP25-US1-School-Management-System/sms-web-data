@@ -87,7 +87,7 @@ const mockData = [
               {
                 name: 'salary',
                 label: 'เงินเดือน',
-                type: 'text',
+                type: 'number',
                 required: true,
                 placeholder: '',
                 disabled: false,

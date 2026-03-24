@@ -106,6 +106,9 @@ function formatDisplayDate(str: string | undefined): string {
 /* ──────────────────── File upload helpers ──────────────────── */
 const fileMap = ref<Record<string, File[]>>({})
 const fileInputRefs = ref<Record<string, HTMLInputElement | null>>({})
+const fileSizeErrors = ref<Record<string, string | undefined>>({})
+const MAX_FILE_SIZE = 15 * 1024 * 1024
+const FILE_SIZE_ERROR_MESSAGE = `ขนาดไฟล์ต้องไม่เกิน ${Math.floor(MAX_FILE_SIZE / (1024 * 1024))} MB`
 
 const fileCountFieldMap: Record<string, string> = {
   slip: 'slipCount',
@@ -135,6 +138,7 @@ function syncSlipCountField(value?: number, shouldValidate = false) {
 
 function resetAllFileCounts() {
   Object.keys(fileCountFieldMap).forEach((key) => syncFileCountField(key, 0))
+  fileSizeErrors.value = {}
 }
 
 function handleFileSelect(
@@ -150,20 +154,24 @@ function handleFileSelect(
     return
   }
   const files = Array.from(input?.files || [])
+  const acceptedFiles = files.filter((file) => file.size <= MAX_FILE_SIZE)
+  const rejectedFiles = files.filter((file) => file.size > MAX_FILE_SIZE)
   if (!fileMap.value[key]) fileMap.value[key] = []
 
   if (multiple) {
     const maxAdditional = options?.maxFiles
       ? Math.max(options.maxFiles - fileMap.value[key].length, 0)
-      : files.length
+      : acceptedFiles.length
     if (maxAdditional <= 0) {
       input.value = ''
       return
     }
-    fileMap.value[key].push(...files.slice(0, maxAdditional))
+    fileMap.value[key].push(...acceptedFiles.slice(0, maxAdditional))
   } else {
-    fileMap.value[key] = files.slice(0, 1)
+    fileMap.value[key] = acceptedFiles.slice(0, 1)
   }
+
+  fileSizeErrors.value[key] = rejectedFiles.length > 0 ? FILE_SIZE_ERROR_MESSAGE : undefined
 
   input.value = ''
   const length = fileMap.value[key]?.length || 0
@@ -181,11 +189,16 @@ function triggerFileInput(key: string) {
 function removeFile(key: string, index: number, onValueChange?: (value: number) => void) {
   if (!fileMap.value[key]) return
   fileMap.value[key].splice(index, 1)
+  fileSizeErrors.value[key] = undefined
   const length = fileMap.value[key]?.length || 0
   onValueChange?.(length)
   if (!onValueChange) {
     syncFileCountField(key, length, true)
   }
+}
+
+function getFileErrorMessage(key: string, errors: string[]) {
+  return fileSizeErrors.value[key] || errors[0] || ''
 }
 
 function formatFileSize(bytes: number) {
@@ -223,6 +236,7 @@ function clearType4LetterFields() {
   if (fileMap.value['letter-doc']?.length) {
     fileMap.value['letter-doc'] = []
   }
+  fileSizeErrors.value['letter-doc'] = undefined
   syncFileCountField('letter-doc', 0, true)
   const letterInput = fileInputRefs.value['letter-doc']
   if (letterInput) {
@@ -250,6 +264,7 @@ function clearReasonDocs() {
   if (fileMap.value['reason-doc']?.length) {
     fileMap.value['reason-doc'] = []
   }
+  fileSizeErrors.value['reason-doc'] = undefined
   syncFileCountField('reason-doc', 0, true)
   const reasonInput = fileInputRefs.value['reason-doc']
   if (reasonInput) {
@@ -978,7 +993,9 @@ async function submitDocForm() {
                       </button>
                     </div>
                   </div>
-                  <FieldError v-if="errors.length" :errors="errors" />
+                  <p v-if="getFileErrorMessage('slip', errors)" class="mt-2 text-sm text-red-600">
+                    {{ getFileErrorMessage('slip', errors) }}
+                  </p>
                 </div>
               </VeeField>
             </div>
@@ -1037,7 +1054,12 @@ async function submitDocForm() {
                       </button>
                     </div>
                   </div>
-                  <FieldError v-if="errors.length" :errors="errors" />
+                  <p
+                    v-if="getFileErrorMessage('card-doc', errors)"
+                    class="mt-2 text-sm text-red-600"
+                  >
+                    {{ getFileErrorMessage('card-doc', errors) }}
+                  </p>
                 </div>
               </VeeField>
             </div>
@@ -1096,7 +1118,12 @@ async function submitDocForm() {
                       </button>
                     </div>
                   </div>
-                  <FieldError v-if="errors.length" :errors="errors" />
+                  <p
+                    v-if="getFileErrorMessage('abroad-doc', errors)"
+                    class="mt-2 text-sm text-red-600"
+                  >
+                    {{ getFileErrorMessage('abroad-doc', errors) }}
+                  </p>
                 </div>
               </VeeField>
             </div>
@@ -1234,7 +1261,12 @@ async function submitDocForm() {
                       </button>
                     </div>
                   </div>
-                  <FieldError v-if="errors.length" :errors="errors" />
+                  <p
+                    v-if="getFileErrorMessage('reason-doc', errors)"
+                    class="mt-2 text-sm text-red-600"
+                  >
+                    {{ getFileErrorMessage('reason-doc', errors) }}
+                  </p>
                 </div>
               </VeeField>
             </div>
@@ -1366,7 +1398,12 @@ async function submitDocForm() {
                       </button>
                     </div>
                   </div>
-                  <FieldError v-if="errors.length" :errors="errors" />
+                  <p
+                    v-if="getFileErrorMessage('letter-doc', errors)"
+                    class="mt-2 text-sm text-red-600"
+                  >
+                    {{ getFileErrorMessage('letter-doc', errors) }}
+                  </p>
                 </div>
               </VeeField>
             </div>
@@ -1627,7 +1664,12 @@ async function submitDocForm() {
                     </button>
                   </div>
                 </div>
-                <FieldError v-if="errors.length" :errors="errors" />
+                <p
+                  v-if="getFileErrorMessage('education-request-doc', errors)"
+                  class="mt-2 text-sm text-red-600"
+                >
+                  {{ getFileErrorMessage('education-request-doc', errors) }}
+                </p>
               </div>
             </VeeField>
           </template>

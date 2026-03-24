@@ -62,12 +62,94 @@ function buildSchemas() {
     const shape: Record<string, any> = {}
     entry.forEach((section) => {
       section.content.forEach((f) => {
-        // all fields treated as string for simplicity; required => nonempty
-        // NOTE: include disabled fields in the schema as optional so they are
-        // registered by vee-validate and receive initial-values from the form.
-        // We only enforce `min(1)` for required fields.
-        if (f.required) shape[f.name] = z.string().min(1)
-        else shape[f.name] = z.string().optional()
+        // Include fields in the schema when either:
+        // - they are disabled (legacy behavior), OR
+        // - they are required (we need to validate required address fields)
+        // If a field is neither disabled nor required, skip it to avoid
+        // validating editable non-required fields.
+        if (!f.disabled && !f.required) return
+
+        const label = f.label || f.name
+        const requiredMsg = `กรุณากรอก ${label}`
+
+  // Special-case email fields so we provide a specific Thai message
+  if (f.type === 'email') {
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+          if (f.required) {
+            // Required email: coerce null/undefined -> '' so min(1) triggers when empty.
+            // Use refine to validate format only when the string is non-empty so we
+            // don't produce both "required" and "invalid format" errors at once.
+            shape[f.name] = z.preprocess(
+              (v) => (v == null ? '' : v),
+              z
+                .string()
+                .min(1, { message: requiredMsg })
+                .refine((val) => val === '' || emailRegex.test(val), { message: 'รูปแบบอีเมลไม่ถูกต้อง' }),
+            )
+          } else {
+            // Optional email: treat null/empty as not-present, otherwise validate format.
+            shape[f.name] = z.preprocess(
+              (v) => (v == null || v === '' ? undefined : v),
+              z.string().email({ message: 'รูปแบบอีเมลไม่ถูกต้อง' }).optional(),
+            )
+          }
+          return
+        }
+
+        // Special-case file fields: validate presence. Files are stored in
+        // `fileMap[entryIndex][name]` and VeeField will receive either a File
+        // or an array of File depending on `multiple`.
+        if (f.type === 'file') {
+          const requiredMsg = `กรุณาอัปโหลดเอกสาร`
+      
+          // Build file validation with size check (15 MB)
+          if (f.required) {
+            if (f.multiple) {
+              // required multiple files: array with at least one item and each file <= MAX
+              shape[f.name] = z
+                .preprocess((v) => (v == null ? [] : v), z.array(z.any()).min(1, { message: requiredMsg }))
+                .refine((arr: any[]) => arr.every((file) => !file || (file.size && file.size <= MAX_FILE_SIZE)), {
+                  message: `ขนาดไฟล์ต้องไม่เกิน ${Math.floor(MAX_FILE_SIZE / (1024 * 1024))} MB`,
+                })
+            } else {
+              // required single file: non-null and size <= MAX
+              shape[f.name] = z
+                .any()
+                .refine((val) => val != null, { message: requiredMsg })
+                .refine((val) => val == null || (val.size && val.size <= MAX_FILE_SIZE), {
+                  message: `ขนาดไฟล์ต้องไม่เกิน ${Math.floor(MAX_FILE_SIZE / (1024 * 1024))} MB`,
+                })
+            }
+          } else {
+            // optional file: allow undefined or file/array, but when present enforce size
+            if (f.multiple)
+              shape[f.name] = z
+                .array(z.any())
+                .optional()
+                .refine((arr: any[] | undefined) => !arr || arr.every((file) => !file || (file.size && file.size <= MAX_FILE_SIZE)), {
+                  message: `ขนาดไฟล์ต้องไม่เกิน ${Math.floor(MAX_FILE_SIZE / (1024 * 1024))} MB`,
+                })
+            else
+              shape[f.name] = z
+                .any()
+                .nullable()
+                .optional()
+                .refine((val) => !val || (val.size && val.size <= MAX_FILE_SIZE), {
+                  message: `ขนาดไฟล์ต้องไม่เกิน ${Math.floor(MAX_FILE_SIZE / (1024 * 1024))} MB`,
+                })
+          }
+          return
+        }
+
+        // Default: treat as string. For required fields enforce non-empty with a Thai message.
+        // Use preprocess to convert null/undefined to empty string so Zod returns our
+        // custom message (rather than the generic "Expected string, received null").
+        if (f.required) {
+          shape[f.name] = z.preprocess((v) => (v == null ? '' : v), z.string().min(1, { message: requiredMsg }))
+        } else {
+          // non-required: accept null/undefined without error
+          shape[f.name] = z.string().nullable().optional()
+        }
       })
     })
     return toTypedSchema(z.object(shape))
@@ -85,6 +167,21 @@ const localEntries = ref<FieldSection[][]>([])
 const localValues = ref<Record<string, any>[]>([])
 // per-entry version to force VeeForm re-render when initial values change
 const localValuesVersions = ref<number[]>([])
+
+// Refs to individual VeeForm component instances so we can programmatically
+// call submitForm() which runs validation and triggers the @submit handler.
+const formRefs = ref<Array<any>>([])
+function setFormRef(index: number, el: any) {
+  formRefs.value[index] = el
+}
+
+// File upload state (declared early because the watch below runs immediately):
+// one record per entry: fileMap[entryIndex][fieldName] = File[]
+const fileMap = ref<Array<Record<string, File[]>>>([])
+const fileInputRefs = ref<Array<Record<string, HTMLInputElement | null>>>([])
+// Per-entry file size errors: fileSizeErrors[entryIndex][fieldName] = string | undefined
+const fileSizeErrors = ref<Array<Record<string, string | undefined>>>([])
+const MAX_FILE_SIZE = 15 * 1024 * 1024 // 15 MB
 
 // Sync localEntries & localValues with props.fields/values
 // ซิงก์ค่า `props.fields` และ `props.values` เข้ากับ state ภายใน (localEntries/localValues)
@@ -132,6 +229,16 @@ watch(
     while (localValuesVersions.value.length < entriesCount) localValuesVersions.value.push(0)
     while (localValuesVersions.value.length > entriesCount) localValuesVersions.value.pop()
 
+  // keep formRefs in sync with entries so indices remain stable
+  while (formRefs.value.length < entriesCount) formRefs.value.push(null)
+  while (formRefs.value.length > entriesCount) formRefs.value.pop()
+  while (fileMap.value.length < entriesCount) fileMap.value.push({})
+  while (fileMap.value.length > entriesCount) fileMap.value.pop()
+  while (fileInputRefs.value.length < entriesCount) fileInputRefs.value.push({})
+  while (fileInputRefs.value.length > entriesCount) fileInputRefs.value.pop()
+  while (fileSizeErrors.value.length < entriesCount) fileSizeErrors.value.push({})
+  while (fileSizeErrors.value.length > entriesCount) fileSizeErrors.value.pop()
+
     // 4) สร้าง/อัปเดต Zod schema สำหรับแต่ละ entry
     buildSchemas()
   },
@@ -152,6 +259,11 @@ function addEntry() {
   localEntries.value.push(cloned)
   localValues.value.push({})
   localValuesVersions.value.push(0)
+  // keep formRefs aligned with new entry
+  formRefs.value.push(null)
+  // keep file structures aligned
+  fileMap.value.push({})
+  fileInputRefs.value.push({})
   // rebuild schemas so the new entry gets validation
   buildSchemas()
 }
@@ -160,24 +272,125 @@ function deleteEntry(entryIndex: number) {
   localEntries.value.splice(entryIndex, 1)
   localValues.value.splice(entryIndex, 1)
   localValuesVersions.value.splice(entryIndex, 1)
+  formRefs.value.splice(entryIndex, 1)
+  // remove per-entry file structures
+  fileMap.value.splice(entryIndex, 1)
+  fileInputRefs.value.splice(entryIndex, 1)
   emit('delete', entryIndex)
   // rebuild schemas to keep schemas in sync
   buildSchemas()
 }
 
-function saveEntry(entryIndex: number) {
+async function saveEntry(entryIndex: number) {
   // programmatically submit the whole-entry form for this entry
+  console.log('Submitting form for entry', entryIndex, 'with current localValues', localValues.value[entryIndex])
+
+  // Prefer calling the VeeForm component instance directly (more reliable
+  // than querying the DOM). The Form component exposes submitForm()/submit()
+  // depending on vee-validate version; try both.
+  const formInstance = formRefs.value[entryIndex]
+  if (formInstance) {
+    // If validate API exists, use it to see validation result and values
+    try {
+      if (typeof formInstance.validate === 'function') {
+        console.log('calling formInstance.validate for entry', entryIndex)
+        const res = await formInstance.validate()
+        console.log('validate result for entry', entryIndex, res)
+        if (res.valid) {
+          // If validate returned values, call onSubmitEntry directly to keep behavior consistent
+          console.log('validation passed, calling onSubmitEntry with values', res.values)
+          onSubmitEntry(entryIndex, res.values)
+          return
+        } else {
+          console.log('validation failed, aborting save; errors:', res.errors)
+          return
+        }
+      }
+
+      // Next try submitForm/submit methods if available
+      if (typeof formInstance.submitForm === 'function' || typeof formInstance.submit === 'function') {
+        console.log('calling child form submit method for entry', entryIndex)
+        if (typeof formInstance.submitForm === 'function') {
+          formInstance.submitForm()
+        } else {
+          formInstance.submit()
+        }
+        return
+      }
+    } catch (err) {
+      console.warn('error while using formInstance APIs', err)
+    }
+  }
+
+  // If we have a component instance but it doesn't expose submit methods,
+  // try to find the submit button inside its root element and click it.
+  if (formInstance) {
+    try {
+      console.log('formInstance found, dumping for debug:', formInstance)
+      const rootEl = (formInstance as any).$el || null
+      console.log('formInstance.$el =', rootEl)
+      if (rootEl) {
+        const innerSubmit = rootEl.querySelector && rootEl.querySelector('button[type="submit"]')
+        if (innerSubmit) {
+          console.log('clicking inner submit button inside formInstance for entry', entryIndex)
+          ;(innerSubmit as HTMLButtonElement).click()
+          return
+        }
+      }
+    } catch (err) {
+      console.warn('error while trying to click submit inside formInstance', err)
+    }
+  }
+
+  // Fallback 1: try to click the hidden submit button inside the form so the
+  // native submit occurs within the correct form element (this should trigger
+  // vee-validate's @submit handler).
+  const submitBtn = document.getElementById('form-submit-' + entryIndex) as HTMLButtonElement | null
+  if (submitBtn) {
+    console.log('clicking hidden submit button fallback for entry', entryIndex)
+    submitBtn.click()
+    return
+  }
+
+  // Fallback 2: try to submit the native HTML form if present (older fallback)
   const el = document.getElementById('form-' + entryIndex) as HTMLFormElement | null
-  if (el) el.requestSubmit()
-  else emit('save', entryIndex, localValues.value[entryIndex] || {})
+  if (el) {
+    console.log('requestSubmit fallback for entry', entryIndex)
+    try {
+      el.requestSubmit()
+    } catch (e) {
+      console.warn('requestSubmit failed, dispatching submit event instead', e)
+      el.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+    }
+    return
+  }
+
+  // Final fallback: emit current localValues (may be empty if form never submitted)
+  console.log('emit fallback save for entry', entryIndex)
+  emit('save', entryIndex, localValues.value[entryIndex] || {})
 }
 
 function onSubmitEntry(entryIndex: number, values: Record<string, any>) {
   // update local values and emit save with validated data
-  localValues.value[entryIndex] = { ...(values || {}) }
+  // include files from fileMap for this entry into emitted values
+  const filesForEntry = fileMap.value[entryIndex] || {}
+  // Convert per-field file arrays to either arrays or single File depending on field definition
+  const normalizedFiles: Record<string, any> = {}
+  const entryTemplate = localEntries.value[entryIndex] || []
+  const allFields: FieldItem[] = entryTemplate.flatMap((sec) => sec.content || [])
+  for (const k of Object.keys(filesForEntry)) {
+    const arr: File[] = filesForEntry[k] || []
+    const def = allFields.find((f) => f.name === k)
+    if (def && def.multiple) normalizedFiles[k] = arr
+    else normalizedFiles[k] = arr[0] ?? undefined
+  }
+
+  const mergedValues = { ...(values || {}), ...normalizedFiles }
+  localValues.value[entryIndex] = { ...mergedValues }
   // bump version so VeeForm will reinitialize with new values if needed
   localValuesVersions.value[entryIndex] = (localValuesVersions.value[entryIndex] || 0) + 1
-  emit('save', entryIndex, { ...(values || {}) })
+  console.log('onSubmitEntry', entryIndex, 'with values', values)
+  emit('save', entryIndex, { ...mergedValues })
 }
 
 // Toggle state: key = entryIndex
@@ -191,21 +404,33 @@ function toggleEntry(entryIdx: number) {
   openState.value[entryIdx] = !isEntryOpen(entryIdx)
 }
 
-// File upload state: key = fieldItem.name, value = File[]
-const fileMap = ref<Record<string, File[]>>({})
-const fileInputRefs = ref<Record<string, HTMLInputElement | null>>({})
-function getFiles(fieldName: string): File[] {
-  return fileMap.value[fieldName] || []
+// File upload state: one record per entry: fileMap[entryIndex][fieldName] = File[]
+
+function ensureFileStructuresForIndex(entryIndex: number) {
+  while (fileMap.value.length <= entryIndex) fileMap.value.push({})
+  while (fileInputRefs.value.length <= entryIndex) fileInputRefs.value.push({})
+  while (fileSizeErrors.value.length <= entryIndex) fileSizeErrors.value.push({})
 }
 
-function handleFileSelect(event: Event, fieldItem: FieldItem) {
+function getFiles(entryIndex: number, fieldName: string): File[] {
+  return (fileMap.value[entryIndex] && fileMap.value[entryIndex][fieldName]) || []
+}
+
+function setFileInputRef(entryIndex: number, fieldName: string, el: HTMLInputElement | null) {
+  ensureFileStructuresForIndex(entryIndex)
+  const refs = fileInputRefs.value[entryIndex] as Record<string, HTMLInputElement | null>
+  refs[fieldName] = el
+}
+
+function handleFileSelect(event: Event, entryIndex: number, fieldItem: FieldItem) {
   const input = event.target as HTMLInputElement
   const files = Array.from(input?.files || [])
-  addFiles(fieldItem, files)
+  addFiles(entryIndex, fieldItem, files)
   input.value = '' // reset เพื่อให้เลือกไฟล์ซ้ำได้
 }
 
-function addFiles(fieldItem: FieldItem, files: File[]) {
+function addFiles(entryIndex: number, fieldItem: FieldItem, files: File[]) {
+  ensureFileStructuresForIndex(entryIndex)
   const filtered = fieldItem.accept
     ? files.filter((f) => {
         const exts = fieldItem.accept!.split(',').map((s) => s.trim().toLowerCase())
@@ -217,20 +442,38 @@ function addFiles(fieldItem: FieldItem, files: File[]) {
         )
       })
     : files
+  // split by size limit
+  const acceptedBySize = filtered.filter((f) => f.size <= MAX_FILE_SIZE)
+  const rejectedBySize = filtered.filter((f) => f.size > MAX_FILE_SIZE)
 
-  if (!fileMap.value[fieldItem.name]) {
-    fileMap.value[fieldItem.name] = []
+  const map = fileMap.value[entryIndex] as Record<string, File[]>
+  let arr = map[fieldItem.name]
+  if (!arr) {
+    arr = []
+    map[fieldItem.name] = arr
   }
 
   if (fieldItem.multiple) {
-    fileMap.value[fieldItem.name]!.push(...filtered)
+    arr.push(...acceptedBySize)
   } else {
-    fileMap.value[fieldItem.name] = filtered.slice(0, 1)
+    map[fieldItem.name] = acceptedBySize.slice(0, 1)
   }
+
+  // set per-field file size error message for this entry
+  const sizeMsg = `ขนาดไฟล์ต้องไม่เกิน ${Math.floor(MAX_FILE_SIZE / (1024 * 1024))} MB`
+  const errs = fileSizeErrors.value[entryIndex] || (fileSizeErrors.value[entryIndex] = {})
+  if (rejectedBySize.length > 0) errs[fieldItem.name] = sizeMsg
+  else errs[fieldItem.name] = undefined
 }
 
-function removeFile(fieldName: string, index: number) {
-  fileMap.value[fieldName]?.splice(index, 1)
+function removeFile(entryIndex: number, fieldName: string, index: number) {
+  const map = fileMap.value[entryIndex]
+  if (map && map[fieldName]) map[fieldName].splice(index, 1)
+  // update size error state after removal
+  const remaining = getFiles(entryIndex, fieldName)
+  const errs = fileSizeErrors.value[entryIndex] || (fileSizeErrors.value[entryIndex] = {})
+  if (remaining.some((f) => f.size > MAX_FILE_SIZE)) errs[fieldName] = `ขนาดไฟล์ต้องไม่เกิน ${Math.floor(MAX_FILE_SIZE / (1024 * 1024))} MB`
+  else errs[fieldName] = undefined
 }
 
 function formatFileSize(bytes: number): string {
@@ -339,7 +582,7 @@ function formatDisplayDateRange(str: string | undefined): string {
           <Card
             v-for="(entry, entryIndex) in localEntries"
             :key="entryIndex"
-            class="gab-3 w-full"
+            class="gab-3 w-full pt-2"
             :class="{ 'pb-0': !isEntryOpen(entryIndex) }"
           >
             <!-- แต่ละ section ภายใน entry -->
@@ -349,7 +592,15 @@ function formatDisplayDateRange(str: string | undefined): string {
               :initial-values="localValues[entryIndex]"
               :validation-schema="schemas[entryIndex]"
               @submit="(values) => onSubmitEntry(entryIndex, values)"
+              :ref="(el) => setFormRef(entryIndex, el)"
             >
+              <!-- hidden submit button inside the form so we can trigger native submit reliably -->
+              <button
+                :id="'form-submit-' + entryIndex"
+                type="submit"
+                class="hidden"
+                aria-hidden="true"
+              />
               <div
                 v-for="(section, sectionIndex) in entry"
                 :key="sectionIndex"
@@ -357,7 +608,7 @@ function formatDisplayDateRange(str: string | undefined): string {
               >
                 <CardHeader :class="{ 'pb-0': !isEntryOpen(entryIndex) }">
                   <div
-                    class="flex flex-row items-center justify-between pb-2"
+                    class="flex flex-row items-center justify-between py-2"
                     :class="
                       isEntryOpen(entryIndex) && section.topic
                         ? 'mb-2 border-b-2'
@@ -376,7 +627,7 @@ function formatDisplayDateRange(str: string | undefined): string {
                     <button
                       v-if="sectionIndex === 0 && isDropdown === true"
                       type="button"
-                      class="hover:bg-muted rounded-md p-1 transition-colors duration-150"
+                      class="hover:bg-muted rounded-md p-1 transition-colors duration-150 cursor-pointer"
                       @click="toggleEntry(entryIndex)"
                     >
                       <ChevronUp
@@ -397,14 +648,22 @@ function formatDisplayDateRange(str: string | undefined): string {
                   "
                 >
                   <div class="overflow-hidden">
-                    <CardContent class="pt-0">
+                    <CardContent class="pt-3">
                       <div class="flex flex-col gap-1 pb-4">
                         <!-- รวมสรุปจากทุก section ใน entry -->
                         <template v-for="(sec, secIdx) in entry" :key="secIdx">
                           <template v-for="value in sec.content" :key="value.name">
                             <p v-if="value.isShow" class="text-muted-foreground text-sm">
                               <span class="text-foreground font-medium">{{ value.label }}</span> :
-                              {{ value.label }}
+                              {{
+                                value.type === 'date'
+                                  ? formatDisplayDate(localValues[entryIndex]?.[value.name])
+                                  : value.type === 'date-range'
+                                  ? formatDisplayDateRange(localValues[entryIndex]?.[value.name])
+                                  : value.type === 'select' && value.options
+                                  ? ((value.options.find((o) => o.value === localValues[entryIndex]?.[value.name]) || {}).label || (localValues[entryIndex]?.[value.name] ?? '-'))
+                                  : (localValues[entryIndex]?.[value.name] ?? '-')
+                              }}
                             </p>
                           </template>
                         </template>
@@ -461,7 +720,7 @@ function formatDisplayDateRange(str: string | undefined): string {
                               "
                               :type="fieldItem.type"
                               :placeholder="
-                                fieldItem.placeholder || fieldItem.label || fieldItem.name
+                                fieldItem.placeholder 
                               "
                               autocomplete="off"
                               :aria-invalid="!!errors.length"
@@ -487,6 +746,7 @@ function formatDisplayDateRange(str: string | undefined): string {
                                     'w-full justify-start text-left font-normal',
                                     !veeField.value && 'text-muted-foreground',
                                     fieldItem.disabled && 'opacity-50',
+                                    errors.length && 'border-red-500 ',
                                   ]"
                                 >
                                   <CalendarIcon class="mr-2 h-4 w-4" />
@@ -533,6 +793,7 @@ function formatDisplayDateRange(str: string | undefined): string {
                                     'w-full justify-start text-left font-normal',
                                     !veeField.value && 'text-muted-foreground',
                                     fieldItem.disabled && 'opacity-50',
+                                    errors.length && 'border-red-500',
                                   ]"
                                 >
                                   <CalendarIcon class="mr-2 h-4 w-4" />
@@ -615,7 +876,7 @@ function formatDisplayDateRange(str: string | undefined): string {
                       <!-- file fields -->
                       <div
                         v-if="section.content.some((f) => f.type === 'file')"
-                        class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2"
+                        class="grid grid-cols-1 gap-4 sm:grid-cols-2"
                       >
                         <div
                           v-for="fieldItem in section.content.filter((f) => f.type === 'file')"
@@ -635,52 +896,73 @@ function formatDisplayDateRange(str: string | undefined): string {
                           >
                             {{ fieldItem.placeholder }}
                           </p>
-                          <input
-                            :ref="
-                              (el: any) => {
-                                if (el) fileInputRefs[fieldItem.name] = el as HTMLInputElement
-                              }
-                            "
-                            type="file"
-                            class="hidden"
-                            :accept="fieldItem.accept"
-                            :multiple="fieldItem.multiple"
-                            :disabled="fieldItem.disabled"
-                            @change="handleFileSelect($event, fieldItem)"
-                          />
-                          <Button
-                            type="button"
-                            class="rounded-lg px-4 py-2 text-sm font-semibold"
-                            :disabled="fieldItem.disabled"
-                            @click="fileInputRefs[fieldItem.name]?.click()"
-                          >
-                            อัปโหลดไฟล์
-                          </Button>
-
-                          <!-- รายการไฟล์ที่เลือก -->
-                          <div
-                            v-if="getFiles(fieldItem.name).length"
-                            class="mt-2 flex flex-col gap-1"
-                          >
-                            <div
-                              v-for="(file, fileIdx) in getFiles(fieldItem.name)"
-                              :key="fileIdx"
-                              class="border-muted bg-muted/50 flex h-10 w-max items-center justify-between gap-2 rounded-2xl border-2 p-2 text-sm"
+                          <VeeField :name="fieldItem.name" v-slot="{ field, errors }">
+                            <Field
+                              :data-invalid="
+                                !!fileSizeErrors[entryIndex]?.[fieldItem.name] || !!errors.length
+                              "
+                              class="gap-0"
                             >
-                              <span class="truncate">{{ file.name }}</span>
-                              <span class="text-muted-foreground shrink-0 text-xs">
-                                {{ formatFileSize(file.size) }}
-                              </span>
-                              <button
-                                v-if="!fieldItem.disabled"
-                                type="button"
-                                class="hover:text-destructive text-muted-foreground rounded p-0.5 transition-colors"
-                                @click.stop="removeFile(fieldItem.name, fileIdx)"
+
+                              <input
+                                :ref="(el: any) => setFileInputRef(entryIndex, fieldItem.name, el)"
+                                type="file"
+                                class="hidden"
+                                :accept="fieldItem.accept"
+                                :multiple="fieldItem.multiple"
+                                :disabled="fieldItem.disabled"
+                                @change="(e) => { handleFileSelect(e, entryIndex, fieldItem); const files = getFiles(entryIndex, fieldItem.name); if (fieldItem.multiple) field['onUpdate:modelValue']?.(files); else field['onUpdate:modelValue']?.(files[0] ?? undefined) }"
+                              />
+                              <div class="w-28">
+                                <Button
+                                  type="button"
+                                  class="cursor-pointer rounded-lg px-6 py-2 text-sm font-semibold bg-[#0b63b8] hover:bg-[#0a58a6] text-white w-fit"
+                                  :disabled="fieldItem.disabled"
+                                  @click="fileInputRefs[entryIndex]?.[fieldItem.name]?.click()"
+                                >
+                                  อัปโหลดไฟล์
+                                </Button>
+                              </div>
+                              <div class="min-h-6">
+                                <div
+                                  v-if="fileSizeErrors[entryIndex]?.[fieldItem.name]"
+                                  class="mt-2 text-sm text-red-600"
+                                >
+                                  {{ fileSizeErrors[entryIndex][fieldItem.name] }}
+                                </div>
+                                <FieldError
+                                  v-else-if="errors.length"
+                                  :errors="errors"
+                                  class="mt-2 text-sm text-red-600"
+                                />
+                              </div>
+
+                              <!-- รายการไฟล์ที่เลือก -->
+                              <div
+                                v-if="getFiles(entryIndex, fieldItem.name).length"
+                                class="mt-2 flex flex-col gap-1"
                               >
-                                <X class="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                          </div>
+                                <div
+                                  v-for="(file, fileIdx) in getFiles(entryIndex, fieldItem.name)"
+                                  :key="fileIdx"
+                                  class="border-muted bg-muted/50 flex h-10 w-max items-center justify-between gap-2 rounded-2xl border-2 p-2 text-sm"
+                                >
+                                  <span class="truncate">{{ file.name }}</span>
+                                  <span class="text-muted-foreground shrink-0 text-xs">
+                                    {{ formatFileSize(file.size) }}
+                                  </span>
+                                  <button
+                                    v-if="!fieldItem.disabled"
+                                    type="button"
+                                    class="hover:text-destructive text-muted-foreground rounded p-0.5 transition-colors"
+                                    @click.stop="() => { removeFile(entryIndex, fieldItem.name, fileIdx); const files = getFiles(entryIndex, fieldItem.name); if (fieldItem.multiple) field['onUpdate:modelValue']?.(files); else field['onUpdate:modelValue']?.(files[0] ?? undefined) }"
+                                  >
+                                    <X class="h-3.5 w-3.5 cursor-pointer" />
+                                  </button>
+                                </div>
+                              </div>
+                            </Field>
+                          </VeeField>
                         </div>
                       </div>
 
@@ -859,6 +1141,7 @@ function formatDisplayDateRange(str: string | undefined): string {
                   </div>
                 </div>
               </div>
+              
             </VeeForm>
 
             <!-- ปุ่มบันทึก / ลบ -->
@@ -869,7 +1152,7 @@ function formatDisplayDateRange(str: string | undefined): string {
               <Button
                 type="button"
                 variant="destructive"
-                class="rounded-lg px-6 py-2 font-semibold shadow-sm"
+                class="rounded-lg px-6 py-2 font-semibold shadow-sm cursor-pointer"
                 @click="deleteEntry(entryIndex)"
               >
                 <Trash2 class="mr-1 h-4 w-4" />
@@ -877,7 +1160,7 @@ function formatDisplayDateRange(str: string | undefined): string {
               </Button>
               <Button
                 type="button"
-                class="rounded-lg bg-[#16A34A] px-6 py-2 font-semibold text-white shadow-sm hover:bg-[#15803D]"
+                class="rounded-lg cursor-pointer bg-[#16A34A] px-6 py-2 font-semibold text-white shadow-sm hover:bg-[#15803D]"
                 @click="saveEntry(entryIndex)"
               >
                 บันทึก

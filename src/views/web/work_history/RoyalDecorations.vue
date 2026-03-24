@@ -16,6 +16,10 @@ async function getRoyalDecorationData() {
       per_page: 50,
     })
     royalDecorationData.value =  response.data[0]?.decorations || [] 
+    royalDecorationData.value = royalDecorationData.value.map((item) => ({
+      ...item,
+      year: item.year.toString() || '',
+    }))
     console.log('royalDecorationData API Response:', response)
     console.log('royalDecorationData Data:', response.data)
 
@@ -36,11 +40,44 @@ onMounted(() => {
 
 const isEditMode = true
 
-function handleSave(groupIndex: number) {
+function handleSave(groupIndex: number, values?: Record<string, any>) {
+  // previous value at that index (if any)
+  const previous = royalDecorationData.value[groupIndex]
+
+  // Determine if this is a new entry (no previous data at index)
+  const isNew = previous == null
+
+  // Log both previous and new values for debugging
+  console.log('CreateForm save emitted:', {
+    groupIndex,
+    isNew,
+    previous: previous ?? null,
+    values: values ?? null,
+  })
+
+  // Optionally update local state to reflect the saved values (keeps UI in sync)
+  if (values) {
+    // if updating existing entry
+    if (!isNew) royalDecorationData.value[groupIndex] = { ...previous, ...values }
+    else royalDecorationData.value.push({ ...(values || {}) })
+  }
+
   toast(`บันทึกข้อมูลกลุ่มที่ ${groupIndex + 1} สำเร็จ`, { position: 'bottom-right' })
 }
 
 function handleDelete(groupIndex: number) {
+  // Log the delete event and show previous value for debugging
+  const previous = royalDecorationData.value[groupIndex]
+  console.log('CreateForm delete emitted:', { groupIndex, previous: previous ?? null })
+
+  // Update local state so the UI reflects the deletion immediately
+  if (previous != null) {
+    royalDecorationData.value.splice(groupIndex, 1)
+    console.log('royalDecorationData after delete:', royalDecorationData.value)
+  } else {
+    console.log('handleDelete: no item found at index', groupIndex)
+  }
+
   toast(`ลบข้อมูลกลุ่มที่ ${groupIndex + 1} สำเร็จ`, { position: 'bottom-right' })
 }
 </script>

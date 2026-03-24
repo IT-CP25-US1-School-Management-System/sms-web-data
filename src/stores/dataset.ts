@@ -19,7 +19,6 @@ export async function getDatasetRows<T = Record<string, any>>(
   if (params?.filter_logic) queryParams.filter_logic = params.filter_logic
   if (params?.sort_by) queryParams.sort_by = params.sort_by
   if (params?.sort_order) queryParams.sort_order = params.sort_order
-
   const response = await dataApiInstance.get<DatasetListResponse<T>>(
     `/v1/datasets/${DATASET_ID}/versions/${DATASET_VERSION}/data`,
     { params: queryParams },

@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/select'
 import { ref, computed } from 'vue'
 import { Separator } from '@/components/ui/separator'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent ,CardHeader ,CardTitle} from '@/components/ui/card'
 import { Form as VeeForm, Field as VeeField } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { z } from 'zod'
@@ -20,7 +20,10 @@ import { toast } from 'vue-sonner'
 
 const fileMap = ref<Record<string, File[]>>({})
 const fileInputRefs = ref<Record<string, HTMLInputElement | null>>({})
+const fileSizeErrors = ref<Record<string, string | undefined>>({})
 const formRef = ref<any>(null)
+const MAX_FILE_SIZE = 15 * 1024 * 1024
+const FILE_SIZE_ERROR_MESSAGE = `ขนาดไฟล์ต้องไม่เกิน ${Math.floor(MAX_FILE_SIZE / (1024 * 1024))} MB`
 
 const pa2GroupSubject = ref('')
 const pa2TeachLevel1 = ref('')
@@ -89,12 +92,15 @@ const groupSubjectOptions = [
 function handleFileSelect(event: Event, key: string, multiple = false) {
   const input = event.target as HTMLInputElement
   const files = Array.from(input?.files || [])
+  const acceptedFiles = files.filter((file) => file.size <= MAX_FILE_SIZE)
+  const rejectedFiles = files.filter((file) => file.size > MAX_FILE_SIZE)
   if (!fileMap.value[key]) fileMap.value[key] = []
   if (multiple) {
-    fileMap.value[key].push(...files)
+    fileMap.value[key].push(...acceptedFiles)
   } else {
-    fileMap.value[key] = files.slice(0, 1)
+    fileMap.value[key] = acceptedFiles.slice(0, 1)
   }
+  fileSizeErrors.value[key] = rejectedFiles.length > 0 ? FILE_SIZE_ERROR_MESSAGE : undefined
   input.value = ''
   // Sync file count to form and validate
   const countField = `${key}-count`
@@ -104,10 +110,15 @@ function handleFileSelect(event: Event, key: string, multiple = false) {
 
 function removeFile(key: string, idx: number) {
   fileMap.value[key]?.splice(idx, 1)
+  fileSizeErrors.value[key] = undefined
   // Sync file count to form and validate
   const countField = `${key}-count`
   formRef.value?.setFieldValue(countField, fileMap.value[key]?.length || 0, false)
   formRef.value?.validateField?.(countField)
+}
+
+function getFileErrorMessage(key: string, errors: string[]) {
+  return fileSizeErrors.value[key] || errors[0] || ''
 }
 
 function formatFileSize(bytes: number): string {
@@ -173,7 +184,10 @@ async function submitPA2Form() {
 </script>
 <template>
   <div class="mx-6 flex flex-col gap-4 pb-6">
-    <Card class="w-full gap-3 pb-6">
+    <Card class="w-full gap-0 pb-6">
+      <CardHeader class="pb-0" >
+          <CardTitle>รายละเอียดการประเมิน PA</CardTitle>
+     </CardHeader>
       <CardContent>
         <VeeForm
           ref="formRef"
@@ -413,7 +427,7 @@ async function submitPA2Form() {
           <div class="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
             <VeeField name="pa2-pa1-count" v-slot="{ errors }">
               <div>
-                <p class="mb-1 text-sm font-semibold">ข้อตกลงPA (PA1)</p>
+                <p class="mb-1 text-sm font-semibold">ข้อตกลงPA (PA1) <span class="text-red-500">*</span></p>
                 <p class="text-muted-foreground mb-2 text-xs">
                   ตั้งชื่อไฟล์ : กลุ่มสาระ-ชื่อ-สกุล-คศ.ปัจจุบัน-pa1
                 </p>
@@ -450,12 +464,14 @@ async function submitPA2Form() {
                     </button>
                   </div>
                 </div>
-                <FieldError v-if="errors.length" :errors="errors" />
+                <p v-if="getFileErrorMessage('pa2-pa1', errors)" class="mt-2 text-sm text-red-600">
+                  {{ getFileErrorMessage('pa2-pa1', errors) }}
+                </p>
               </div>
             </VeeField>
             <VeeField name="pa2-eval1-count" v-slot="{ errors }">
               <div>
-                <p class="mb-1 text-sm font-semibold">PA2 (กรรมการคนที่1 ผู้อำนวยการ)</p>
+                <p class="mb-1 text-sm font-semibold">PA2 (กรรมการคนที่1 ผู้อำนวยการ) <span class="text-red-500">*</span></p>
                 <p class="text-muted-foreground mb-2 text-xs">
                   ตั้งชื่อไฟล์ : กลุ่มสาระ-ชื่อ-สกุล-คศ.ปัจจุบัน-pa2-กรรมการ1
                 </p>
@@ -492,7 +508,12 @@ async function submitPA2Form() {
                     </button>
                   </div>
                 </div>
-                <FieldError v-if="errors.length" :errors="errors" />
+                <p
+                  v-if="getFileErrorMessage('pa2-eval1', errors)"
+                  class="mt-2 text-sm text-red-600"
+                >
+                  {{ getFileErrorMessage('pa2-eval1', errors) }}
+                </p>
               </div>
             </VeeField>
           </div>
@@ -500,7 +521,7 @@ async function submitPA2Form() {
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <VeeField name="pa2-eval2-count" v-slot="{ errors }">
               <div>
-                <p class="mb-1 text-sm font-semibold">PA2 (กรรมการคนที่ 2)</p>
+                <p class="mb-1 text-sm font-semibold">PA2 (กรรมการคนที่ 2) <span class="text-red-500">*</span></p>
                 <p class="text-muted-foreground mb-2 text-xs">
                   ตั้งชื่อไฟล์ : กลุ่มสาระ-ชื่อ-สกุล-คศ.ปัจจุบัน-pa2-กรรมการ2
                 </p>
@@ -537,12 +558,17 @@ async function submitPA2Form() {
                     </button>
                   </div>
                 </div>
-                <FieldError v-if="errors.length" :errors="errors" />
+                <p
+                  v-if="getFileErrorMessage('pa2-eval2', errors)"
+                  class="mt-2 text-sm text-red-600"
+                >
+                  {{ getFileErrorMessage('pa2-eval2', errors) }}
+                </p>
               </div>
             </VeeField>
             <VeeField name="pa2-eval3-count" v-slot="{ errors }">
               <div>
-                <p class="mb-1 text-sm font-semibold">PA2 (กรรมการคนที่ 3)</p>
+                <p class="mb-1 text-sm font-semibold">PA2 (กรรมการคนที่ 3) <span class="text-red-500">*</span></p>
                 <p class="text-muted-foreground mb-2 text-xs">
                   ตั้งชื่อไฟล์ : กลุ่มสาระ-ชื่อ-สกุล-คศ.ปัจจุบัน-pa2-กรรมการ3
                 </p>
@@ -579,7 +605,12 @@ async function submitPA2Form() {
                     </button>
                   </div>
                 </div>
-                <FieldError v-if="errors.length" :errors="errors" />
+                <p
+                  v-if="getFileErrorMessage('pa2-eval3', errors)"
+                  class="mt-2 text-sm text-red-600"
+                >
+                  {{ getFileErrorMessage('pa2-eval3', errors) }}
+                </p>
               </div>
             </VeeField>
           </div>

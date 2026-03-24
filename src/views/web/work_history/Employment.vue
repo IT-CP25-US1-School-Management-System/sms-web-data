@@ -92,7 +92,7 @@ onMounted(() => {
         {
           name: 'salary',
           label: 'เงินค่าจ้าง',
-          type: 'text',
+          type: 'number',
           required: true,
           placeholder: '',
           disabled: true,
@@ -100,7 +100,7 @@ onMounted(() => {
         {
           name: 'social-security-contribution',
           label: 'เงินสมทบกองทุนประกันสังคม',
-          type: 'text',
+          type: 'number',
           required: true,
           placeholder: '',
           disabled: true,

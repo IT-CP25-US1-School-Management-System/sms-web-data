@@ -2,7 +2,6 @@
 import { FileText, X, ChevronUp } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { FieldError } from '@/components/ui/field'
 import { Form as VeeForm, Field as VeeField } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { z } from 'zod'
@@ -12,6 +11,9 @@ import { ref, computed } from 'vue'
 const fileMap = ref<Record<string, File[]>>({})
 const fileInputRefs = ref<Record<string, HTMLInputElement | null>>({})
 const formRef = ref<any>(null)
+const fileSizeErrors = ref<Record<string, string | undefined>>({})
+const MAX_FILE_SIZE = 15 * 1024 * 1024
+const FILE_SIZE_ERROR_MESSAGE = `ขนาดไฟล์ต้องไม่เกิน ${Math.floor(MAX_FILE_SIZE / (1024 * 1024))} MB`
 
 /* ──────────────────── Type 5: PA – collapsible sections ──────────────────── */
 const paSections = [
@@ -48,12 +50,15 @@ const initialValues = computed(() => {
 function handleFileSelect(event: Event, key: string, multiple = false) {
   const input = event.target as HTMLInputElement
   const files = Array.from(input?.files || [])
+  const acceptedFiles = files.filter((file) => file.size <= MAX_FILE_SIZE)
+  const rejectedFiles = files.filter((file) => file.size > MAX_FILE_SIZE)
   if (!fileMap.value[key]) fileMap.value[key] = []
   if (multiple) {
-    fileMap.value[key].push(...files)
+    fileMap.value[key].push(...acceptedFiles)
   } else {
-    fileMap.value[key] = files.slice(0, 1)
+    fileMap.value[key] = acceptedFiles.slice(0, 1)
   }
+  fileSizeErrors.value[key] = rejectedFiles.length > 0 ? FILE_SIZE_ERROR_MESSAGE : undefined
   input.value = ''
   // Sync file count to form and validate
   const idx = key.split('-')[1]
@@ -63,10 +68,15 @@ function handleFileSelect(event: Event, key: string, multiple = false) {
 
 function removeFile(key: string, idx: number) {
   fileMap.value[key]?.splice(idx, 1)
+  fileSizeErrors.value[key] = undefined
   // Sync file count to form and validate
   const sectionIdx = key.split('-')[1]
   formRef.value?.setFieldValue(`pa-${sectionIdx}-count`, fileMap.value[key]?.length || 0, false)
   formRef.value?.validateField?.(`pa-${sectionIdx}-count`)
+}
+
+function getFileErrorMessage(key: string, errors: string[]) {
+  return fileSizeErrors.value[key] || errors[0] || ''
 }
 
 function formatFileSize(bytes: number): string {
@@ -128,7 +138,7 @@ async function submitPAForm() {
           >
             <div class="overflow-hidden">
               <CardContent class="pt-3">
-                <p class="mb-2 text-sm font-semibold">แนบไฟล์ PDF</p>
+                <p class="mb-2 text-sm font-semibold">แนบไฟล์ PDF <span class="text-red-500">*</span></p>
                 <VeeField :name="`pa-${sIdx}-count`" v-slot="{ errors }">
                   <input
                     :ref="
@@ -146,7 +156,7 @@ async function submitPAForm() {
                     class="cursor-pointer"
                     @click="triggerFileInput(`pa-${sIdx}`)"
                   >
-                    <FileText class="mr-1 h-4 w-4" /> อัปโหลดไฟล์
+                    <FileText class="mr-1 h-4 w-4" /> อัปโหลดไฟล์  
                   </Button>
                   <div v-if="fileMap[`pa-${sIdx}`]?.length" class="mt-2 flex flex-col gap-1">
                     <div
@@ -167,7 +177,12 @@ async function submitPAForm() {
                       </button>
                     </div>
                   </div>
-                  <FieldError v-if="errors.length" :errors="errors" class="mt-2" />
+                  <p
+                    v-if="getFileErrorMessage(`pa-${sIdx}`, errors)"
+                    class="mt-2 text-sm text-red-600"
+                  >
+                    {{ getFileErrorMessage(`pa-${sIdx}`, errors) }}
+                  </p>
                 </VeeField>
               </CardContent>
             </div>

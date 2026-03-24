@@ -1,41 +1,49 @@
 <script setup lang="ts">
 import DropDownForm from '@/components/form/DropDownForm.vue'
 import { Button } from '@/components/ui/button'
-import { getDatasetRows } from '@/stores/dataset'
+import { getDatasetRows ,updateDatasetRow } from '@/stores/dataset'
 import { onMounted, ref } from 'vue'
-import type { v } from 'vue-router/dist/router-CWoNjPRp.mjs'
 import { toast } from 'vue-sonner'
-
-const isNotError = ref(true)
+import ConfirmModal from '@/components/ConfirmModal.vue'
+import type { PersonData } from '@/types/teacher'
+import {calAge ,formatDateInput} from '@/lib/helpers.ts'
 const loading = ref(false)
-
 const personalData = ref<Record<string, any>>({})
+const personalDataUpdate = ref<PersonData>({})
+const allData = ref<Record<string, any>[]>([])
+
+const confirmModal = ref(false)
+const action = ref('update') 
+const modalTopic = ref('ข้อมูลส่วนตัว')
+const modalValue = ref('')
+
 // refs to DropDownForm components so we can trigger validation from the parent save button
 const generalForm = ref<any>(null)
 const sensitiveForm = ref<any>(null)
 const contactForm = ref<any>(null)
+
+
 async function getPersonalDetailData() {
   loading.value = true
+
   try {
-    const response = await getDatasetRows({
+    const response = await getDatasetRows( {
       view: 'personal_get',
       page: 1,
       per_page: 50,
     })
     personalData.value = response.data[0] || {}
-    console.log('Personal Detail API Response:', response)
-    console.log('Personal Detail Data:', response.data)
-    console.log('Personal Detail Prefix:', personalData.value?.prefixes?.prefixes_name_th)
-    personalData.value.birth_date = personalData.value.birth_date
-      ? personalData.value.birth_date.split('T')[0]
-      : ''
+    console.log('Personal Detail API Response:', personalData.value)
+    // personalData.value.birth_date = personalData.value.birth_date
+    //   ? personalData.value.birth_date.split('T')[0]
+    //   : ''
+    personalData.value.birth_date = formatDateInput(personalData.value.birth_date)
+    personalDataUpdate.value = {...personalData.value} as PersonData
     personalData.value.prefix_id = response.data[0]?.prefixes?.prefixes_name_th || ''
     personalData.value.prefix_en = response.data[0]?.prefixes?.prefixes_name_en || ''
-    isNotError.value = true
+    personalData.value.age = calAge(personalData.value.birth_date)
   } catch (error: any) {
-    console.error('Personal Detail API Error:', error)
-    console.error('Error Response:', error?.response?.data)
-    isNotError.value = false
+   
     toast.error(`โหลดข้อมูลส่วนตัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
       position: 'bottom-right',
     })
@@ -43,38 +51,100 @@ async function getPersonalDetailData() {
   loading.value = false
 }
 
+async function updateDataPersonalDetail() {
+  loading.value = true
+  const datasetId = 'data_update_view'
+  const version = 'v1.0.0'
+
+  try {
+    const response = await updateDatasetRow(
+       // assuming the API identifies the record to update by an 'id' field
+      datasetId, 
+      version,
+      personalData.value.id,
+      personalDataUpdate.value, 
+    )
+    // personalData.value = response.data[0] || {}
+    console.log('Personal Detail API Response:', response)
+    console.log('Personal Detail Data:', response.data)
+      toast.success(`อัพเดตข้อมูลส่วนตัวสำเร็จ`, {
+        position: 'bottom-right',
+      })
+  } catch (error: any) {
+    console.error('Personal Detail API Error:', error)
+    console.error('Error Response:', error?.response?.data)
+    toast.error(`อัพเดตข้อมูลส่วนตัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
+      position: 'bottom-right',
+    })
+  } 
+  loading.value = false
+}
+
+
 onMounted(() => {
-  console.log("family");
   getPersonalDetailData()
 })
 
-function updatePersonalDetailData() {
+function updateData(action:boolean) {
   // Implementation for updating personal detail data
+  if (action) {
+    const now = new Date().toISOString()
+    personalDataUpdate.value = {
+    ...personalDataUpdate.value,
+    department_id: +personalData.value.department_id?.toString() || 0,
+    updated_at: now,
+  }
+   console.log('action:',personalDataUpdate.value)
+   updateDataPersonalDetail()
+  } 
+  confirmModal.value = false
 }
 
 async function onSaveAll() {
-  // trigger submit on all child forms; they expose submitForm()
   const forms = [generalForm, sensitiveForm, contactForm]
+  let isAllValid = []
+
   for (const fRef of forms) {
-    try {
-      if (fRef.value && typeof fRef.value.submitForm === 'function') {
-        await fRef.value.submitForm()
+    if (fRef.value?.submitForm) {
+      const isValid = await fRef.value.submitForm()
+      if (!isValid) {
+        isAllValid.push(false)
       }
-    } catch (err) {
-      console.error('Error submitting form', err)
     }
   }
+  // If any form is false, do not proceed and close the modal if it was open
+  if (isAllValid.some((valid) => valid=== false)) {
+    confirmModal.value = false
+    return
+  }
+
+  confirmModal.value = true
+  console.log('All form data to save:',  confirmModal.value , personalDataUpdate.value)
+}
+
+//value จาก emit
+async function handleSave(data: Record<string, any> , formType: string) {
+  console.log('Saving data from form type:', formType, 'with data:', data)
+ // console.log('Current allData:', allData.value)
+ if (formType === 'contactForm') {
+    personalDataUpdate.value = {
+      ...personalDataUpdate.value,
+      ...data,
+    }
+  }
+ // console.log('Updated personalDataUpdate:', personalDataUpdate.value)
 }
 
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 mx-6" v-if="isNotError">
+  <div class="flex flex-col gap-4 mx-6">
     <!-- ข้อมูลทั่วไป -->
     <DropDownForm
       topic="ข้อมูลทั่วไป  แก้ไม่ได้  ยกเว้นช่องทางการติดต่อ update ไดเ"
       :values="personalData"
       ref="generalForm"
+      @save="(data) => handleSave(data, 'generalForm')"
       :fields="[
         {
           name: 'prefix_id',
@@ -176,6 +246,7 @@ async function onSaveAll() {
       ref="sensitiveForm"
       topic="ข้อมูล Sensitive"
       :values="personalData"
+      @save="(data) => handleSave(data, 'sensitive')"
       :fields="[
         {
           name: 'gender',
@@ -232,6 +303,7 @@ async function onSaveAll() {
       ref="contactForm"
       topic="ช่องทางการติดต่อ"
       :values="personalData"
+      @save="(data) => handleSave(data, 'contactForm')"
       :fields="[
         {
           name: 'phone',
@@ -239,7 +311,7 @@ async function onSaveAll() {
           type: 'text',
           required: true,
           disabled: false,
-          placeholder: 'กรุณาระบุเบอร์โทรศัพท์',
+          placeholder: '0xxxxxxxxx',
         },
         {
           name: 'personal_email',
@@ -247,7 +319,7 @@ async function onSaveAll() {
           type: 'email',
           required: true,
           disabled: false,
-          placeholder: 'กรุณาระบุอีเมล',
+          placeholder: 'example@email.com',
         },
         {
           name: 'line-id',
@@ -261,19 +333,26 @@ async function onSaveAll() {
     />
   </div>
  
-  <div class="flex flex-col gap-4 mx-6" v-else>
-    เกิดข้อผิดพลาดในการโหลดข้อมูลส่วนตัว กรุณาลองใหม่อีกครั้งภายหลัง
-  </div>  
+  
    <!-- ปุ่มบันทึก -->
     <div
-      v-if="isNotError"
       class="sticky bottom-0 right-0 z-40 flex justify-end border-t border-gray-200 bg-white p-3 w-full dark:bg-black dark:border-neutral-700"
     >
       <Button
-        class="bg-[#16A34A] hover:bg-[#15803D] text-white px-8 py-2 rounded-lg font-semibold shadow-sm"
-        @click="onSaveAll"
+        class="cursor-pointer bg-[#16A34A] hover:bg-[#15803D] text-white px-8 py-2 rounded-lg font-semibold shadow-sm"
+        @click="onSaveAll()"
       >
         บันทึก
       </Button>
     </div>
+
+  <!-- modal -->
+  <ConfirmModal
+    v-if="confirmModal"
+    :action="action"
+    :topic="modalTopic"
+    :value="modalValue"
+    @confirm="updateData"
+  />
+
 </template>

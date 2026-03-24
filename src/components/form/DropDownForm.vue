@@ -80,9 +80,16 @@ const schema = computed(() => {
 
 const initialValues = ref<Record<string, any>>({})
 const localValues = ref<Record<string, any>>({})
+const MAX_FILE_SIZE = 15 * 1024 * 1024
+const FILE_SIZE_ERROR_MESSAGE = `ขนาดไฟล์ต้องไม่เกิน ${Math.floor(MAX_FILE_SIZE / (1024 * 1024))} MB`
 
 // ref to the internal VeeForm component so parent can trigger submit
 const formRef = ref<any>(null)
+
+const fileMap = ref<Record<string, File[]>>({})
+const fileInputRefs = ref<Record<string, HTMLInputElement | null>>({})
+const fileErrors = ref<Record<string, string | undefined>>({})
+const fileSizeErrors = ref<Record<string, string | undefined>>({})
 
 function cloneValues(source: Record<string, any> = {}) {
   return JSON.parse(JSON.stringify(source))
@@ -101,6 +108,8 @@ function syncFormState() {
   const next = buildValuesFromProps()
   initialValues.value = cloneValues(next)
   localValues.value = cloneValues(next)
+  fileErrors.value = {}
+  fileSizeErrors.value = {}
 
   if (formRef.value?.resetForm) {
     formRef.value.resetForm({
@@ -139,31 +148,34 @@ watch(
   { deep: true },
 )
 
-async function submitForm() {
-  if (!formRef.value) return false
-
-  const result = await formRef.value.validate()
-
-  if (result.valid) {
-    await formRef.value.submitForm()
-  }
-
-  return result.valid
-}
-
-defineExpose({ submitForm, isDirty })
-
 function onSubmit(values: Record<string, any>) {
   initialValues.value = cloneValues(values || {})
   localValues.value = cloneValues(values || {})
   emit('save', values)
 }
+
+async function submitForm() {
+  if (!formRef.value) return false
+
+  const result = await formRef.value.validate()
+  const filesValid = validateFileFields()
+
+  if (result.valid && filesValid) {
+    // formRef.value.$el?.dispatchEvent(
+    //   new Event('submit', { cancelable: true, bubbles: true })
+    // )
+    onSubmit(formRef.value.values)
+  }
+
+  return result.valid && filesValid
+}
+
+defineExpose({ submitForm, isDirty })
+
+
 //console.log('mapValueToOption', mapValueToOption())
 const isOpen = ref(true)
 
-// File upload state: key = fieldItem.name, value = File[]
-const fileMap = ref<Record<string, File[]>>({})
-const fileInputRefs = ref<Record<string, HTMLInputElement | null>>({})
 function getFiles(fieldName: string): File[] {
   return fileMap.value[fieldName] || []
 }
@@ -187,20 +199,50 @@ function addFiles(fieldItem: FieldItem, files: File[]) {
         )
       })
     : files
+  const acceptedBySize = filtered.filter((file) => file.size <= MAX_FILE_SIZE)
+  const rejectedBySize = filtered.filter((file) => file.size > MAX_FILE_SIZE)
 
   if (!fileMap.value[fieldItem.name]) {
     fileMap.value[fieldItem.name] = []
   }
 
   if (fieldItem.multiple) {
-    fileMap.value[fieldItem.name]!.push(...filtered)
+    fileMap.value[fieldItem.name]!.push(...acceptedBySize)
   } else {
-    fileMap.value[fieldItem.name] = filtered.slice(0, 1)
+    fileMap.value[fieldItem.name] = acceptedBySize.slice(0, 1)
+  }
+
+  fileSizeErrors.value[fieldItem.name] =
+    rejectedBySize.length > 0 ? FILE_SIZE_ERROR_MESSAGE : undefined
+
+  if (fileMap.value[fieldItem.name]?.length) {
+    fileErrors.value[fieldItem.name] = undefined
   }
 }
 
 function removeFile(fieldName: string, index: number) {
   fileMap.value[fieldName]?.splice(index, 1)
+  fileSizeErrors.value[fieldName] = undefined
+}
+
+function validateFileFields() {
+  let isValid = true
+
+  for (const field of props.fields || []) {
+    if (field.type !== 'file' || field.disabled) continue
+    if (fileSizeErrors.value[field.name]) {
+      isValid = false
+      continue
+    }
+    if (field.required && getFiles(field.name).length === 0) {
+      fileErrors.value[field.name] = `กรุณาแนบ ${field.label || field.name}`
+      isValid = false
+    } else {
+      fileErrors.value[field.name] = undefined
+    }
+  }
+
+  return isValid
 }
 
 function formatFileSize(bytes: number): string {
@@ -415,6 +457,14 @@ function formatDisplayDate(str: string | undefined): string {
               </Button>
 
               <!-- รายการไฟล์ที่เลือก -->
+              <div class="min-h-6">
+                <p v-if="fileSizeErrors[fieldItem.name]" class="mt-2 text-sm text-red-600">
+                  {{ fileSizeErrors[fieldItem.name] }}
+                </p>
+                <p v-else-if="fileErrors[fieldItem.name]" class="mt-2 text-sm text-red-600">
+                  {{ fileErrors[fieldItem.name] }}
+                </p>
+              </div>
               <div v-if="getFiles(fieldItem.name).length" class="mt-2 flex flex-col gap-1">
                 <div
                   v-for="(file, fileIdx) in getFiles(fieldItem.name)"
