@@ -191,7 +191,7 @@ export async function logout(): Promise<void> {
 /**
  * Create a new user account
  */
-export async function createUser(userData: { email: string; firstname: string; lastname: string }): Promise<any> {
+export async function createUser(userData: { email: string; first_name: string; last_name: string }): Promise<any> {
   const response = await authApiInstance.post('/v1/auth/users', userData)
   return response.data
 }

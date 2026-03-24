@@ -42,7 +42,7 @@ export interface ApprovalLog {
   id: string
   request_id: string
   approver_id: string
-  action: 'อนุมัติ' | 'ไม่อนุมัติ' | 'ส่งกลับแก้ไข'
+  action: 'อนุมัติ' | 'ไม่อนุมัติ' | 'กำลังดำเนินการ'
   comment?: string
   created_at: string
 }

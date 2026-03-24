@@ -9,9 +9,10 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent } from '@/components/ui/card'
 import { ArrowLeft, Loader2 } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
-import type { DocumentRequest } from '@/types/document'
-import { getDocumentRequestById, updateDocumentRequest } from '@/stores/documents'
+import type { DocumentRequest, ApprovalLog } from '@/types/document'
+import { getDocumentRequestById, updateDocumentRequest, createApprovalLog } from '@/stores/documents'
 import { toDateInputFormat, getPrefixName } from '@/lib/helpers'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const route = useRoute()
@@ -60,41 +61,55 @@ const fetchRequest = async () => {
 
 // Save changes
 const handleSave = async () => {
-  if (!request.value) return
-
-  saving.value = true
-  try {
-    const updateData: Partial<DocumentRequest> = {
-      id: request.value.id,
-      person_id: request.value.person_id,
-      document_type: formData.value.document_type,
-      description: formData.value.description,
-      start_date: formData.value.start_date || undefined,
-      end_date: formData.value.end_date || undefined,
-      quantity: parseFloat(formData.value.quantity) || 0,
-      status: (
-        formData.value.status as
-          | 'กำลังดำเนินการ'
-          | 'อนุมัติ'
-          | 'ไม่อนุมัติ'
-      ) || undefined,
-      created_at: request.value.created_at,
-      updated_at: new Date().toISOString(),
-    }
-    await updateDocumentRequest(request.value.id, updateData)
-    toast.success('สำเร็จ', {
-      description: 'บันทึกการเปลี่ยนแปลงเรียบร้อยแล้ว',
-    })
-    router.back()
-  } catch (error: any) {
-    console.error('Failed to update request:', error)
-    toast.error('เกิดข้อผิดพลาด', {
-      description: error.message || 'ไม่สามารถบันทึกการเปลี่ยนแปลง',
-    })
-  } finally {
-    saving.value = false
-  }
-}
+   if (!request.value) return
+ 
+   saving.value = true
+   try {
+     const updateData: Partial<DocumentRequest> = {
+       id: request.value.id,
+       title: request.value.title,
+       person_id: request.value.person_id,
+       document_type: formData.value.document_type,
+       description: formData.value.description,
+       start_date: formData.value.start_date || undefined,
+       end_date: formData.value.end_date || undefined,
+       quantity: parseFloat(formData.value.quantity) || 0,
+       status: (
+         formData.value.status as
+           | 'กำลังดำเนินการ'
+           | 'อนุมัติ'
+           | 'ไม่อนุมัติ'
+       ) || undefined,
+       created_at: request.value.created_at,
+       updated_at: new Date().toISOString(),
+     }
+     await updateDocumentRequest(request.value.id, updateData)
+     
+     // Create approval log
+     const authStore = useAuthStore()
+     const approvalLogData: Omit<ApprovalLog, 'id' | 'created_at'> = {
+       request_id: request.value.id,
+       approver_id: authStore.user?.id || '', //9667f10f-12d2-4795-86a1-3e82deb6ac0e
+       action: formData.value.status as 'อนุมัติ' | 'ไม่อนุมัติ' | 'กำลังดำเนินการ',
+       comment: `แก้ไขคำร้อง: เปลี่ยนสถานะจาก ${request.value.status || ''} เป็น ${formData.value.status || ''}`,
+     }
+     await createApprovalLog(approvalLogData)
+     
+     toast.success('สำเร็จ', {
+       description: 'บันทึกการเปลี่ยนแปลงเรียบร้อยแล้ว',
+     })
+     console.log(updateData);
+     
+     router.back()
+   } catch (error: any) {
+     console.error('Failed to update request:', error)
+     toast.error('เกิดข้อผิดพลาด', {
+       description: error.message || 'ไม่สามารถบันทึกการเปลี่ยนแปลง',
+     })
+   } finally {
+     saving.value = false
+   }
+ }
 
 // Handle cancel
 const handleCancel = () => {
@@ -143,41 +158,45 @@ onMounted(() => {
             <!-- Document Type -->
             <div class="space-y-2">
               <Label for="document_type">ประเภทเอกสาร</Label>
-              <Input
-                id="document_type"
-                v-model="formData.document_type"
-                placeholder="เช่น ใบการศึกษา"
-              />
+               <Input
+                 id="document_type"
+                 v-model="formData.document_type"
+                 placeholder="เช่น ใบการศึกษา"
+                 :disabled="true"
+               />
             </div>
 
             <!-- Description -->
             <div class="space-y-2">
               <Label for="description">รายละเอียด</Label>
-              <Textarea
-                id="description"
-                v-model="formData.description"
-                placeholder="รายละเอียดคำร้อง"
-                rows="4"
-              />
+               <Textarea
+                 id="description"
+                 v-model="formData.description"
+                 placeholder="รายละเอียดคำร้อง"
+                 rows="4"
+                 :disabled="true"
+               />
             </div>
 
             <!-- Dates -->
             <div class="grid grid-cols-2 gap-4">
               <div class="space-y-2">
                 <Label for="start_date">วันที่เริ่มต้น</Label>
-                <Input
-                  id="start_date"
-                  v-model="formData.start_date"
-                  type="date"
-                />
+                 <Input
+                   id="start_date"
+                   v-model="formData.start_date"
+                   type="date"
+                   :disabled="true"
+                 />
               </div>
               <div class="space-y-2">
                 <Label for="end_date">วันสิ้นสุด</Label>
-                <Input
-                  id="end_date"
-                  v-model="formData.end_date"
-                  type="date"
-                />
+                 <Input
+                   id="end_date"
+                   v-model="formData.end_date"
+                   type="date"
+                   :disabled="true"
+                 />
               </div>
             </div>
 
@@ -185,12 +204,13 @@ onMounted(() => {
             <div class="grid grid-cols-2 gap-4">
               <div class="space-y-2">
                 <Label for="quantity">จำนวน</Label>
-                <Input
-                  id="quantity"
-                  v-model="formData.quantity"
-                  type="number"
-                  placeholder="0"
-                />
+                 <Input
+                   id="quantity"
+                   v-model="formData.quantity"
+                   type="number"
+                   placeholder="0"
+                   :disabled="true"
+                 />
               </div>
               <div class="space-y-2">
                 <Label for="status">สถานะ</Label>

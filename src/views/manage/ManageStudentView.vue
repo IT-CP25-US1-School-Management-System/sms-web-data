@@ -38,26 +38,28 @@ const { canPreviousPage, canNextPage, getVisiblePages } = usePagination(paginati
 const fetchStudents = async () => {
   loading.value = true
   try {
-    // Build flat filter array
-    const filterConditions: any[] = []
-    
-    // Add search filter if query exists
+    // Build where array for API
+    const where: any[][] = []
+
+    // Example: filter by gender_id (replace as needed)
+    // where.push([
+    //   { table_name: 'person_data', field: 'gender_id', operator: '=', value: 'ชาย' }
+    // ])
+
+    // Add search filter if query exists (example: filter by name)
     if (searchQuery.value.trim()) {
       const query = searchQuery.value.trim()
-      filterConditions.push({
-        logic: 'OR',
-        conditions: [
-          { column: 'first_name_th', operator: 'like', value: `%${query}%` },
-          { column: 'last_name_th', operator: 'like', value: `%${query}%` },
-          { column: 'student_id', operator: 'like', value: `%${query}%` },
-        ],
-      })
+      where.push([
+        { table_name: 'person_data', field: 'first_name_th', operator: 'like', value: `%${query}%` },
+        { table_name: 'person_data', field: 'last_name_th', operator: 'like', value: `%${query}%` },
+        { table_name: 'person_data', field: 'student_id', operator: 'like', value: `%${query}%` },
+      ])
     }
 
     const response = await getStudents({
       page: pagination.value.page,
       per_page: pagination.value.per_page,
-      filter: filterConditions.length > 0 ? filterConditions : undefined,
+      where: where.length > 0 ? where : undefined,
     })
 
     students.value = response.data

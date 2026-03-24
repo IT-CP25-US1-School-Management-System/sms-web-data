@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { ROUTE_NAMES } from '@/lib/constants'
 import { createTeacher, getTeachers, getTeacherById, updateTeacher } from '@/stores/teachers'
 import { useTeacherStore } from '@/stores/teachers'
-import type { TeacherCreateDTO, TeacherUpdateDTO } from '@/types/teacher'
+import type { TeacherCreateDTO } from '@/types/teacher'
 import { useToast } from '@/composables/useToast'
 import { generateUUID } from '@/lib/helpers'
 import { createUser } from '@/stores/api'
@@ -176,7 +176,7 @@ const handleSave = async () => {
       // Create user account with teacher's email
       if (formValues.value.email) {
         try {
-          await createUser({ email: formValues.value.email, firstname: firstName, lastname: lastName })
+          await createUser({ email: formValues.value.email, first_name: firstName, last_name: lastName })
         } catch (userError: any) {
           console.error('Failed to create user account:', userError)
           showError('สร้างบัญชีผู้ใช้ไม่สำเร็จ', {

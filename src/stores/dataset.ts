@@ -6,7 +6,7 @@ import type {
 } from '@/types/dataset'
 
 export const DATASET_ID = 'capstone'
-export const DATASET_VERSION = 'v1.2.1'
+export const DATASET_VERSION = 'v1.2.4'
 
 /**
  * Generic function to list rows from a dataset version
@@ -22,8 +22,8 @@ export async function getDatasetRows<T = Record<string, any>>(
   }
 
   if (params?.view) queryParams.view = params.view
-  if (params?.filter) queryParams.filter = JSON.stringify(params.filter)
-  if (params?.filter_logic) queryParams.filter_logic = params.filter_logic
+  if (params?.where_logical_operator) queryParams.where_logical_operator = params.where_logical_operator
+  if (params?.where) queryParams.where = JSON.stringify(params.where)
   if (params?.sort_by) queryParams.sort_by = params.sort_by
   if (params?.sort_order) queryParams.sort_order = params.sort_order
 

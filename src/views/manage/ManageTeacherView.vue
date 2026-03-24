@@ -57,40 +57,43 @@ const { canPreviousPage, canNextPage, getVisiblePages } = usePagination(paginati
 const fetchTeachers = async () => {
   loading.value = true
   try {
-    // Build filter object
-    const filterConditions: any[] = []
+    // Build where array for API (is_government + search)
+    const where: any[][] = []
 
     // Add tab filter for is_government (server-side)
     if (activeTab.value === 'government') {
-      filterConditions.push({
-        column: 'is_government',
-        operator: 'eq',
-        value: 'true',
-      })
+      where.push([
+        {
+          table_name: 'person_data',
+          field: 'is_government',
+          operator: '=',
+          value: 'true',
+        },
+      ])
     } else if (activeTab.value === 'contract') {
-      filterConditions.push({
-        column: 'is_government',
-        operator: 'eq',
-        value: 'false',
-      })
+      where.push([
+        {
+          table_name: 'person_data',
+          field: 'is_government',
+          operator: '=',
+          value: 'false',
+        },
+      ])
     }
 
     // Add search filter if query exists
     if (searchQuery.value.trim()) {
       const query = searchQuery.value.trim()
-      filterConditions.push({
-        logic: 'OR',
-        conditions: [
-          { column: 'first_name_th', operator: 'like', value: `%${query}%` },
-          { column: 'last_name_th', operator: 'like', value: `%${query}%` },
-        ],
-      })
+      where.push([
+        { table_name: 'person_data', field: 'first_name_th', operator: 'like', value: `%${query}%` },
+        { table_name: 'person_data', field: 'last_name_th', operator: 'like', value: `%${query}%` },
+      ])
     }
 
     const response = await getTeachers({
       page: pagination.value.page,
       per_page: pagination.value.per_page,
-      filter: filterConditions.length > 0 ? filterConditions : undefined,
+      where: where.length > 0 ? where : undefined,
       sort_by: 'first_name_th',
       sort_order: 'asc',
     })
