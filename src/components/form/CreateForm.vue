@@ -24,7 +24,7 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { type DateValue, CalendarDate } from '@internationalized/date'
 import type { DateRange } from 'reka-ui'
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 // (removed example global form - using per-entry VeeForm instead)
 
@@ -165,6 +165,8 @@ const emit = defineEmits<{
 const localEntries = ref<FieldSection[][]>([])
 // localValues: เก็บค่าของแต่ละ entry (แยก object)
 const localValues = ref<Record<string, any>[]>([])
+const initialEntryValues = ref<Record<string, any>[]>([])
+const entryTouchedStates = ref<boolean[]>([])
 // per-entry version to force VeeForm re-render when initial values change
 const localValuesVersions = ref<number[]>([])
 
@@ -181,7 +183,38 @@ const fileMap = ref<Array<Record<string, File[]>>>([])
 const fileInputRefs = ref<Array<Record<string, HTMLInputElement | null>>>([])
 // Per-entry file size errors: fileSizeErrors[entryIndex][fieldName] = string | undefined
 const fileSizeErrors = ref<Array<Record<string, string | undefined>>>([])
+const fileTypeErrors = ref<Array<Record<string, string | undefined>>>([])
 const MAX_FILE_SIZE = 15 * 1024 * 1024 // 15 MB
+
+function getAcceptRules(accept?: string) {
+  return (
+    accept
+      ?.split(',')
+      .map((rule) => rule.trim().toLowerCase())
+      .filter(Boolean) || []
+  )
+}
+
+function isFileAcceptedByRule(file: File, rule: string) {
+  const fileName = file.name.toLowerCase()
+  const fileType = file.type.toLowerCase()
+
+  if (rule.startsWith('.')) return fileName.endsWith(rule)
+  if (rule.endsWith('/*')) return fileType.startsWith(rule.slice(0, -1))
+  return fileType === rule
+}
+
+function isFileAcceptedByAccept(file: File, accept?: string) {
+  const rules = getAcceptRules(accept)
+  if (!rules.length) return true
+  return rules.some((rule) => isFileAcceptedByRule(file, rule))
+}
+
+function getFileAcceptErrorMessage(accept?: string) {
+  const rules = getAcceptRules(accept)
+  if (!rules.length) return undefined
+  return `รองรับเฉพาะไฟล์ ${rules.join(', ')}`
+}
 
 // Sync localEntries & localValues with props.fields/values
 // ซิงก์ค่า `props.fields` และ `props.values` เข้ากับ state ภายใน (localEntries/localValues)
@@ -201,6 +234,8 @@ watch(
     if (Array.isArray(values) && values.length > 0) {
       // เก็บสำเนา (ไม่ผูก reference ตรง ๆ)
       localValues.value = values.map((v) => ({ ...v }))
+      initialEntryValues.value = values.map((v) => ({ ...v }))
+      entryTouchedStates.value = values.map(() => false)
 
       // bump เวอร์ชันของแต่ละ entry เพื่อบังคับให้ VeeForm remount ถ้าจำเป็น
       localValuesVersions.value = values.map((_, i) => (localValuesVersions.value[i] || 0) + 1)
@@ -218,6 +253,8 @@ watch(
     } else if (localValues.value.length === 0) {
       // กรณีไม่มี values จาก parent: สร้าง localValues ให้ตรงกับจำนวน localEntries
       localValues.value = localEntries.value.map(() => ({}))
+      initialEntryValues.value = localEntries.value.map(() => ({}))
+      entryTouchedStates.value = localEntries.value.map(() => false)
       localValuesVersions.value = localEntries.value.map(() => 0)
     }
 
@@ -225,6 +262,10 @@ watch(
     const entriesCount = localEntries.value.length
     while (localValues.value.length < entriesCount) localValues.value.push({})
     while (localValues.value.length > entriesCount) localValues.value.pop()
+    while (initialEntryValues.value.length < entriesCount) initialEntryValues.value.push({})
+    while (initialEntryValues.value.length > entriesCount) initialEntryValues.value.pop()
+    while (entryTouchedStates.value.length < entriesCount) entryTouchedStates.value.push(false)
+    while (entryTouchedStates.value.length > entriesCount) entryTouchedStates.value.pop()
 
     while (localValuesVersions.value.length < entriesCount) localValuesVersions.value.push(0)
     while (localValuesVersions.value.length > entriesCount) localValuesVersions.value.pop()
@@ -232,12 +273,14 @@ watch(
   // keep formRefs in sync with entries so indices remain stable
   while (formRefs.value.length < entriesCount) formRefs.value.push(null)
   while (formRefs.value.length > entriesCount) formRefs.value.pop()
-  while (fileMap.value.length < entriesCount) fileMap.value.push({})
-  while (fileMap.value.length > entriesCount) fileMap.value.pop()
-  while (fileInputRefs.value.length < entriesCount) fileInputRefs.value.push({})
-  while (fileInputRefs.value.length > entriesCount) fileInputRefs.value.pop()
-  while (fileSizeErrors.value.length < entriesCount) fileSizeErrors.value.push({})
-  while (fileSizeErrors.value.length > entriesCount) fileSizeErrors.value.pop()
+    while (fileMap.value.length < entriesCount) fileMap.value.push({})
+    while (fileMap.value.length > entriesCount) fileMap.value.pop()
+    while (fileInputRefs.value.length < entriesCount) fileInputRefs.value.push({})
+    while (fileInputRefs.value.length > entriesCount) fileInputRefs.value.pop()
+    while (fileSizeErrors.value.length < entriesCount) fileSizeErrors.value.push({})
+    while (fileSizeErrors.value.length > entriesCount) fileSizeErrors.value.pop()
+    while (fileTypeErrors.value.length < entriesCount) fileTypeErrors.value.push({})
+    while (fileTypeErrors.value.length > entriesCount) fileTypeErrors.value.pop()
 
     // 4) สร้าง/อัปเดต Zod schema สำหรับแต่ละ entry
     buildSchemas()
@@ -258,12 +301,16 @@ function addEntry() {
   const cloned: FieldSection[] = JSON.parse(JSON.stringify(template))
   localEntries.value.push(cloned)
   localValues.value.push({})
+  initialEntryValues.value.push({})
+  entryTouchedStates.value.push(false)
   localValuesVersions.value.push(0)
   // keep formRefs aligned with new entry
   formRefs.value.push(null)
   // keep file structures aligned
   fileMap.value.push({})
   fileInputRefs.value.push({})
+  fileSizeErrors.value.push({})
+  fileTypeErrors.value.push({})
   // rebuild schemas so the new entry gets validation
   buildSchemas()
 }
@@ -271,11 +318,15 @@ function addEntry() {
 function deleteEntry(entryIndex: number) {
   localEntries.value.splice(entryIndex, 1)
   localValues.value.splice(entryIndex, 1)
+  initialEntryValues.value.splice(entryIndex, 1)
+  entryTouchedStates.value.splice(entryIndex, 1)
   localValuesVersions.value.splice(entryIndex, 1)
   formRefs.value.splice(entryIndex, 1)
   // remove per-entry file structures
   fileMap.value.splice(entryIndex, 1)
   fileInputRefs.value.splice(entryIndex, 1)
+  fileSizeErrors.value.splice(entryIndex, 1)
+  fileTypeErrors.value.splice(entryIndex, 1)
   emit('delete', entryIndex)
   // rebuild schemas to keep schemas in sync
   buildSchemas()
@@ -387,6 +438,8 @@ function onSubmitEntry(entryIndex: number, values: Record<string, any>) {
 
   const mergedValues = { ...(values || {}), ...normalizedFiles }
   localValues.value[entryIndex] = { ...mergedValues }
+  initialEntryValues.value[entryIndex] = { ...mergedValues }
+  entryTouchedStates.value[entryIndex] = false
   // bump version so VeeForm will reinitialize with new values if needed
   localValuesVersions.value[entryIndex] = (localValuesVersions.value[entryIndex] || 0) + 1
   console.log('onSubmitEntry', entryIndex, 'with values', values)
@@ -410,6 +463,7 @@ function ensureFileStructuresForIndex(entryIndex: number) {
   while (fileMap.value.length <= entryIndex) fileMap.value.push({})
   while (fileInputRefs.value.length <= entryIndex) fileInputRefs.value.push({})
   while (fileSizeErrors.value.length <= entryIndex) fileSizeErrors.value.push({})
+  while (fileTypeErrors.value.length <= entryIndex) fileTypeErrors.value.push({})
 }
 
 function getFiles(entryIndex: number, fieldName: string): File[] {
@@ -422,6 +476,83 @@ function setFileInputRef(entryIndex: number, fieldName: string, el: HTMLInputEle
   refs[fieldName] = el
 }
 
+function updateEntryValue(entryIndex: number, fieldName: string, value: any) {
+  while (localValues.value.length <= entryIndex) localValues.value.push({})
+  while (entryTouchedStates.value.length <= entryIndex) entryTouchedStates.value.push(false)
+  const current = localValues.value[entryIndex] || {}
+  localValues.value[entryIndex] = {
+    ...current,
+    [fieldName]: value,
+  }
+  entryTouchedStates.value[entryIndex] = true
+}
+
+function getAllFields(entryIndex: number): FieldItem[] {
+  return (localEntries.value[entryIndex] || []).flatMap((section) => section.content || [])
+}
+
+function normalizeComparableValue(value: any): any {
+  if (value instanceof File) {
+    return {
+      name: value.name,
+      size: value.size,
+      type: value.type,
+    }
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item) => normalizeComparableValue(item))
+  }
+
+  if (value && typeof value === 'object') {
+    return Object.keys(value)
+      .sort()
+      .reduce(
+        (acc, key) => {
+          acc[key] = normalizeComparableValue(value[key])
+          return acc
+        },
+        {} as Record<string, any>,
+      )
+  }
+
+  return value ?? ''
+}
+
+function isEmptyRequiredValue(value: any) {
+  if (Array.isArray(value)) return value.length === 0
+  return value == null || value === ''
+}
+
+function hasEntryChanges(entryIndex: number) {
+  const current = normalizeComparableValue(localValues.value[entryIndex] || {})
+  const initial = normalizeComparableValue(initialEntryValues.value[entryIndex] || {})
+  return JSON.stringify(current) !== JSON.stringify(initial)
+}
+
+function hasEntryMissingRequired(entryIndex: number) {
+  return getAllFields(entryIndex).some((field) => {
+    if (!field.required || field.disabled) return false
+
+    if (field.type === 'file') {
+      const files = getFiles(entryIndex, field.name)
+      if (fileSizeErrors.value[entryIndex]?.[field.name]) return true
+      if (fileTypeErrors.value[entryIndex]?.[field.name]) return true
+      return field.multiple ? files.length === 0 : !files[0]
+    }
+
+    return isEmptyRequiredValue(localValues.value[entryIndex]?.[field.name])
+  })
+}
+
+const disabledSaveByEntry = computed(() =>
+  localEntries.value.map(
+    (_, entryIndex) =>
+      (!entryTouchedStates.value[entryIndex] && !hasEntryChanges(entryIndex)) ||
+      hasEntryMissingRequired(entryIndex),
+  ),
+)
+
 function handleFileSelect(event: Event, entryIndex: number, fieldItem: FieldItem) {
   const input = event.target as HTMLInputElement
   const files = Array.from(input?.files || [])
@@ -431,20 +562,11 @@ function handleFileSelect(event: Event, entryIndex: number, fieldItem: FieldItem
 
 function addFiles(entryIndex: number, fieldItem: FieldItem, files: File[]) {
   ensureFileStructuresForIndex(entryIndex)
-  const filtered = fieldItem.accept
-    ? files.filter((f) => {
-        const exts = fieldItem.accept!.split(',').map((s) => s.trim().toLowerCase())
-        return exts.some(
-          (ext) =>
-            (ext.startsWith('.') && f.name.toLowerCase().endsWith(ext)) ||
-            (ext.includes('*') && f.type.startsWith(ext.replace('*', ''))) ||
-            f.type === ext,
-        )
-      })
-    : files
+  const acceptedByType = files.filter((file) => isFileAcceptedByAccept(file, fieldItem.accept))
+  const rejectedByType = files.filter((file) => !isFileAcceptedByAccept(file, fieldItem.accept))
   // split by size limit
-  const acceptedBySize = filtered.filter((f) => f.size <= MAX_FILE_SIZE)
-  const rejectedBySize = filtered.filter((f) => f.size > MAX_FILE_SIZE)
+  const acceptedBySize = acceptedByType.filter((f) => f.size <= MAX_FILE_SIZE)
+  const rejectedBySize = acceptedByType.filter((f) => f.size > MAX_FILE_SIZE)
 
   const map = fileMap.value[entryIndex] as Record<string, File[]>
   let arr = map[fieldItem.name]
@@ -459,11 +581,20 @@ function addFiles(entryIndex: number, fieldItem: FieldItem, files: File[]) {
     map[fieldItem.name] = acceptedBySize.slice(0, 1)
   }
 
+  updateEntryValue(
+    entryIndex,
+    fieldItem.name,
+    fieldItem.multiple ? [...(map[fieldItem.name] || [])] : map[fieldItem.name]?.[0] ?? undefined,
+  )
+
   // set per-field file size error message for this entry
   const sizeMsg = `ขนาดไฟล์ต้องไม่เกิน ${Math.floor(MAX_FILE_SIZE / (1024 * 1024))} MB`
   const errs = fileSizeErrors.value[entryIndex] || (fileSizeErrors.value[entryIndex] = {})
   if (rejectedBySize.length > 0) errs[fieldItem.name] = sizeMsg
   else errs[fieldItem.name] = undefined
+  const typeErrs = fileTypeErrors.value[entryIndex] || (fileTypeErrors.value[entryIndex] = {})
+  if (rejectedByType.length > 0) typeErrs[fieldItem.name] = getFileAcceptErrorMessage(fieldItem.accept)
+  else typeErrs[fieldItem.name] = undefined
 }
 
 function removeFile(entryIndex: number, fieldName: string, index: number) {
@@ -471,9 +602,17 @@ function removeFile(entryIndex: number, fieldName: string, index: number) {
   if (map && map[fieldName]) map[fieldName].splice(index, 1)
   // update size error state after removal
   const remaining = getFiles(entryIndex, fieldName)
+  const fieldDef = getAllFields(entryIndex).find((field) => field.name === fieldName)
+  updateEntryValue(
+    entryIndex,
+    fieldName,
+    fieldDef?.multiple ? [...remaining] : remaining[0] ?? undefined,
+  )
   const errs = fileSizeErrors.value[entryIndex] || (fileSizeErrors.value[entryIndex] = {})
   if (remaining.some((f) => f.size > MAX_FILE_SIZE)) errs[fieldName] = `ขนาดไฟล์ต้องไม่เกิน ${Math.floor(MAX_FILE_SIZE / (1024 * 1024))} MB`
   else errs[fieldName] = undefined
+  const typeErrs = fileTypeErrors.value[entryIndex] || (fileTypeErrors.value[entryIndex] = {})
+  typeErrs[fieldName] = undefined
 }
 
 function formatFileSize(bytes: number): string {
@@ -533,7 +672,7 @@ function formatDisplayDate(str: string | undefined): string {
 // Date-range helpers  (stored as "YYYY-MM-DD~YYYY-MM-DD")
 function stringToDateRange(str: string | undefined): DateRange | undefined {
   if (!str) return undefined
-  const [startStr, endStr] = str.split('~')
+  const [startStr = '', endStr = ''] = str.split('~')
   const start = stringToDateValue(startStr)
   const end = stringToDateValue(endStr)
   if (!start) return undefined
@@ -548,7 +687,7 @@ function dateRangeToString(range: DateRange): string {
 
 function formatDisplayDateRange(str: string | undefined): string {
   if (!str) return ''
-  const [startStr, endStr] = str.split('~')
+  const [startStr = '', endStr = ''] = str.split('~')
   const s = formatDisplayDate(startStr)
   const e = formatDisplayDate(endStr)
   if (!s) return ''
@@ -703,6 +842,7 @@ function formatDisplayDateRange(str: string | undefined): string {
                           :key="fieldItem.name"
                           v-slot="{ field: veeField, errors }"
                           :name="fieldItem.name"
+                          v-model="localValues[entryIndex]![fieldItem.name]"
                         >
                           <Field :data-invalid="!!errors.length">
                             <FieldLabel :for="`form-field-${fieldItem.name}`" class="mb-1 block">
@@ -716,7 +856,10 @@ function formatDisplayDateRange(str: string | undefined): string {
                               :id="`form-field-${fieldItem.name}`"
                               :model-value="veeField.value"
                               @update:model-value="
-                                (val: any) => veeField['onUpdate:modelValue']?.(val)
+                                (val: any) => {
+                                  veeField['onUpdate:modelValue']?.(val)
+                                  updateEntryValue(entryIndex, fieldItem.name, val)
+                                }
                               "
                               :type="fieldItem.type"
                               :placeholder="
@@ -764,7 +907,9 @@ function formatDisplayDateRange(str: string | undefined): string {
                                   @update:model-value="
                                     (val: DateValue | undefined) => {
                                       if (val) {
-                                        veeField['onUpdate:modelValue']?.(dateValueToString(val))
+                                        const nextValue = dateValueToString(val)
+                                        veeField['onUpdate:modelValue']?.(nextValue)
+                                        updateEntryValue(entryIndex, fieldItem.name, nextValue)
                                         datePopoverOpen[
                                           `main-${entryIndex}-${sectionIndex}-${fieldItem.name}`
                                         ] = false
@@ -810,7 +955,9 @@ function formatDisplayDateRange(str: string | undefined): string {
                                   @update:model-value="
                                     (val: DateRange) => {
                                       if (val.start) {
-                                        veeField['onUpdate:modelValue']?.(dateRangeToString(val))
+                                        const nextValue = dateRangeToString(val)
+                                        veeField['onUpdate:modelValue']?.(nextValue)
+                                        updateEntryValue(entryIndex, fieldItem.name, nextValue)
                                         if (val.end) {
                                           datePopoverOpen[
                                             `range-${entryIndex}-${sectionIndex}-${fieldItem.name}`
@@ -829,7 +976,10 @@ function formatDisplayDateRange(str: string | undefined): string {
                               :model-value="(veeField.value as string) || ''"
                               :disabled="fieldItem.disabled"
                               @update:model-value="
-                                (val: any) => veeField['onUpdate:modelValue']?.(val)
+                                (val: any) => {
+                                  veeField['onUpdate:modelValue']?.(val)
+                                  updateEntryValue(entryIndex, fieldItem.name, val)
+                                }
                               "
                             >
                               <SelectTrigger
@@ -856,7 +1006,10 @@ function formatDisplayDateRange(str: string | undefined): string {
                               :id="`form-field-${fieldItem.name}`"
                               :model-value="veeField.value"
                               @update:model-value="
-                                (val: any) => veeField['onUpdate:modelValue']?.(val)
+                                (val: any) => {
+                                  veeField['onUpdate:modelValue']?.(val)
+                                  updateEntryValue(entryIndex, fieldItem.name, val)
+                                }
                               "
                               :placeholder="
                                 fieldItem.placeholder || fieldItem.label || fieldItem.name
@@ -896,10 +1049,16 @@ function formatDisplayDateRange(str: string | undefined): string {
                           >
                             {{ fieldItem.placeholder }}
                           </p>
-                          <VeeField :name="fieldItem.name" v-slot="{ field, errors }">
+                          <VeeField
+                            :name="fieldItem.name"
+                            v-slot="{ field, errors }"
+                            v-model="localValues[entryIndex]![fieldItem.name]"
+                          >
                             <Field
                               :data-invalid="
-                                !!fileSizeErrors[entryIndex]?.[fieldItem.name] || !!errors.length
+                                !!fileTypeErrors[entryIndex]?.[fieldItem.name] ||
+                                !!fileSizeErrors[entryIndex]?.[fieldItem.name] ||
+                                !!errors.length
                               "
                               class="gap-0"
                             >
@@ -925,7 +1084,13 @@ function formatDisplayDateRange(str: string | undefined): string {
                               </div>
                               <div class="min-h-6">
                                 <div
-                                  v-if="fileSizeErrors[entryIndex]?.[fieldItem.name]"
+                                  v-if="fileTypeErrors[entryIndex]?.[fieldItem.name]"
+                                  class="mt-2 text-sm text-red-600"
+                                >
+                                  {{ fileTypeErrors[entryIndex][fieldItem.name] }}
+                                </div>
+                                <div
+                                  v-else-if="fileSizeErrors[entryIndex]?.[fieldItem.name]"
                                   class="mt-2 text-sm text-red-600"
                                 >
                                   {{ fileSizeErrors[entryIndex][fieldItem.name] }}
@@ -1161,6 +1326,7 @@ function formatDisplayDateRange(str: string | undefined): string {
               <Button
                 type="button"
                 class="rounded-lg cursor-pointer bg-[#16A34A] px-6 py-2 font-semibold text-white shadow-sm hover:bg-[#15803D]"
+                :disabled="disabledSaveByEntry[entryIndex]"
                 @click="saveEntry(entryIndex)"
               >
                 บันทึก

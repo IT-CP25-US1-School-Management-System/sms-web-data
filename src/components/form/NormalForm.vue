@@ -191,6 +191,27 @@ const isDirty = computed(
   () => JSON.stringify(localValues.value) !== JSON.stringify(initialValues.value),
 )
 
+function isMissingRequiredValue(field: NormalFormField) {
+  if (!field.required || field.disabled) return false
+
+  const value = localValues.value[field.name]
+
+  if (field.type === 'checkbox') return value !== true
+  if (field.type === 'checkbox-group') return !Array.isArray(value) || value.length === 0
+  if (field.type === 'file') {
+    if (fileSizeErrors.value[field.name]) return true
+    return getFiles(field.name).length === 0
+  }
+
+  return value == null || value === ''
+}
+
+const hasMissingRequiredFields = computed(() =>
+  (props.fields || []).some((field) => isMissingRequiredValue(field)),
+)
+
+const canSubmit = computed(() => isDirty.value && !hasMissingRequiredFields.value)
+
 watch(
   localValues,
   (vals) => {
@@ -221,7 +242,7 @@ function setFieldValue(path: string, value: unknown) {
   formRef.value.setFieldValue?.(path as any, value, false)
 }
 
-defineExpose({ submitForm, isDirty, setFieldValue })
+defineExpose({ submitForm, isDirty, setFieldValue, hasMissingRequiredFields, canSubmit })
 
 function getFiles(fieldName: string): File[] {
   return fileMap.value[fieldName] || []

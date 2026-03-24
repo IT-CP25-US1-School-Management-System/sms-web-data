@@ -84,6 +84,7 @@ onMounted(() => {
                 label: 'แนบใบประกอบวิชาชีพ',
                 type: 'file',
                 accept: '.pdf,.jpg,.png',
+                required: true,
                 multiple: true,
               },
             ],

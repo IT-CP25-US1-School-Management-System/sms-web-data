@@ -25,6 +25,7 @@ type AddressFormState = {
   id: string
   fields: NormalFormField[]
   initialValues: Record<string, any>
+  currentValues: Record<string, any>
   formRef: NormalFormInstance | null
   hasChanges: boolean
   lastProvince?: string
@@ -84,6 +85,10 @@ const addressTypeOptions: NormalFormOption[] = [
 ]
 
 const pendingPayloads = new Map<string, Record<string, any>>()
+
+function cloneFormValues(values: Record<string, any>) {
+  return JSON.parse(JSON.stringify(values))
+}
 
 function buildAddressValues(source?: PersonAddress) {
   return {
@@ -208,7 +213,8 @@ function createAddressFormState(source?: PersonAddress, index = 0) {
   const state = reactive<AddressFormState>({
     id: source?.id || generatedId,
     fields: createAddressFields(initialValues),
-    initialValues,
+    initialValues: cloneFormValues(initialValues),
+    currentValues: cloneFormValues(initialValues),
     formRef: null,
     hasChanges: false,
     lastProvince: initialValues.province_code,
@@ -291,7 +297,9 @@ function setFormRef(formId: string, instance: NormalFormInstance | null) {
 function handleFormChange(formId: string, payload: NormalFormChangePayload) {
   const target = addressForms.value.find((entry) => entry.id === formId)
   if (!target) return
-  target.hasChanges = payload.isDirty
+  target.currentValues = cloneFormValues(payload.values)
+  target.hasChanges =
+    JSON.stringify(target.currentValues) !== JSON.stringify(target.initialValues)
   syncCascade(target, payload.values)
 }
 
@@ -319,8 +327,17 @@ function handleFormSave(formId: string, values: Record<string, any>) {
   pendingPayloads.set(formId, payload)
 }
 
-const hasAnyChanges = computed(() => addressForms.value.some((entry) => entry.hasChanges))
-const isSaveDisabled = computed(() => loading.value || !hasAnyChanges.value)
+const hasAnyChanges = computed(() =>
+  addressForms.value.some(
+    (entry) => JSON.stringify(entry.currentValues) !== JSON.stringify(entry.initialValues),
+  ),
+)
+const hasAnyInvalidRequired = computed(() =>
+  addressForms.value.some((entry) => Boolean(entry.formRef?.hasMissingRequiredFields)),
+)
+const isSaveDisabled = computed(
+  () => loading.value || !hasAnyChanges.value || hasAnyInvalidRequired.value,
+)
 
 async function onSaveAll() {
   pendingPayloads.clear()
@@ -340,6 +357,7 @@ async function onSaveAll() {
   console.log('address payload', payloadList)
   toast.success('บันทึกข้อมูลที่อยู่เรียบร้อย (mock)')
   addressForms.value.forEach((form) => {
+    form.initialValues = cloneFormValues(form.currentValues)
     form.hasChanges = false
   })
 }

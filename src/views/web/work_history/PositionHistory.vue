@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import NormalForm, { type NormalFormField } from '@/components/form/NormalForm.vue'
 import { Button } from '@/components/ui/button'
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { toast } from 'vue-sonner'
 import { getDatasetRows } from '@/stores/dataset'
 
@@ -10,6 +10,11 @@ type PositionRow = Record<string, any>
 const positionForms = ref<any[]>([])
 const loading = ref(false)
 const positionData = ref<PositionRow[]>([])
+
+const hasAnyChanges = computed(() =>
+  positionForms.value.some((form) => Boolean(form?.isDirty)),
+)
+const isSaveDisabled = computed(() => loading.value || !hasAnyChanges.value)
 
 const positionFields: NormalFormField[] = [
   {
@@ -95,6 +100,8 @@ function getRefSetter(index: number) {
 }
 
 async function onSave() {
+  if (!hasAnyChanges.value) return
+
   for (const inst of positionForms.value) {
     if (!inst) continue
     if (typeof inst.submitForm === 'function') {
@@ -127,8 +134,8 @@ function handleSave(data: Record<string, any>) {
       </div>
     </div>
 
-    <div class="sticky bottom-0 right-0 z-40 flex justify-end border-t border-gray-200 bg-white p-3 w-full">
-      <Button @click="onSave" class="bg-[#16A34A] hover:bg-[#15803D] text-white px-8 py-2 rounded-lg font-semibold shadow-sm">
+    <div class="cursor-pointer sticky bottom-0 right-0 z-40 flex justify-end border-t border-gray-200 bg-white p-3 w-full">
+      <Button :disabled="isSaveDisabled" @click="onSave" class="bg-[#16A34A] hover:bg-[#15803D] text-white px-8 py-2 rounded-lg font-semibold shadow-sm">
         บันทึก
       </Button>
     </div>

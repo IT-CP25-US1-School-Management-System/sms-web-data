@@ -2,15 +2,22 @@
 import DropDownForm from '@/components/form/DropDownForm.vue'
 import { Button } from '@/components/ui/button'
 import { getDatasetRows ,updateDatasetRow } from '@/stores/dataset'
-import { onMounted, ref } from 'vue'
+import { onMounted, ref ,computed } from 'vue'
 import { toast } from 'vue-sonner'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import type { PersonData } from '@/types/teacher'
 import {calAge ,formatDateInput} from '@/lib/helpers.ts'
 const loading = ref(false)
 const personalData = ref<Record<string, any>>({})
-const personalDataUpdate = ref<PersonData>({})
-const allData = ref<Record<string, any>[]>([])
+const personalDataUpdate = ref<PersonData>({
+  id: '',
+  prefix_id: 0,
+  role_id: '',
+  is_government: false,
+  first_name_th: '',
+  last_name_th: '',
+  created_at: ''
+})
 
 const confirmModal = ref(false)
 const action = ref('update') 
@@ -21,6 +28,7 @@ const modalValue = ref('')
 const generalForm = ref<any>(null)
 const sensitiveForm = ref<any>(null)
 const contactForm = ref<any>(null)
+
 
 
 async function getPersonalDetailData() {
@@ -135,6 +143,10 @@ async function handleSave(data: Record<string, any> , formType: string) {
  // console.log('Updated personalDataUpdate:', personalDataUpdate.value)
 }
 
+const hasAnyChanges = computed(() =>
+  [generalForm.value, sensitiveForm.value, contactForm.value].some((form) => Boolean(form?.isDirty)),
+)
+const isSaveDisabled = computed(() => loading.value|| !hasAnyChanges.value )
 </script>
 
 <template>
@@ -340,6 +352,7 @@ async function handleSave(data: Record<string, any> , formType: string) {
     >
       <Button
         class="cursor-pointer bg-[#16A34A] hover:bg-[#15803D] text-white px-8 py-2 rounded-lg font-semibold shadow-sm"
+        :disabled="isSaveDisabled"
         @click="onSaveAll()"
       >
         บันทึก
@@ -352,6 +365,7 @@ async function handleSave(data: Record<string, any> , formType: string) {
     :action="action"
     :topic="modalTopic"
     :value="modalValue"
+    :disabled="isSaveDisabled"
     @confirm="updateData"
   />
 
