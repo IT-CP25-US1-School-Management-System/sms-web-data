@@ -133,6 +133,7 @@ export interface TeacherCreateDTO {
 export interface TeacherUpdateDTO extends Partial<TeacherCreateDTO> {}
 
 export interface PersonAddressCreateDTO {
+  id?: string
   person_id: string
   house_registry_no?: string
   house_no?: string
@@ -150,6 +151,8 @@ export interface PersonAddressCreateDTO {
   is_house_registered?: boolean
   is_current?: boolean
   is_retired_residence?: boolean
+  created_at?: string
+  updated_at?: string
 }
 
 export interface FamilyMemberCreateDTO {

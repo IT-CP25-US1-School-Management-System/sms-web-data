@@ -27,6 +27,7 @@ import type { PaginationData } from '@/composables/usePagination'
 import { toast } from 'vue-sonner'
 import type { PersonData } from '@/types/teacher'
 import { getTeachers, deleteTeacher, useTeacherStore } from '@/stores/teachers'
+import { deleteUser } from '@/stores/api'
 
 // Tab types
 type TabType = 'all' | 'government' | 'contract'
@@ -171,10 +172,24 @@ const confirmDelete = async () => {
 
   deleting.value = true
   try {
+    let userDeleteFailed = false
+    try {
+      await deleteUser(teacherToDelete.value.id)
+    } catch (userError) {
+      userDeleteFailed = true
+      console.error('Failed to delete user account:', userError)
+    }
+
     await deleteTeacher(teacherToDelete.value.id)
-    toast.success('สำเร็จ', {
-      description: 'ลบข้อมูลคุณครูเรียบร้อยแล้ว',
-    })
+    if (userDeleteFailed) {
+      toast.warning('ลบข้อมูลบางส่วนสำเร็จ', {
+        description: 'ลบข้อมูลคุณครูแล้ว แต่ลบบัญชีผู้ใช้ไม่สำเร็จ',
+      })
+    } else {
+      toast.success('สำเร็จ', {
+        description: 'ลบข้อมูลคุณครูและบัญชีผู้ใช้เรียบร้อยแล้ว',
+      })
+    }
     fetchTeachers() // Reload data
   } catch (error: any) {
     console.error('Failed to delete teacher:', error)

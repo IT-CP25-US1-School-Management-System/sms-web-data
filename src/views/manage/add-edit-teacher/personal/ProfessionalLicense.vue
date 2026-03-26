@@ -4,8 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import DropDownForm from '@/components/form/DropDownForm.vue'
 import { Button } from '@/components/ui/button'
 import { ROUTE_NAMES } from '@/lib/constants'
-import { createProfessionalLicense } from '@/stores/teachers'
-import { useTeacherStore } from '@/stores/teachers'
+import { createProfessionalLicense, useTeacherStore } from '@/stores/teachers'
 import type { ProfessionalLicenseCreateDTO } from '@/types/teacher'
 import { useToast } from '@/composables/useToast'
 
@@ -64,37 +63,41 @@ async function handleSave() {
     isSaving.value = false
   }
 }
+
+const handleBack = () => {
+  const idFromUrl = route.query.id as string
+  const personId = idFromUrl || teacherStore.personId
+  router.push({ name: ROUTE_NAMES.ADD_TEACHER_EDUCATION, query: { id: personId } })
+}
 </script>
 
 <template>
   <div class="mx-6 pb-24">
+    <p class="mb-4 text-sm text-muted-foreground">รูปแบบฟอร์มสอดคล้องกับข้อมูลใบประกอบวิชาชีพในหน้าข้อมูลส่วนบุคคล</p>
     <DropDownForm
       topic="ข้อมูลใบอนุญาตประกอบวิชาชีพ"
       :values="formValues"
       @change="handleValuesUpdate"
       :fields="[
         {
-          name: 'license_type', label: 'ประเภทใบอนุญาต', type: 'select', required: true, placeholder: 'เลือกประเภทใบอนุญาต',
+          name: 'license_type', label: 'ใบประกอบวิชาชีพ', type: 'select', required: true, placeholder: 'เลือกประเภทใบประกอบวิชาชีพ',
           options: [
-            { label: 'ใบอนุญาตประกอบวิชาชีพครู', value: 'teacher_license' },
-            { label: 'ใบอนุญาตปฏิบัติการสอน', value: 'teaching_permit' },
-            { label: 'หนังสือรับรองความรู้', value: 'knowledge_cert' },
-            { label: 'อื่นๆ', value: 'other' },
+            { label: 'ใบอนุญาตปฏิบัติหน้าที่ครู (P-License)', value: 'P-License' },
+            { label: 'ใบอนุญาตประกอบวิชาชีพครูชั้นต้น (B-License)', value: 'B-License' },
+            { label: 'ใบอนุญาตประกอบวิชาชีพครูชั้นสูง (A-License)', value: 'A-License' },
+            { label: 'ใบอนุญาตสอน', value: 'ใบอนุญาตสอน' },
           ],
         },
-        { name: 'license_no', label: 'เลขที่ใบอนุญาต', type: 'text', required: true, placeholder: 'กรุณาระบุเลขที่ใบอนุญาต' },
-        { name: 'issue_date', label: 'วันที่ออกใบอนุญาต', type: 'date', placeholder: 'วว / ดด / ปปปป' },
-        { name: 'expiry_date', label: 'วันที่หมดอายุ', type: 'date', placeholder: 'วว / ดด / ปปปป' },
+        { name: 'license_no', label: 'เลขที่ใบประกอบวิชาชีพ', type: 'text', required: true, placeholder: 'กรุณาระบุเลขที่ใบประกอบวิชาชีพ' },
+        { name: 'issue_date', label: 'วันเดือนปีที่ออกบัตร', type: 'date', placeholder: 'วว / ดด / ปปปป' },
+        { name: 'expiry_date', label: 'วันเดือนปีบัตรหมดอายุ', type: 'date', placeholder: 'วว / ดด / ปปปป' },
+        { name: 'license-file', label: 'แนบใบประกอบวิชาชีพ', type: 'file', accept: '.pdf,.jpg,.png', multiple: true, placeholder: 'แนบไฟล์เอกสาร' },
       ]"
     />
   </div>
 
   <div class="sticky bottom-0 right-0 z-40 flex w-full justify-end border-t border-gray-200 bg-white p-3">
-    <Button variant="outline" class="mr-2" @click="() => {
-      const idFromUrl = route.query.id as string
-      const personId = idFromUrl || teacherStore.personId
-      router.push({ name: ROUTE_NAMES.ADD_TEACHER_EDUCATION, query: { id: personId } })
-    }">
+    <Button variant="outline" class="mr-2" @click="handleBack">
       ย้อนกลับ
     </Button>
     <Button

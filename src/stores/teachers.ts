@@ -19,16 +19,17 @@ import type {
   EducationRecordCreateDTO,
   ProfessionalLicenseCreateDTO,
 } from '@/types/teacher'
+import type { PersonAddress } from '@/types/address'
 
 // TODO: Replace with the correct dataset IDs once configured in the DMS backend
-const ADDRESS_DATASET_ID = DATASET_ID
-const ADDRESS_DATASET_VERSION = DATASET_VERSION
+const ADDRESS_DATASET_ID = 'data_manage'
+const ADDRESS_DATASET_VERSION = 'v2.0.1'
 const FAMILY_DATASET_ID = DATASET_ID
-const FAMILY_DATASET_VERSION = DATASET_VERSION
+const FAMILY_DATASET_VERSION = 'v3.0.0'
 const EDUCATION_DATASET_ID = DATASET_ID
-const EDUCATION_DATASET_VERSION = DATASET_VERSION
+const EDUCATION_DATASET_VERSION = 'v4.0.0'
 const LICENSE_DATASET_ID = DATASET_ID
-const LICENSE_DATASET_VERSION = DATASET_VERSION
+const LICENSE_DATASET_VERSION = 'v5.0.0'
 
 /**
  * Get list of teachers with pagination and filters
@@ -38,7 +39,7 @@ export async function getTeachers(
 ): Promise<DatasetListResponse<PersonData>> {
   return getDatasetRows<PersonData>(DATASET_ID, DATASET_VERSION, {
     ...params,
-    view: 'person_details',
+    view: 'personal_detail',
   })
 }
 
@@ -46,7 +47,21 @@ export async function getTeachers(
  * Get a single teacher by ID
  */
 export async function getTeacherById(teacherId: string): Promise<DatasetRowResponse<PersonData>> {
-  return getDatasetRowByKey<PersonData>(DATASET_ID, DATASET_VERSION, teacherId, 'person_details')
+  return getDatasetRowByKey<PersonData>(DATASET_ID, DATASET_VERSION, teacherId, 'personal_detail')
+}
+
+/**
+ * Get address data for a single teacher by ID
+ */
+export async function getAddressById(
+  teacherId: string,
+): Promise<DatasetRowResponse<{ person_addresses?: PersonAddress[] }>> {
+  return getDatasetRowByKey<{ person_addresses?: PersonAddress[] }>(
+    DATASET_ID,
+    DATASET_VERSION,
+    teacherId,
+    'personal_address',
+  )
 }
 
 /**
@@ -82,6 +97,16 @@ export async function createPersonAddress(
   data: PersonAddressCreateDTO,
 ): Promise<DatasetRowResponse<any>> {
   return createDatasetRow(ADDRESS_DATASET_ID, ADDRESS_DATASET_VERSION, data)
+}
+
+/**
+ * Update a person address by address row ID
+ */
+export async function updatePersonAddress(
+  addressId: string,
+  data: Partial<PersonAddressCreateDTO>,
+): Promise<DatasetRowResponse<any>> {
+  return updateDatasetRow(ADDRESS_DATASET_ID, ADDRESS_DATASET_VERSION, addressId, data)
 }
 
 /**

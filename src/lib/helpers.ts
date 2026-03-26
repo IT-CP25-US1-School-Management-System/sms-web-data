@@ -90,13 +90,14 @@ export const getImgInitials = (name: string) => {
 
 export const getPrefixName = (prefixId?: number | string | null): string => {
   const prefixMap: Record<number | string, string> = {
-    1: 'นาย',
-    2: 'นาง',
-    3: 'นางสาว',
+  '250ae8ee-9f0a-4b94-a2c4-a475752dc3e6': 'นาย',
+  '6ec2c1dd-ab31-47d3-8870-680baac1b8da': 'นาง',
+  '9b91d6d5-c414-4a92-b44a-2ad07250271c': 'นางสาว',
   }
   if (!prefixId) return ''
   return prefixMap[prefixId] || ''
 };
+
 export const calAge = (birthDate: string | Date): number => {
   const today = new Date();
   const birth = new Date(birthDate);
