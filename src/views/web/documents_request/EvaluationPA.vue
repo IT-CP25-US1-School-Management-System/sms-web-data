@@ -3,6 +3,7 @@ import { FileText, X } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Field, FieldLabel, FieldError } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import { Spinner } from '@/components/ui/spinner'
 import {
   Select,
   SelectContent,
@@ -12,18 +13,26 @@ import {
 } from '@/components/ui/select'
 import { ref, computed } from 'vue'
 import { Separator } from '@/components/ui/separator'
-import { Card, CardContent ,CardHeader ,CardTitle} from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Form as VeeForm, Field as VeeField } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { z } from 'zod'
 import { toast } from 'vue-sonner'
+import { generateUUID } from '@/lib/helpers'
+import { useAuthStore } from '@/stores/auth'
+import { createDatasetRow } from '@/stores/dataset'
+import { createFileDocument } from '@/stores/document'
+import type { CreateFileDocumentParams, FileDocument } from '@/types/document'
+import type { DocumentLink, DocumentRequest } from '@/types/document_request'
 
 const fileMap = ref<Record<string, File[]>>({})
 const fileInputRefs = ref<Record<string, HTMLInputElement | null>>({})
 const fileSizeErrors = ref<Record<string, string | undefined>>({})
 const formRef = ref<any>(null)
+const isSubmitting = ref(false)
 const MAX_FILE_SIZE = 15 * 1024 * 1024
 const FILE_SIZE_ERROR_MESSAGE = `ขนาดไฟล์ต้องไม่เกิน ${Math.floor(MAX_FILE_SIZE / (1024 * 1024))} MB`
+const authStore = useAuthStore()
 
 const pa2GroupSubject = ref('')
 const pa2TeachLevel1 = ref('')
@@ -37,7 +46,24 @@ const pa2Evaluator1 = ref('')
 const pa2Evaluator2 = ref('')
 const pa2Evaluator3 = ref('')
 
-// Validation schema
+const documentRequest = ref<DocumentRequest>({
+  id: '',
+  person_id: '',
+  document_type: 'การประเมินPA',
+  status: 'กำลังดำเนินการ',
+  created_at: '',
+  updated_at: '',
+})
+
+const documentLink = ref<DocumentLink>({
+  document_key: '',
+  entity_table: '',
+  entity_id: '',
+  purpose: '',
+  person_id: '',
+  created_at: '',
+})
+
 const validationSchema = computed(() => {
   return toTypedSchema(
     z.object({
@@ -102,7 +128,6 @@ function handleFileSelect(event: Event, key: string, multiple = false) {
   }
   fileSizeErrors.value[key] = rejectedFiles.length > 0 ? FILE_SIZE_ERROR_MESSAGE : undefined
   input.value = ''
-  // Sync file count to form and validate
   const countField = `${key}-count`
   formRef.value?.setFieldValue(countField, fileMap.value[key].length, false)
   formRef.value?.validateField?.(countField)
@@ -111,7 +136,6 @@ function handleFileSelect(event: Event, key: string, multiple = false) {
 function removeFile(key: string, idx: number) {
   fileMap.value[key]?.splice(idx, 1)
   fileSizeErrors.value[key] = undefined
-  // Sync file count to form and validate
   const countField = `${key}-count`
   formRef.value?.setFieldValue(countField, fileMap.value[key]?.length || 0, false)
   formRef.value?.validateField?.(countField)
@@ -131,13 +155,191 @@ function triggerFileInput(key: string) {
   fileInputRefs.value[key]?.click()
 }
 
-function onSubmit(values: Record<string, any>) {
-  toast.success('บันทึก PA2 เอกสารสำเร็จ', { position: 'bottom-right' })
-  console.log('PA2 Evaluation submitted:', values)
+function getCurrentUserName() {
+  return authStore.user?.name || authStore.user?.given_name || authStore.user?.email || 'current-user'
+}
+
+function getSelectedFiles(): File[] {
+  return Object.values(fileMap.value).flatMap((files) => files ?? [])
+}
+
+function resetEvaluationPAForm() {
+  pa2GroupSubject.value = ''
+  pa2TeachLevel1.value = ''
+  pa2TeachLevel2.value = ''
+  pa2Subject.value = ''
+  pa2TeachHours.value = ''
+  pa2SupportHours.value = ''
+  pa2QualityHours.value = ''
+  pa2PolicyHours.value = ''
+  pa2Evaluator1.value = ''
+  pa2Evaluator2.value = ''
+  pa2Evaluator3.value = ''
+  fileMap.value = {}
+  fileSizeErrors.value = {}
+
+  Object.values(fileInputRefs.value).forEach((input) => {
+    if (input) input.value = ''
+  })
+
+  formRef.value?.resetForm({
+    values: {
+      pa2GroupSubject: '',
+      pa2TeachLevel1: '',
+      pa2TeachLevel2: '',
+      pa2Subject: '',
+      pa2TeachHours: '',
+      pa2SupportHours: '',
+      pa2QualityHours: '',
+      pa2PolicyHours: '',
+      pa2Evaluator1: '',
+      pa2Evaluator2: '',
+      pa2Evaluator3: '',
+      'pa2-pa1-count': 0,
+      'pa2-eval1-count': 0,
+      'pa2-eval2-count': 0,
+      'pa2-eval3-count': 0,
+    },
+  })
+}
+
+function buildDocumentDetailPayload(_values: Record<string, any>) {
+  // TODO: คุณเติม logic และ version ของ dataset สำหรับ Evaluation PA ที่นี่
+  return null as { version: string; data: Record<string, any> } | null
+}
+
+async function createDocumentType() {
+  const datasetId = 'document_create'
+  const version = 'v1.0.0'
+
+  documentRequest.value.id = generateUUID()
+  documentRequest.value.person_id = authStore.user?.id || ''
+  documentRequest.value.document_type = 'การประเมินPA'
+  documentRequest.value.created_at = new Date().toISOString()
+  documentRequest.value.updated_at = new Date().toISOString()
+
+  try {
+    await createDatasetRow(datasetId, version, documentRequest.value)
+    return documentRequest.value.id
+  } catch (error: any) {
+    console.error('Create Document Type API Error:', error)
+    console.error('Error Response:', error?.response?.data)
+    toast.error(`สร้างคำร้องไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
+      position: 'bottom-right',
+    })
+    throw error
+  }
+}
+
+async function uploadFile() {
+  const files = getSelectedFiles()
+  const params: CreateFileDocumentParams = {
+    path: 'file-req',
+    folder: 'file',
+    uploaded_by: getCurrentUserName(),
+    description: 'การประเมินPA',
+  }
+
+  try {
+    const uploadedKeys: string[] = []
+
+    for (const file of files) {
+      const response = await createFileDocument<FileDocument>(file, params)
+      if (!response.data?.resource_id) {
+        throw new Error('อัปโหลดไฟล์ไม่สำเร็จ')
+      }
+      uploadedKeys.push(response.data.resource_id)
+    }
+
+    return uploadedKeys
+  } catch (error: any) {
+    console.error('Document Upload API Error:', error)
+    console.error('Error Response:', error?.response?.data)
+    toast.error(`อัปโหลดไฟล์ไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
+      position: 'bottom-right',
+    })
+    throw error
+  }
+}
+
+async function storeFile(documentIds: string[]) {
+  const datasetId = 'document_create'
+  const version = 'v1.1.0'
+
+  try {
+    for (const documentId of documentIds) {
+      documentLink.value = {
+        document_key: documentId,
+        entity_table: 'document_request',
+        entity_id: documentRequest.value.id,
+        purpose: 'การประเมินPA',
+        person_id: documentRequest.value.person_id,
+        created_at: new Date().toISOString(),
+      }
+
+      await createDatasetRow(datasetId, version, documentLink.value)
+    }
+  } catch (error: any) {
+    console.error('Store File API Error:', error)
+    console.error('Error Response:', error?.response?.data)
+    toast.error(`บันทึกลิงก์ไฟล์ไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
+      position: 'bottom-right',
+    })
+    throw error
+  }
+}
+
+async function createDocumentDetail(values: Record<string, any>) {
+  const payload = buildDocumentDetailPayload(values)
+  if (!payload) return null
+
+  const datasetId = 'document_create'
+
+  try {
+    await createDatasetRow(datasetId, payload.version, payload.data)
+    return payload.data
+  } catch (error: any) {
+    console.error('Create Document Detail API Error:', error)
+    console.error('Error Response:', error?.response?.data)
+    toast.error(`บันทึกรายละเอียดคำร้องไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
+      position: 'bottom-right',
+    })
+    throw error
+  }
+}
+
+async function onSubmit(values: Record<string, any>) {
+  isSubmitting.value = true
+  const payload: Record<string, any> = { ...values }
+  payload.files = { ...fileMap.value }
+
+  try {
+    console.log('EvaluationPA submit payload:', JSON.parse(JSON.stringify(payload)))
+  } catch (_error) {
+    // ignore
+  }
+
+  try {
+    await createDocumentType()
+    const uploadedKeys = await uploadFile()
+    await storeFile(uploadedKeys)
+    await createDocumentDetail(values)
+    resetEvaluationPAForm()
+
+    toast.success('ยื่นคำร้องสำเร็จ', { position: 'bottom-right' })
+  } catch (_error) {
+    // แต่ละฟังก์ชันจัดการ error toast ของตัวเองแล้ว
+    toast.error(`เกิดข้อผิดพลาด: ${_error}`, {
+      position: 'bottom-right',
+    })
+  } finally {
+    isSubmitting.value = false
+  }
 }
 
 async function submitPA2Form() {
-  // Sync all field values first
+  if (isSubmitting.value) return
+
   formRef.value?.setFieldValue('pa2GroupSubject', pa2GroupSubject.value)
   formRef.value?.setFieldValue('pa2TeachLevel1', pa2TeachLevel1.value)
   formRef.value?.setFieldValue('pa2TeachLevel2', pa2TeachLevel2.value)
@@ -154,7 +356,6 @@ async function submitPA2Form() {
   formRef.value?.setFieldValue('pa2-eval2-count', fileMap.value['pa2-eval2']?.length || 0)
   formRef.value?.setFieldValue('pa2-eval3-count', fileMap.value['pa2-eval3']?.length || 0)
 
-  // Mark all fields as touched and validate
   const fieldNames = [
     'pa2GroupSubject',
     'pa2TeachLevel1',
@@ -178,21 +379,22 @@ async function submitPA2Form() {
     await formRef.value?.validateField?.(fieldName)
   }
 
-  // Submit form
-  await formRef.value?.submitForm()
+  const formElement = document.getElementById('pa-evaluation-form') as HTMLFormElement | null
+  formElement?.requestSubmit()
 }
 </script>
 <template>
   <div class="mx-6 flex flex-col gap-4 pb-6">
     <Card class="w-full gap-0 pb-6">
-      <CardHeader class="pb-0" >
-          <CardTitle>รายละเอียดการประเมิน PA</CardTitle>
-     </CardHeader>
+      <CardHeader class="pb-0">
+        <CardTitle>รายละเอียดการประเมิน PA</CardTitle>
+      </CardHeader>
       <CardContent>
         <VeeForm
           ref="formRef"
           :validation-schema="validationSchema"
           :initial-values="initialValues"
+          id="pa-evaluation-form"
           @submit="onSubmit"
         >
           <Separator class="my-4" />
@@ -276,7 +478,6 @@ async function submitPA2Form() {
             </VeeField>
           </div>
 
-          <!-- Row 2: ชม.การสอน x4 -->
           <div
             class="mb-4 grid grid-cols-1 items-end gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
           >
@@ -358,7 +559,6 @@ async function submitPA2Form() {
             </VeeField>
           </div>
 
-          <!-- Row 3: รายชื่อคณะกรรมการประเมิน -->
           <div
             class="mb-4 grid grid-cols-1 items-end gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
           >
@@ -423,7 +623,6 @@ async function submitPA2Form() {
             </VeeField>
           </div>
 
-          <!-- File uploads: PA1, PA2 (กรรมการ 1-3) -->
           <div class="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
             <VeeField name="pa2-pa1-count" v-slot="{ errors }">
               <div>
@@ -449,7 +648,7 @@ async function submitPA2Form() {
                   <div
                     v-for="(file, i) in fileMap['pa2-pa1']"
                     :key="i"
-                    class="border-muted bg-muted/50 flex h-10 w-max items-center gap-2 rounded-2xl border-2 p-2 text-sm"
+                    class="border-muted bg-muted/40 flex min-h-11 w-full max-w-xl items-center gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
                   >
                     <span class="truncate">{{ file.name }}</span>
                     <span class="text-muted-foreground shrink-0 text-xs">{{
@@ -493,7 +692,7 @@ async function submitPA2Form() {
                   <div
                     v-for="(file, i) in fileMap['pa2-eval1']"
                     :key="i"
-                    class="border-muted bg-muted/50 flex h-10 w-max items-center gap-2 rounded-2xl border-2 p-2 text-sm"
+                    class="border-muted bg-muted/40 flex min-h-11 w-full max-w-xl items-center gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
                   >
                     <span class="truncate">{{ file.name }}</span>
                     <span class="text-muted-foreground shrink-0 text-xs">{{
@@ -543,7 +742,7 @@ async function submitPA2Form() {
                   <div
                     v-for="(file, i) in fileMap['pa2-eval2']"
                     :key="i"
-                    class="border-muted bg-muted/50 flex h-10 w-max items-center gap-2 rounded-2xl border-2 p-2 text-sm"
+                    class="border-muted bg-muted/40 flex min-h-11 w-fit max-w-xl items-center gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
                   >
                     <span class="truncate">{{ file.name }}</span>
                     <span class="text-muted-foreground shrink-0 text-xs">{{
@@ -551,7 +750,7 @@ async function submitPA2Form() {
                     }}</span>
                     <button
                       type="button"
-                      class="hover:text-destructive text-muted-foreground rounded p-0.5"
+                      class="hover:text-destructive text-muted-foreground rounded p-0.5 cursor-pointer "
                       @click="removeFile('pa2-eval2', i)"
                     >
                       <X class="h-3.5 w-3.5" />
@@ -590,7 +789,7 @@ async function submitPA2Form() {
                   <div
                     v-for="(file, i) in fileMap['pa2-eval3']"
                     :key="i"
-                    class="border-muted bg-muted/50 flex h-10 w-max items-center gap-2 rounded-2xl border-2 p-2 text-sm"
+                    class="border-muted bg-muted/40 flex min-h-11 w-full max-w-xl items-center gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
                   >
                     <span class="truncate">{{ file.name }}</span>
                     <span class="text-muted-foreground shrink-0 text-xs">{{
@@ -598,7 +797,7 @@ async function submitPA2Form() {
                     }}</span>
                     <button
                       type="button"
-                      class="hover:text-destructive text-muted-foreground rounded p-0.5"
+                      class="hover:text-destructive text-muted-foreground rounded p-0.5 cursor-pointer"
                       @click="removeFile('pa2-eval3', i)"
                     >
                       <X class="h-3.5 w-3.5" />
@@ -623,10 +822,12 @@ async function submitPA2Form() {
   >
     <Button
       type="button"
-      class="rounded-lg bg-[#16A34A] px-8 py-2 font-semibold text-white shadow-sm hover:bg-[#15803D]"
+      class="cursor-pointer rounded-lg bg-[#16A34A] px-8 py-2 font-semibold text-white shadow-sm hover:bg-[#15803D]"
+      :disabled="isSubmitting"
       @click="submitPA2Form"
     >
-      บันทึก
+      <Spinner v-if="isSubmitting" class="mr-2 h-4 w-4" />
+      ส่งเอกสาร
     </Button>
   </div>
 </template>

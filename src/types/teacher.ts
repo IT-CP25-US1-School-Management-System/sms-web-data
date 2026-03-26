@@ -52,7 +52,7 @@ export interface PersonData {
   personal_email?: string // อีเมลส่วนตัว
   birth_date?: string
   appointment_type_id?: number // ประเภทการบรรจุ
-  
+  line_id?: string // ไลน์ไอดี
   marital_status?: string // สถานะภาพ เช่น สมรส โสด หย่า ร้าง และ หม้าย
   spouse_name?: string // ชื่อคู่สมรส
   
@@ -60,6 +60,39 @@ export interface PersonData {
   governments?: Government[] // มีเมื่อเป็นข้าราชการ
   employment_contract?: EmploymentContract[] // มีเมื่อเป็นครูอัตราจ้าง
   
+  created_at: string
+  updated_at?: string
+}
+
+export interface FamilyMember {
+  id: string
+  person_id: string
+  relation_type: string
+  prefix_id: number
+  first_name_th: string
+  middle_name_th?: string
+  last_name_th: string
+  former_last_name_th?: string
+  national_id?: string
+  gender?: Gender
+  is_alive: boolean
+  birth_date?: string
+  phone?: string
+  email?: string
+  marital_status?: string
+  is_emergency_contact?: boolean
+  house_no?: string
+  moo?: string
+  building?: string
+  soi?: string
+  road?: string
+  subdistrict_code?: string
+  subdistrict?: string
+  district_code?: string
+  district?: string
+  province_code?: string
+  province?: string
+  postal_code?: string
   created_at: string
   updated_at?: string
 }
@@ -103,6 +136,9 @@ export interface EmploymentContract {
   created_at: string
   updated_at?: string
 }
+
+
+
 
 // For API operations
 export interface TeacherCreateDTO {

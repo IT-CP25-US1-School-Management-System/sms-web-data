@@ -7,6 +7,7 @@ import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Spinner } from '@/components/ui/spinner'
 import { RangeCalendar } from '@/components/ui/range-calendar'
 
 import { ChevronUp, CirclePlus, CalendarIcon, Trash2, X } from 'lucide-vue-next'
@@ -50,6 +51,8 @@ type FieldSection = {
 const props = defineProps<{
   isDropdown?: boolean
   readonly?: boolean
+  canDelete?: boolean
+  deferCommitOnSave?: boolean
   fields?: FieldSection[][]
   values?: Record<string, any>[]
 }>()
@@ -158,7 +161,7 @@ function buildSchemas() {
 
 const emit = defineEmits<{
   (e: 'save', index: number, values: Record<string, any>): void
-  (e: 'delete', index: number): void
+  (e: 'delete', index: number, id?: string): void
 }>()
 
 // localEntries: FieldSection[][] — แต่ละ entry คือ 1 การ์ด ที่มีหลาย section
@@ -291,7 +294,6 @@ watch(
 watch(
   () => props.values,
   (newValues) => {
-    console.log('Values prop changed:', newValues)
   },
 )
 function addEntry() {
@@ -316,6 +318,7 @@ function addEntry() {
 }
 
 function deleteEntry(entryIndex: number) {
+  const entryId = localValues.value[entryIndex]?.id || initialEntryValues.value[entryIndex]?.id
   localEntries.value.splice(entryIndex, 1)
   localValues.value.splice(entryIndex, 1)
   initialEntryValues.value.splice(entryIndex, 1)
@@ -327,98 +330,95 @@ function deleteEntry(entryIndex: number) {
   fileInputRefs.value.splice(entryIndex, 1)
   fileSizeErrors.value.splice(entryIndex, 1)
   fileTypeErrors.value.splice(entryIndex, 1)
-  emit('delete', entryIndex)
+  emit('delete', entryIndex, entryId)
   // rebuild schemas to keep schemas in sync
   buildSchemas()
 }
 
 async function saveEntry(entryIndex: number) {
+  if (savingEntries.value[entryIndex]) return
+  savingEntries.value[entryIndex] = true
+
   // programmatically submit the whole-entry form for this entry
-  console.log('Submitting form for entry', entryIndex, 'with current localValues', localValues.value[entryIndex])
 
   // Prefer calling the VeeForm component instance directly (more reliable
   // than querying the DOM). The Form component exposes submitForm()/submit()
   // depending on vee-validate version; try both.
-  const formInstance = formRefs.value[entryIndex]
-  if (formInstance) {
-    // If validate API exists, use it to see validation result and values
-    try {
-      if (typeof formInstance.validate === 'function') {
-        console.log('calling formInstance.validate for entry', entryIndex)
-        const res = await formInstance.validate()
-        console.log('validate result for entry', entryIndex, res)
-        if (res.valid) {
-          // If validate returned values, call onSubmitEntry directly to keep behavior consistent
-          console.log('validation passed, calling onSubmitEntry with values', res.values)
-          onSubmitEntry(entryIndex, res.values)
-          return
-        } else {
-          console.log('validation failed, aborting save; errors:', res.errors)
-          return
+  try {
+    const formInstance = formRefs.value[entryIndex]
+    if (formInstance) {
+      // If validate API exists, use it to see validation result and values
+      try {
+        if (typeof formInstance.validate === 'function') {
+          const res = await formInstance.validate()
+          if (res.valid) {
+            // If validate returned values, call onSubmitEntry directly to keep behavior consistent
+            onSubmitEntry(entryIndex, res.values)
+            return
+          } else {
+            return
+          }
         }
-      }
 
-      // Next try submitForm/submit methods if available
-      if (typeof formInstance.submitForm === 'function' || typeof formInstance.submit === 'function') {
-        console.log('calling child form submit method for entry', entryIndex)
-        if (typeof formInstance.submitForm === 'function') {
-          formInstance.submitForm()
-        } else {
-          formInstance.submit()
-        }
-        return
-      }
-    } catch (err) {
-      console.warn('error while using formInstance APIs', err)
-    }
-  }
-
-  // If we have a component instance but it doesn't expose submit methods,
-  // try to find the submit button inside its root element and click it.
-  if (formInstance) {
-    try {
-      console.log('formInstance found, dumping for debug:', formInstance)
-      const rootEl = (formInstance as any).$el || null
-      console.log('formInstance.$el =', rootEl)
-      if (rootEl) {
-        const innerSubmit = rootEl.querySelector && rootEl.querySelector('button[type="submit"]')
-        if (innerSubmit) {
-          console.log('clicking inner submit button inside formInstance for entry', entryIndex)
-          ;(innerSubmit as HTMLButtonElement).click()
+        // Next try submitForm/submit methods if available
+        if (
+          typeof formInstance.submitForm === 'function' ||
+          typeof formInstance.submit === 'function'
+        ) {
+          if (typeof formInstance.submitForm === 'function') {
+            formInstance.submitForm()
+          } else {
+            formInstance.submit()
+          }
           return
         }
+      } catch (err) {
+        console.warn('error while using formInstance APIs', err)
       }
-    } catch (err) {
-      console.warn('error while trying to click submit inside formInstance', err)
     }
-  }
 
-  // Fallback 1: try to click the hidden submit button inside the form so the
-  // native submit occurs within the correct form element (this should trigger
-  // vee-validate's @submit handler).
-  const submitBtn = document.getElementById('form-submit-' + entryIndex) as HTMLButtonElement | null
-  if (submitBtn) {
-    console.log('clicking hidden submit button fallback for entry', entryIndex)
-    submitBtn.click()
-    return
-  }
-
-  // Fallback 2: try to submit the native HTML form if present (older fallback)
-  const el = document.getElementById('form-' + entryIndex) as HTMLFormElement | null
-  if (el) {
-    console.log('requestSubmit fallback for entry', entryIndex)
-    try {
-      el.requestSubmit()
-    } catch (e) {
-      console.warn('requestSubmit failed, dispatching submit event instead', e)
-      el.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+    // If we have a component instance but it doesn't expose submit methods,
+    // try to find the submit button inside its root element and click it.
+    if (formInstance) {
+      try {
+        const rootEl = (formInstance as any).$el || null
+        if (rootEl) {
+          const innerSubmit = rootEl.querySelector && rootEl.querySelector('button[type="submit"]')
+          if (innerSubmit) {
+            ;(innerSubmit as HTMLButtonElement).click()
+            return
+          }
+        }
+      } catch (err) {
+      }
     }
-    return
-  }
 
-  // Final fallback: emit current localValues (may be empty if form never submitted)
-  console.log('emit fallback save for entry', entryIndex)
-  emit('save', entryIndex, localValues.value[entryIndex] || {})
+    // Fallback 1: try to click the hidden submit button inside the form so the
+    // native submit occurs within the correct form element (this should trigger
+    // vee-validate's @submit handler).
+    const submitBtn = document.getElementById('form-submit-' + entryIndex) as HTMLButtonElement | null
+    if (submitBtn) {
+      submitBtn.click()
+      return
+    }
+
+    // Fallback 2: try to submit the native HTML form if present (older fallback)
+    const el = document.getElementById('form-' + entryIndex) as HTMLFormElement | null
+    if (el) {
+      try {
+        el.requestSubmit()
+      } catch (e) {
+        console.warn('requestSubmit failed, dispatching submit event instead', e)
+        el.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+      }
+      return
+    }
+
+    // Final fallback: emit current localValues (may be empty if form never submitted)
+    emit('save', entryIndex, localValues.value[entryIndex] || {})
+  } finally {
+    savingEntries.value[entryIndex] = false
+  }
 }
 
 function onSubmitEntry(entryIndex: number, values: Record<string, any>) {
@@ -436,13 +436,16 @@ function onSubmitEntry(entryIndex: number, values: Record<string, any>) {
     else normalizedFiles[k] = arr[0] ?? undefined
   }
 
-  const mergedValues = { ...(values || {}), ...normalizedFiles }
+  // Preserve current local entry values because vee-validate result may omit
+  // editable optional fields that are not part of the generated schema.
+  const mergedValues = { ...(localValues.value[entryIndex] || {}), ...(values || {}), ...normalizedFiles }
   localValues.value[entryIndex] = { ...mergedValues }
-  initialEntryValues.value[entryIndex] = { ...mergedValues }
-  entryTouchedStates.value[entryIndex] = false
-  // bump version so VeeForm will reinitialize with new values if needed
-  localValuesVersions.value[entryIndex] = (localValuesVersions.value[entryIndex] || 0) + 1
-  console.log('onSubmitEntry', entryIndex, 'with values', values)
+  if (!props.deferCommitOnSave) {
+    initialEntryValues.value[entryIndex] = { ...mergedValues }
+    entryTouchedStates.value[entryIndex] = false
+    // bump version so VeeForm will reinitialize with new values if needed
+    localValuesVersions.value[entryIndex] = (localValuesVersions.value[entryIndex] || 0) + 1
+  }
   emit('save', entryIndex, { ...mergedValues })
 }
 
@@ -548,10 +551,13 @@ function hasEntryMissingRequired(entryIndex: number) {
 const disabledSaveByEntry = computed(() =>
   localEntries.value.map(
     (_, entryIndex) =>
+      Boolean(savingEntries.value[entryIndex]) ||
       (!entryTouchedStates.value[entryIndex] && !hasEntryChanges(entryIndex)) ||
       hasEntryMissingRequired(entryIndex),
   ),
 )
+
+const savingEntries = ref<Record<number, boolean>>({})
 
 function handleFileSelect(event: Event, entryIndex: number, fieldItem: FieldItem) {
   const input = event.target as HTMLInputElement
@@ -1082,7 +1088,7 @@ function formatDisplayDateRange(str: string | undefined): string {
                                   อัปโหลดไฟล์
                                 </Button>
                               </div>
-                              <div class="min-h-6">
+                              <div class="min-h-6" v-if="fileTypeErrors[entryIndex]?.[fieldItem.name] || fileSizeErrors[entryIndex]?.[fieldItem.name] || errors.length">
                                 <div
                                   v-if="fileTypeErrors[entryIndex]?.[fieldItem.name]"
                                   class="mt-2 text-sm text-red-600"
@@ -1102,30 +1108,31 @@ function formatDisplayDateRange(str: string | undefined): string {
                                 />
                               </div>
 
-                              <!-- รายการไฟล์ที่เลือก -->
+                               <!-- รายการไฟล์ที่เลือก -->
                               <div
                                 v-if="getFiles(entryIndex, fieldItem.name).length"
-                                class="mt-2 flex flex-col gap-1"
+                                class="mt-2 flex flex-col gap-2"
                               >
                                 <div
                                   v-for="(file, fileIdx) in getFiles(entryIndex, fieldItem.name)"
                                   :key="fileIdx"
-                                  class="border-muted bg-muted/50 flex h-10 w-max items-center justify-between gap-2 rounded-2xl border-2 p-2 text-sm"
+                                  class="border-muted bg-muted/40 flex min-h-11 w-fit max-w-xl items-center justify-between gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
                                 >
-                                  <span class="truncate">{{ file.name }}</span>
+                                  <span class="text-black truncate">{{ file.name }}</span>
                                   <span class="text-muted-foreground shrink-0 text-xs">
                                     {{ formatFileSize(file.size) }}
                                   </span>
                                   <button
                                     v-if="!fieldItem.disabled"
                                     type="button"
-                                    class="hover:text-destructive text-muted-foreground rounded p-0.5 transition-colors"
+                                    class="hover:text-destructive text-muted-foreground rounded p-0.5 transition-colors  cursor-pointer "
                                     @click.stop="() => { removeFile(entryIndex, fieldItem.name, fileIdx); const files = getFiles(entryIndex, fieldItem.name); if (fieldItem.multiple) field['onUpdate:modelValue']?.(files); else field['onUpdate:modelValue']?.(files[0] ?? undefined) }"
                                   >
                                     <X class="h-3.5 w-3.5 cursor-pointer" />
                                   </button>
                                 </div>
                               </div>
+                          
                             </Field>
                           </VeeField>
                         </div>
@@ -1315,6 +1322,7 @@ function formatDisplayDateRange(str: string | undefined): string {
               :class="!isEntryOpen(entryIndex) ? 'hidden' : 'flex justify-end'"
             >
               <Button
+                v-if="canDelete"
                 type="button"
                 variant="destructive"
                 class="rounded-lg px-6 py-2 font-semibold shadow-sm cursor-pointer"

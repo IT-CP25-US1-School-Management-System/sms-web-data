@@ -41,10 +41,6 @@ async function getPersonalDetailData() {
       per_page: 50,
     })
     personalData.value = response.data[0] || {}
-    console.log('Personal Detail API Response:', personalData.value)
-    // personalData.value.birth_date = personalData.value.birth_date
-    //   ? personalData.value.birth_date.split('T')[0]
-    //   : ''
     personalData.value.birth_date = formatDateInput(personalData.value.birth_date)
     personalDataUpdate.value = {...personalData.value} as PersonData
     personalData.value.prefix_id = response.data[0]?.prefixes?.prefixes_name_th || ''
@@ -66,18 +62,20 @@ async function updateDataPersonalDetail() {
 
   try {
     const response = await updateDatasetRow(
-       // assuming the API identifies the record to update by an 'id' field
       datasetId, 
       version,
       personalData.value.id,
       personalDataUpdate.value, 
     )
-    // personalData.value = response.data[0] || {}
-    console.log('Personal Detail API Response:', response)
-    console.log('Personal Detail Data:', response.data)
+      if ((response as { message?: string }).message === 'success') {
       toast.success(`อัพเดตข้อมูลส่วนตัวสำเร็จ`, {
         position: 'bottom-right',
       })
+    } else {
+      toast.error(`อัพเดตข้อมูลส่วนตัวไม่สำเร็จ`, {
+        position: 'bottom-right',
+      })
+    }
   } catch (error: any) {
     console.error('Personal Detail API Error:', error)
     console.error('Error Response:', error?.response?.data)
@@ -102,7 +100,6 @@ function updateData(action:boolean) {
     department_id: +personalData.value.department_id?.toString() || 0,
     updated_at: now,
   }
-   console.log('action:',personalDataUpdate.value)
    updateDataPersonalDetail()
   } 
   confirmModal.value = false
@@ -127,20 +124,16 @@ async function onSaveAll() {
   }
 
   confirmModal.value = true
-  console.log('All form data to save:',  confirmModal.value , personalDataUpdate.value)
 }
 
 //value จาก emit
 async function handleSave(data: Record<string, any> , formType: string) {
-  console.log('Saving data from form type:', formType, 'with data:', data)
- // console.log('Current allData:', allData.value)
  if (formType === 'contactForm') {
     personalDataUpdate.value = {
       ...personalDataUpdate.value,
       ...data,
     }
   }
- // console.log('Updated personalDataUpdate:', personalDataUpdate.value)
 }
 
 const hasAnyChanges = computed(() =>
@@ -334,7 +327,7 @@ const isSaveDisabled = computed(() => loading.value|| !hasAnyChanges.value )
           placeholder: 'example@email.com',
         },
         {
-          name: 'line-id',
+          name: 'line_id',
           label: 'Line ID',
           type: 'text',
           required: true,

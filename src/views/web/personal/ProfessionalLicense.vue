@@ -30,6 +30,35 @@ async function getProfessionalLicenseData() {
   loading.value = false
 }
 
+// async function updateProfessionalLicenseData() {
+//   loading.value = true
+//   const datasetId = 'data_update_view'
+//   const version = 'v1.3.0'
+
+//   try {
+//     const response = await updateDatasetRow(
+//        // assuming the API identifies the record to update by an 'id' field
+//       datasetId, 
+//       version,
+//       personalData.value.id,
+//       personalDataUpdate.value, 
+//     )
+//     // personalData.value = response.data[0] || {}
+//     console.log('Personal Detail API Response:', response)
+//     console.log('Personal Detail Data:', response.data)
+//       toast.success(`อัพเดตข้อมูลส่วนตัวสำเร็จ`, {
+//         position: 'bottom-right',
+//       })
+//   } catch (error: any) {
+//     console.error('Personal Detail API Error:', error)
+//     console.error('Error Response:', error?.response?.data)
+//     toast.error(`อัพเดตข้อมูลส่วนตัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
+//       position: 'bottom-right',
+//     })
+//   } 
+//   loading.value = false
+// }
+
 onMounted(() => {
   console.log('professional license')
   getProfessionalLicenseData()

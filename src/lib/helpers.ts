@@ -36,6 +36,23 @@ export const formatTime = (date: string | Date): string => {
   });
 };
 
+export const formatDateThaiInput = (date?: string | Date | null): string => {
+  if (!date) return "";
+
+  const formatDateParts = (value: string) => {
+    const [year, month, day] = value.split("-");
+    if (!year || !month || !day) return "";
+    return `${day}-${month}-${year}`;
+  };
+
+  if (typeof date === "string") {
+    return formatDateParts(date.split("T")[0] || "");
+  }
+
+  const isoString = date.toISOString();
+  return formatDateParts(isoString.split("T")[0] || "");
+};
+
 export const formatPrice = (price: number) => {
   return new Intl.NumberFormat("th-TH").format(price);
 };
@@ -48,6 +65,14 @@ export const isValidEmail = (email: string): boolean => {
 export const generateId = (): string => {
   return Math.random().toString(36).substring(2) + Date.now().toString(36);
 };
+
+export const generateUUID = (): string => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0
+    const v = c === 'x' ? r : (r & 0x3) | 0x8
+    return v.toString(16)
+  })
+}
 
 export const debounce = <T extends (...args: any[]) => any>(
   func: T,

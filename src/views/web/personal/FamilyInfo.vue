@@ -1,11 +1,31 @@
 <script setup lang="ts">
 import CreateForm from '@/components/form/CreateForm.vue'
-import { getDatasetRows } from '@/stores/dataset'
+import ConfirmModal from '@/components/ConfirmModal.vue'
+import { getDatasetRows, updateDatasetRow } from '@/stores/dataset'
+import type { FamilyMember } from '@/types/teacher'
 import { onMounted, ref } from 'vue'
 import { toast } from 'vue-sonner'
 
 const loading = ref(false)
 const familyData = ref<Record<string, any>[]>([])
+
+const action = ref('update')
+const modalTopic = ref('ข้อมูลครอบครัว')
+const modalValue = ref('')
+const confirmModal = ref(false)
+const pendingGroupIndex = ref<number | null>(null)
+const pendingValues = ref<Record<string, any>>({})
+
+function mapFamilyMemberForForm(member: Partial<FamilyMember>) {
+  return {
+    ...member,
+    is_alive: member.is_alive ? 'มีชีวิต' : 'ไม่มีชีวิต',
+    road: member.road ?? '',
+    soi: member.soi ?? '',
+    building: member.building ?? '',
+  }
+}
+
 async function getFamilyData() {
   loading.value = true
   try {
@@ -14,22 +34,11 @@ async function getFamilyData() {
       page: 1,
       per_page: 50,
     })
-    familyData.value = response.data[0]?.family_members || []
-    familyData.value = familyData.value.map((member) => ({
-      ...member,
-      is_alive: member.is_alive ? 'มีชีวิต' : 'ไม่มีชีวิต',
-      road: member.address?.road || '-',
-      soi: member.address?.soi || '-',
-      building: member.address?.building || '-',
-    }))
-    console.log('Family API Response:', response)
-    console.log('Family Data:', familyData.value)
-    toast.success(`โหลดข้อมูลครอบครัวสำเร็จ (${response.total_rows} รายการ)`, {
-      position: 'bottom-right',
-    })
+
+    familyData.value = (response.data[0]?.family_members || []).map(
+      (member: FamilyMember) => mapFamilyMemberForForm(member),
+    )
   } catch (error: any) {
-    // console.error('Family API Error:', error)
-    // console.error('Error Response:', error?.response?.data)
     toast.error(`โหลดข้อมูลครอบครัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
       position: 'bottom-right',
     })
@@ -37,31 +46,90 @@ async function getFamilyData() {
   loading.value = false
 }
 
+async function updateFamilyData(groupIndex: number, values?: Record<string, any>) {
+  const currentMember = familyData.value[groupIndex]
+
+  if (!currentMember?.id) {
+    toast.error('ไม่พบข้อมูลสมาชิกครอบครัวที่ต้องการบันทึก', {
+      position: 'bottom-right',
+    })
+    return
+  }
+
+  loading.value = true
+
+  try {
+    const payload: Partial<FamilyMember> = {
+      ...currentMember,
+      ...values,
+      is_alive: currentMember.is_alive === 'มีชีวิต',
+      road: values?.road ?? currentMember.road ?? '',
+      soi: values?.soi ?? currentMember.soi ?? '',
+      building: values?.building ?? currentMember.building ?? '',
+      updated_at: new Date().toISOString(),
+    }
+
+    const response = await updateDatasetRow('data_update_view', 'v1.2.0', currentMember.id, payload)
+    console.log('Family Update API Response:', response)
+    familyData.value[groupIndex] = mapFamilyMemberForForm({
+      ...currentMember,
+      ...payload,
+    })
+
+    if ((response as { message?: string }).message === 'success') {
+      toast.success(`บันทึกข้อมูลข้อมูลครอบครัวสำเร็จ`, {
+        position: 'bottom-right',
+      })
+    }else {
+      toast.error(`อัพเดตข้อมูลครอบครัวไม่สำเร็จ`, {
+        position: 'bottom-right',
+      })
+    }
+  } catch (error: any) {
+    console.error('Family API Error:', error)
+    console.error('Error Response:', error?.response?.data)
+    toast.error(`อัปเดตข้อมูลครอบครัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
+      position: 'bottom-right',
+    })
+  }
+
+  loading.value = false
+}
+
+function updateData(confirmed: boolean) {
+  if (confirmed && pendingGroupIndex.value !== null) {
+    void updateFamilyData(pendingGroupIndex.value, pendingValues.value)
+  }
+  pendingGroupIndex.value = null
+  pendingValues.value = {}
+  confirmModal.value = false
+}
+
 onMounted(() => {
-  getFamilyData()
+  void getFamilyData()
 })
 
 function handleSave(groupIndex: number, values?: Record<string, any>) {
-  // Log the emitted values from CreateForm for debugging
   console.log('CreateForm save emitted:', { groupIndex, values })
-  // TODO: เรียก API บันทึกข้อมูล
-  toast(`บันทึกข้อมูลกลุ่มที่ ${groupIndex + 1} สำเร็จ`, { position: 'bottom-right' })
-}
-
-function handleDelete(groupIndex: number) {
-  // TODO: เรียก API ลบข้อมูล
-  toast(`ลบข้อมูลกลุ่มที่ ${groupIndex + 1} สำเร็จ`, { position: 'bottom-right' })
+  familyData.value[groupIndex] = {
+    ...familyData.value[groupIndex],
+    ...values,
+  }
+  pendingGroupIndex.value = groupIndex
+  pendingValues.value = values || {}
+  confirmModal.value = true
 }
 </script>
 
 <template>
   <div class="mx-6 flex flex-col gap-4">
-    แก้ไม่ได้ ยกเว้นที่ เบอร์โทร อีเมล , ที่อยู่ update ได้
+    แก้ไขไม่ได้ ยกเว้นที่ เบอร์โทร อีเมล , ที่อยู่ update ได้
     <CreateForm
       :isDropdown="true"
       :readonly="true"
+      :deferCommitOnSave="true"
       :values="familyData"
-      
+      :canDelete="false"
       :fields="[
         [
           {
@@ -232,7 +300,14 @@ function handleDelete(groupIndex: number) {
         ],
       ]"
       @save="handleSave"
-      @delete="handleDelete"
     />
   </div>
+
+  <ConfirmModal
+    v-if="confirmModal"
+    :action="action"
+    :topic="modalTopic"
+    :value="modalValue"
+    @confirm="updateData"
+  />
 </template>

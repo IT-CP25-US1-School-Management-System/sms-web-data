@@ -5,7 +5,8 @@ import NormalForm, {
   type NormalFormOption,
 } from '@/components/form/NormalForm.vue'
 import { Button } from '@/components/ui/button'
-import { getDatasetRows } from '@/stores/dataset'
+import { getDatasetRows , updateDatasetRow } from '@/stores/dataset'
+import ConfirmModal from '@/components/ConfirmModal.vue'
 import type {
   AddressDatasetRow,
   PersonAddress,
@@ -23,6 +24,7 @@ type NormalFormInstance = InstanceType<typeof NormalForm>
 
 type AddressFormState = {
   id: string
+  source?: PersonAddress
   fields: NormalFormField[]
   initialValues: Record<string, any>
   currentValues: Record<string, any>
@@ -32,7 +34,6 @@ type AddressFormState = {
   lastDistrict?: string
 }
 onMounted(() => {
-  console.log('AddressInfo')
   getAddressData()
 })
 const loading = ref(false)
@@ -41,6 +42,37 @@ const addressForms = ref<AddressFormState[]>([])
 const provinceData = provincesJson as Province[]
 const districtData = districtsJson as District[]
 const subDistrictData = subDistrictsJson as SubDistrict[]
+
+const action = ref('update') 
+const modalTopic = ref('ข้อมูลที่อยู่')
+const modalValue = ref('')
+const confirmModal = ref(false)
+
+const subDistrictOptionsByDistrict = new Map<string, NormalFormOption[]>()
+const subDistrictNameMap = new Map<string, string>()
+const postalCodeBySubDistrict = new Map<string, string>()
+const addressDataUpdate = ref<PersonAddress>({
+  id: '',
+  person_id: '',
+  house_no: null,
+  house_registry_no: null,
+  moo: null,
+  soi: null,
+  road: null,
+  building: null,
+  province: null,
+  province_code: null,
+  district: null,
+  district_code: null,
+  subdistrict: null,
+  subdistrict_code: null,
+  postal_code: null,
+  is_house_registered: false,
+  is_current: false,
+  is_retired_residence: false,
+  created_at: '',
+  updated_at: null,
+})
 
 const provinceOptions: NormalFormOption[] = provinceData.map((province) => ({
   label: province.name_th,
@@ -61,9 +93,7 @@ districtData.forEach((district) => {
   districtNameMap.set(option.value, option.label)
 })
 
-const subDistrictOptionsByDistrict = new Map<string, NormalFormOption[]>()
-const subDistrictNameMap = new Map<string, string>()
-const postalCodeBySubDistrict = new Map<string, string>()
+
 
 subDistrictData.forEach((subDistrict) => {
   const option: NormalFormOption = { label: subDistrict.name_th, value: String(subDistrict.id) }
@@ -212,6 +242,7 @@ function createAddressFormState(source?: PersonAddress, index = 0) {
       : `address-${Date.now()}-${index}`
   const state = reactive<AddressFormState>({
     id: source?.id || generatedId,
+    source,
     fields: createAddressFields(initialValues),
     initialValues: cloneFormValues(initialValues),
     currentValues: cloneFormValues(initialValues),
@@ -274,6 +305,7 @@ async function getAddressData() {
       page: 1,
       per_page: 50,
     })
+    
     const records = response.data?.[0]?.person_addresses || []
     addressForms.value = (records.length ? records : [undefined]).map((address, index) =>
       createAddressFormState(address, index),
@@ -285,6 +317,45 @@ async function getAddressData() {
   } finally {
     loading.value = false
   }
+}
+
+async function updateAddressData() {
+  loading.value = true
+  const datasetId = 'data_update_view'
+  const version = 'v1.1.0'
+
+  try {
+    const response = await updateDatasetRow(
+       // assuming the API identifies the record to update by an 'id' field
+      datasetId, 
+      version,
+      addressDataUpdate.value.id,
+      addressDataUpdate.value, 
+    )
+    
+    if ((response as { message?: string }).message === 'success') {
+      toast.success(`อัพเดตข้อมูลที่อยู่สำเร็จ`, {
+        position: 'bottom-right',
+      })
+    } else {
+      toast.error(`อัพเดตข้อมูลที่อยู่ไม่สำเร็จ`, {
+        position: 'bottom-right',
+      })
+    }
+      
+  } catch (error: any) {
+    toast.error(`อัพเดตข้อมูลส่วนตัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
+      position: 'bottom-right',
+    })
+  } 
+  loading.value = false
+}
+
+function updateData(action:boolean) {
+  if (action) {
+   updateAddressData()
+  } 
+  confirmModal.value = false
 }
 
 function setFormRef(formId: string, instance: NormalFormInstance | null) {
@@ -322,10 +393,31 @@ function normalizeAddressPayload(values: Record<string, any>) {
   }
 }
 
-function handleFormSave(formId: string, values: Record<string, any>) {
-  const payload = normalizeAddressPayload(values)
-  pendingPayloads.set(formId, payload)
+function buildAddressUpdate(source: PersonAddress | undefined, payload: Record<string, any>): PersonAddress {
+  return {
+    id: source?.id || '',
+    person_id: source?.person_id || '',
+    house_no: payload.house_no || null,
+    house_registry_no: payload.house_registry_no || null,
+    moo: payload.moo || null,
+    soi: payload.soi || null,
+    road: payload.road || null,
+    building: payload.building || null,
+    province: payload.province || null,
+    province_code: payload.province_code || null,
+    district: payload.district || null,
+    district_code: payload.district_code || null,
+    subdistrict: payload.subdistrict || null,
+    subdistrict_code: payload.subdistrict_code || null,
+    postal_code: payload.postal_code || null,
+    is_house_registered: Boolean(payload.is_house_registered),
+    is_current: Boolean(payload.is_current),
+    is_retired_residence: Boolean(payload.is_retired_residence),
+    created_at: source?.created_at || new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }
 }
+
 
 const hasAnyChanges = computed(() =>
   addressForms.value.some(
@@ -339,23 +431,35 @@ const isSaveDisabled = computed(
   () => loading.value || !hasAnyChanges.value || hasAnyInvalidRequired.value,
 )
 
+
+function handleFormSave(formId: string, values: Record<string, any>) {
+  const target = addressForms.value.find((entry) => entry.id === formId)
+  if (!target) return
+  const payload = normalizeAddressPayload(values)
+  addressDataUpdate.value = buildAddressUpdate(target.source, payload)
+  pendingPayloads.set(formId, payload)
+
+}
+
 async function onSaveAll() {
   pendingPayloads.clear()
+  let isAllValid = []
   for (const form of addressForms.value) {
     if (form.formRef?.submitForm) {
       const valid = await form.formRef.submitForm()
       if (!valid) {
-        toast.error('กรุณากรอกข้อมูลให้ครบถ้วนก่อนบันทึก')
-        return
+        isAllValid.push(false)
       }
     }
   }
-
+  if (isAllValid.some((valid) => valid=== false)) {
+    confirmModal.value = false
+    return
+  }
   if (!pendingPayloads.size) return
 
-  const payloadList = Array.from(pendingPayloads.values())
-  console.log('address payload', payloadList)
-  toast.success('บันทึกข้อมูลที่อยู่เรียบร้อย (mock)')
+  confirmModal.value = true
+
   addressForms.value.forEach((form) => {
     form.initialValues = cloneFormValues(form.currentValues)
     form.hasChanges = false
@@ -382,12 +486,23 @@ async function onSaveAll() {
       class="sticky right-0 bottom-0 z-40 flex w-full justify-end border-t border-gray-200 bg-white p-3 dark:border-neutral-700 dark:bg-black"
     >
       <Button
-        class="rounded-lg bg-[#16A34A] px-8 py-2 font-semibold text-white shadow-sm hover:bg-[#15803D]"
+        class="cursor-pointer rounded-lg bg-[#16A34A] px-8 py-2 font-semibold text-white shadow-sm hover:bg-[#15803D]"
         :disabled="isSaveDisabled"
         @click="onSaveAll"
       >
         บันทึก
       </Button>
     </div>
+
+  <!-- modal -->
+  <ConfirmModal
+    v-if="confirmModal"
+    :action="action"
+    :topic="modalTopic"
+    :value="modalValue"
+    :disabled="isSaveDisabled"
+    @confirm="updateData"
+  />
+
   </div>
 </template>
