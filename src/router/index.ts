@@ -1,13 +1,24 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ROUTE_NAMES } from '@/lib/constants'
-import { getTeacherById } from '@/stores/teachers'
+import { getTeacherById, useTeacherStore } from '@/stores/teachers'
 
 const validateTeacherIdGuard = async (to: any) => {
+  const teacherStore = useTeacherStore()
   const idFromUrl = to.query.id as string
   if (idFromUrl) {
+    if (teacherStore.currentTeacher?.id === idFromUrl) {
+      teacherStore.setPersonId(idFromUrl)
+      return true
+    }
+
     try {
-      await getTeacherById(idFromUrl)
+      const response = await getTeacherById(idFromUrl)
+      if (!response.data) {
+        return { name: ROUTE_NAMES.HOME }
+      }
+
+      teacherStore.setCurrentTeacher(response.data)
       // ID exists, allow navigation
       return true
     } catch (error) {

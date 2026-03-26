@@ -55,10 +55,13 @@ export async function createDatasetRow<T = Record<string, any>>(
   datasetId: string,
   version: string,
   data: Partial<T>,
+  viewName?: string,
 ): Promise<DatasetRowResponse<T>> {
+  const params = viewName ? { view: viewName } : undefined
   const response = await dataApiInstance.post<DatasetRowResponse<T>>(
     `/v1/datasets/${datasetId}/versions/${version}/data`,
     data,
+    params ? { params } : undefined,
   )
   return response.data
 }
@@ -71,10 +74,13 @@ export async function updateDatasetRow<T = Record<string, any>>(
   version: string,
   key: string,
   data: Partial<T>,
+  viewName?: string,
 ): Promise<DatasetRowResponse<T>> {
+  const params = viewName ? { view: viewName } : undefined
   const response = await dataApiInstance.put<DatasetRowResponse<T>>(
     `/v1/datasets/${datasetId}/versions/${version}/data/key/${key}`,
     data,
+    params ? { params } : undefined,
   )
   return response.data
 }

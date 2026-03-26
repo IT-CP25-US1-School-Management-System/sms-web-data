@@ -5,8 +5,7 @@ import DropDownForm from '@/components/form/DropDownForm.vue'
 import { Button } from '@/components/ui/button'
 import { Plus, Trash2 } from 'lucide-vue-next'
 import { ROUTE_NAMES } from '@/lib/constants'
-import { createFamilyMember } from '@/stores/teachers'
-import { useTeacherStore } from '@/stores/teachers'
+import { createFamilyMember, useTeacherStore } from '@/stores/teachers'
 import type { FamilyMemberCreateDTO } from '@/types/teacher'
 import { useToast } from '@/composables/useToast'
 
@@ -68,12 +67,21 @@ async function saveEntry(index: number) {
       former_last_name_th: v.former_last_name_th || undefined,
       national_id: v.national_id || undefined,
       gender: v.gender || undefined,
-      is_alive: v.is_alive !== undefined ? v.is_alive === 'true' || v.is_alive === true : undefined,
+      is_alive: v.is_alive !== undefined ? v.is_alive === 'มีชีวิต' || v.is_alive === true : undefined,
       birth_date: v.birth_date || undefined,
       phone: v.phone || undefined,
       email: v.email || undefined,
       marital_status: v.marital_status || undefined,
       is_emergency_contact: v.is_emergency_contact === 'true' || v.is_emergency_contact === true,
+      house_no: v.house_no || undefined,
+      moo: v.moo || undefined,
+      building: v.building || undefined,
+      soi: v.soi || undefined,
+      road: v.road || undefined,
+      subdistrict: v.subdistrict || undefined,
+      district: v.district || undefined,
+      province: v.province || undefined,
+      postal_code: v.postal_code || undefined,
     }
     await createFamilyMember(payload)
     showSuccess(`บันทึกสมาชิกครอบครัวคนที่ ${index + 1} สำเร็จ`)
@@ -91,10 +99,17 @@ const handleNext = () => {
   const personId = idFromUrl || teacherStore.personId
   router.push({ name: ROUTE_NAMES.ADD_TEACHER_EDUCATION, query: { id: personId } })
 }
+
+const handleBack = () => {
+  const idFromUrl = route.query.id as string
+  const personId = idFromUrl || teacherStore.personId
+  router.push({ name: ROUTE_NAMES.ADD_TEACHER_ADDRESS, query: { id: personId } })
+}
 </script>
 
 <template>
   <div class="mx-6 flex flex-col gap-4 pb-24">
+    <p class="text-sm text-muted-foreground">รูปแบบฟอร์มสอดคล้องกับข้อมูลครอบครัวในหน้าข้อมูลส่วนบุคคล</p>
     <div v-for="(entry, index) in entries" :key="index" class="relative">
       <DropDownForm
         :topic="`สมาชิกครอบครัวคนที่ ${index + 1}`"
@@ -131,11 +146,11 @@ const handleNext = () => {
           },
           {
             name: 'is_alive', label: 'การมีชีวิต', type: 'select', placeholder: 'เลือก',
-            options: [{ label: 'มีชีวิต', value: 'true' }, { label: 'เสียชีวิต', value: 'false' }],
+            options: [{ label: 'มีชีวิต', value: 'มีชีวิต' }, { label: 'ไม่มีชีวิต', value: 'ไม่มีชีวิต' }],
           },
           { name: 'birth_date', label: 'วันเกิด', type: 'date', placeholder: 'วว / ดด / ปปปป' },
-          { name: 'phone', label: 'โทรศัพท์', type: 'text', placeholder: 'กรุณาระบุเบอร์โทร' },
-          { name: 'email', label: 'อีเมล', type: 'email', placeholder: 'กรุณาระบุอีเมล' },
+          { name: 'phone', label: 'โทรศัพท์', type: 'text', required: true, placeholder: '0xxxxxxxxx' },
+          { name: 'email', label: 'อีเมล', type: 'email', required: true, placeholder: 'example@email.com' },
           {
             name: 'marital_status', label: 'สถานภาพ', type: 'select', placeholder: 'เลือก',
             options: [
@@ -145,6 +160,15 @@ const handleNext = () => {
               { label: 'หม้าย', value: 'หม้าย' },
             ],
           },
+          { name: 'province', label: 'จังหวัด', type: 'text', required: true, placeholder: 'กรุณาระบุจังหวัด' },
+          { name: 'district', label: 'อำเภอ/เขต', type: 'text', required: true, placeholder: 'กรุณาระบุอำเภอ/เขต' },
+          { name: 'subdistrict', label: 'ตำบล/แขวง', type: 'text', required: true, placeholder: 'กรุณาระบุตำบล/แขวง' },
+          { name: 'postal_code', label: 'รหัสไปรษณีย์', type: 'text', required: true, placeholder: 'กรุณาระบุรหัสไปรษณีย์' },
+          { name: 'road', label: 'ถนน', type: 'text', placeholder: 'กรุณาระบุถนน' },
+          { name: 'soi', label: 'ตรอก/ซอย', type: 'text', placeholder: 'กรุณาระบุตรอก/ซอย' },
+          { name: 'building', label: 'หมู่บ้าน/อาคาร', type: 'text', placeholder: 'กรุณาระบุหมู่บ้าน/อาคาร' },
+          { name: 'moo', label: 'หมู่ที่', type: 'text', required: true, placeholder: 'กรุณาระบุหมู่ที่' },
+          { name: 'house_no', label: 'บ้านเลขที่', type: 'text', required: true, placeholder: 'กรุณาระบุบ้านเลขที่' },
         ]"
       />
       <div class="mt-2 flex justify-end gap-2">
@@ -174,11 +198,7 @@ const handleNext = () => {
   </div>
 
   <div class="sticky bottom-0 right-0 z-40 flex w-full justify-end border-t border-gray-200 bg-white p-3">
-    <Button variant="outline" class="mr-2" @click="() => {
-      const idFromUrl = route.query.id as string
-      const personId = idFromUrl || teacherStore.personId
-      router.push({ name: ROUTE_NAMES.ADD_TEACHER_ADDRESS, query: { id: personId } })
-    }">
+    <Button variant="outline" class="mr-2" @click="handleBack">
       ย้อนกลับ
     </Button>
     <Button class="rounded-lg bg-[#16A34A] px-8 py-2 font-semibold text-white shadow-sm hover:bg-[#15803D]" @click="handleNext">

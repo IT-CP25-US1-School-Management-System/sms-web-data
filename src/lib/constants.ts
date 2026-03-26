@@ -56,10 +56,4 @@ export const DATASET_SENSITIVITY = {
 
 export type DatasetSensitivity = (typeof DATASET_SENSITIVITY)[keyof typeof DATASET_SENSITIVITY]
 
-export const PREFIX_OPTIONS = {
-  1: 'นาย',
-  2: 'นาง',
-  3: 'นางสาว',
-} as const
-
 export type PrefixType = keyof typeof PREFIX_OPTIONS
