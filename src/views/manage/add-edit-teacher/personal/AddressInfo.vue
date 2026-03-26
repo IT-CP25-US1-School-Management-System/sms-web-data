@@ -26,8 +26,8 @@ onMounted(() => {
 
 const addressTypes = ref<string[]>([])
 
-const handleValuesUpdate = (values: Record<string, any>) => {
-  formValues.value = { ...formValues.value, ...values }
+const handleValuesUpdate = (payload: { values: Record<string, any>; isDirty: boolean }) => {
+  formValues.value = { ...formValues.value, ...payload.values }
 }
 
 const handleSave = async () => {
@@ -98,7 +98,7 @@ const handleSave = async () => {
       <DropDownForm
         topic="ข้อมูลที่อยู่"
         :values="formValues"
-        @update:values="handleValuesUpdate"
+        @change="handleValuesUpdate"
         :fields="[
           { name: 'province', label: 'จังหวัด', type: 'text', required: true, placeholder: 'กรุณาระบุจังหวัด' },
           { name: 'postal_code', label: 'รหัสไปรษณีย์', type: 'text', required: true, placeholder: 'กรุณาระบุรหัสไปรษณีย์' },

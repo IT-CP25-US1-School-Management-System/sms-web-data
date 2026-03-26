@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { env } from '@/lib/env'
@@ -119,34 +119,35 @@ const menuConfig: {
           label: 'ข้อมูลการดำรงตำแหน่ง',
           icon: null,
           routeName: ROUTE_NAMES.POSITION_HISTORY,
+          showCondition: () => !isGovernment.value,
         },
         {
           id: 'royal-decorations',
           label: 'ประวัติเครื่องราชอิสริยาภรณ์',
           icon: null,
           routeName: ROUTE_NAMES.ROYAL_DECORATIONS,
-          showCondition: () => true, // optional condition
+          showCondition: () => !isGovernment.value, // only for government staff
         },
         {
           id: 'academic-rank-history',
           label: 'ประวัติวิทยฐานะ',
           icon: null,
           routeName: ROUTE_NAMES.ACADEMIC_RANK_HISTORY,
-          showCondition: () => true, // optional condition
+          showCondition: () => !isGovernment.value, // only for government staff
         },
         {
           id: 'employment',
           label: 'ข้อมูลการจ้าง',
           icon: null,
           routeName: ROUTE_NAMES.EMPLOYMENT,
-          showCondition: () => true, // optional condition
+          showCondition: () => isGovernment.value, // show for non-government (contract) staff
         },
         {
           id: 'contract-position',
           label: 'ประวัติการดำรงตำแหน่ง (อัตราจ้าง)',
           icon: null,
           routeName: ROUTE_NAMES.CONTRACT_POSITION,
-          showCondition: () => true, // optional condition
+          showCondition: () => isGovernment.value, // show for non-government (contract) staff
         },
       ],
     },
@@ -173,7 +174,7 @@ const menuConfig: {
     },
     {
       id: 'documents',
-      label: 'คำร้อง',
+      label: 'คำร้อง และ การประเมิน PA',
       icon: TicketSlash,
       routeName: null,
       children: [
@@ -182,6 +183,18 @@ const menuConfig: {
           label: 'ยื่นคำร้อง',
           icon: null,
           routeName: ROUTE_NAMES.SUBMIT_DOCUMENTS,
+        },
+        {
+          id: 'pa-document',
+          label: 'การส่งเอกสาร PA',
+          icon: null,
+          routeName: ROUTE_NAMES.PA_DOCUMENT,
+        },
+        {
+          id: 'evaluation-pa',
+          label: 'การประเมิน PA',
+          icon: null,
+          routeName: ROUTE_NAMES.EVALUATION_PA,
         },
         {
           id: 'track-documents',
@@ -262,6 +275,21 @@ const mockAuth = {
   isLoading: authStore.loading,
 }
 
+// Determine whether the current user is government staff. The user object
+// coming from the auth store may vary in shape (some backends nest attributes),
+// so check common locations where `is_government` might appear.
+const isGovernment = computed(() => {
+  const u: any = authStore.user
+  if (!u) return false
+  return Boolean(
+    u.is_government ??
+      u.profile?.is_government ??
+      u.attributes?.is_government ??
+      u['isGovernment'] ??
+      false,
+  )
+})
+
 const isActiveRoute = (routeName: string | null) => {
   if (!routeName) return false
   return route.name === routeName || route.name?.toString().startsWith(routeName)
@@ -280,14 +308,14 @@ const handleLogout = async () => {
 </script>
 
 <template>
-  <Sidebar variant="inset">
+  <Sidebar variant="inset" >
     <SidebarHeader>
       <SidebarMenu>
         <SidebarMenuItem>
           <SidebarMenuButton size="lg" as-child>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 ">
               <div
-                class="bg-background flex aspect-square h-10 items-center justify-center rounded-lg"
+                class="bg-background  flex aspect-square h-10 items-center justify-center rounded-lg"
               >
                 <!-- <img src="/" alt="Logo" class="h-9" /> -->
               </div>

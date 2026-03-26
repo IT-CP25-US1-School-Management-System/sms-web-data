@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Field, FieldLabel } from '@/components/ui/field'
+import { Field, FieldLabel, FieldError } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -13,8 +13,15 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
-import { ChevronUp, FileText, X } from 'lucide-vue-next'
-import { ref, watch } from 'vue'
+import { FileText, X, CalendarIcon } from 'lucide-vue-next'
+import { ref, watch, computed } from 'vue'
+import { Form as VeeForm, Field as VeeField, ErrorMessage } from 'vee-validate'
+import { toTypedSchema } from '@vee-validate/zod'
+import { z } from 'zod'
+import { toast } from 'vue-sonner'
+import { Calendar } from '@/components/ui/calendar'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { type DateValue, CalendarDate } from '@internationalized/date'
 
 /* ──────────────────── ประเภทคำร้อง ──────────────────── */
 const requestTypeOptions = [
@@ -22,22 +29,24 @@ const requestTypeOptions = [
   { label: 'คำขอบัตรประจำตัว', value: '2' },
   { label: 'คำร้องขออนุญาตไปต่างประเทศ', value: '3' },
   { label: 'แบบรายงานเปลี่ยนแปลงหรือเพิ่มเติมรายการลงในสมุดประวัติ', value: '4' },
-  { label: 'การประเมินผลการพัฒนางานตามข้อตกลง PA', value: '5' },
-  { label: 'การส่ง PA2 กับ PA3', value: '6' },
+  { label: 'คำร้องขอเพิ่มวุติการศึกษา', value: '5' },
 ]
 
 /* ──────────────────── Common state ──────────────────── */
 const title = ref('')
 const requestType = ref('')
+const formRef = ref<any>(null)
 
 /* ──────────────────── Type 1: คำร้องขอเอกสาร ──────────────────── */
-const chkSalary = ref(false)
 const salaryQty = ref('')
-const chkWork = ref(false)
 const workQty = ref('')
-const chkLetter = ref(false)
 const letterBank = ref('')
 const letterQty = ref('')
+
+// salary detail local refs (kept in sync with VeeField)
+const salary_info = ref('')
+const salary_base = ref('')
+const salary_compensation = ref('')
 
 const bankOptions = [
   { label: 'ธนาคารกรุงไทย', value: 'krungthai' },
@@ -55,814 +64,1616 @@ const chkLetter4 = ref(false)
 const letterBank4 = ref('')
 const letterQty4 = ref('')
 
-/* ──────────────────── Type 5: PA – collapsible sections ──────────────────── */
-const paSections = [
-  'แบบข้อตกลงในการพัฒนางาน PA1',
-  'แบบบันทึกขอหมายลิขบุคลากรที่มีวิไขปฏิบัติงาน',
-  'รายงานกิจกรรมชุมชนแห่งการเรียนรู้ทางวิชาชีพ PLC',
-  'รายงานการวิจัย',
-  'แผนการจัดการเรียนรู้',
-  'สรุปผลการเยี่ยมบ้านนักเรียน',
-  'รายงานการประเมินตนเอง T-SAR',
-  'KP Innovative',
-]
-const paOpenState = ref<Record<number, boolean>>(
-  Object.fromEntries(paSections.map((_, i) => [i, true])),
-)
+/* ──────────────────── Type 5: คำร้องขอเพิ่มวุติการศึกษา ──────────────────── */
+const educationData = ref<Record<string, any>>({
+  education_level: '',
+  qualification: '',
+  qualification_name: '',
+  major_group: '',
+  minor_group: '',
+  institution: '',
+  start_date: '',
+  graduation_date: '',
+  country: '',
+  honor_type: '',
+  'qualification-used': '',
+})
 
-/* ──────────────────── Type 6: การส่ง PA2 กับ PA3 ──────────────────── */
-const pa2GroupSubject = ref('')
-const pa2TeachLevel1 = ref('')
-const pa2TeachLevel2 = ref('')
-const pa2Subject = ref('')
-const pa2TeachHours = ref('')
-const pa2SupportHours = ref('')
-const pa2QualityHours = ref('')
-const pa2PolicyHours = ref('')
-const pa2Evaluator1 = ref('')
-const pa2Evaluator2 = ref('')
-const pa2Evaluator3 = ref('')
+/* ──────────────────── Date picker helpers ──────────────────── */
+const datePopoverOpen = ref<Record<string, boolean>>({})
 
-const groupSubjectOptions = [
-  { label: 'ภาษาไทย', value: 'thai' },
-  { label: 'คณิตศาสตร์', value: 'math' },
-  { label: 'วิทยาศาสตร์และเทคโนโลยี', value: 'science' },
-  { label: 'สังคมศึกษา ศาสนาและวัฒนธรรม', value: 'social' },
-  { label: 'ศิลปะ', value: 'art' },
-  { label: 'สุขศึกษาและพลศึกษา', value: 'health' },
-  { label: 'การงานอาชีพ', value: 'career' },
-  { label: 'ภาษาต่างประเทศ', value: 'foreign' },
-]
+function stringToDateValue(str: string | undefined): DateValue | undefined {
+  if (!str) return undefined
+  const [y, m, d] = str.split('-').map(Number)
+  if (!y || !m || !d) return undefined
+  return new CalendarDate(y, m, d)
+}
+
+function dateValueToString(dv: DateValue): string {
+  const y = String(dv.year).padStart(4, '0')
+  const m = String(dv.month).padStart(2, '0')
+  const d = String(dv.day).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+function formatDisplayDate(str: string | undefined): string {
+  if (!str) return ''
+  const [y, m, d] = str.split('-')
+  if (!y || !m || !d) return ''
+  return `${d}/${m}/${y}`
+}
 
 /* ──────────────────── File upload helpers ──────────────────── */
 const fileMap = ref<Record<string, File[]>>({})
 const fileInputRefs = ref<Record<string, HTMLInputElement | null>>({})
+const fileSizeErrors = ref<Record<string, string | undefined>>({})
+const MAX_FILE_SIZE = 15 * 1024 * 1024
+const FILE_SIZE_ERROR_MESSAGE = `ขนาดไฟล์ต้องไม่เกิน ${Math.floor(MAX_FILE_SIZE / (1024 * 1024))} MB`
 
-function handleFileSelect(event: Event, key: string, multiple = false) {
+const fileCountFieldMap: Record<string, string> = {
+  slip: 'slipCount',
+  'card-doc': 'cardDocCount',
+  'abroad-doc': 'abroadDocCount',
+  'report-doc': 'reportDocCount',
+  'update-doc': 'updateDocCount',
+  'letter-doc': 'letterDocCount',
+  'reason-doc': 'reasonDocCount',
+  'education-request-doc': 'educationRequestDocCount',
+}
+
+type FileSelectOptions = {
+  maxFiles?: number
+}
+
+function syncFileCountField(key: string, value?: number, shouldValidate = false) {
+  const fieldName = fileCountFieldMap[key]
+  if (!fieldName) return
+  const nextValue = typeof value === 'number' ? value : fileMap.value[key]?.length || 0
+  formRef.value?.setFieldValue(fieldName, nextValue, shouldValidate)
+}
+
+function syncSlipCountField(value?: number, shouldValidate = false) {
+  syncFileCountField('slip', value, shouldValidate)
+}
+
+function resetAllFileCounts() {
+  Object.keys(fileCountFieldMap).forEach((key) => syncFileCountField(key, 0))
+  fileSizeErrors.value = {}
+}
+
+function handleFileSelect(
+  event: Event,
+  key: string,
+  multiple = false,
+  onValueChange?: (value: number) => void,
+  options?: FileSelectOptions,
+) {
   const input = event.target as HTMLInputElement
-  const files = Array.from(input?.files || [])
-  if (!fileMap.value[key]) fileMap.value[key] = []
-  if (multiple) {
-    fileMap.value[key].push(...files)
-  } else {
-    fileMap.value[key] = files.slice(0, 1)
+  if (options?.maxFiles !== undefined && options.maxFiles <= 0) {
+    input.value = ''
+    return
   }
+  const files = Array.from(input?.files || [])
+  const acceptedFiles = files.filter((file) => file.size <= MAX_FILE_SIZE)
+  const rejectedFiles = files.filter((file) => file.size > MAX_FILE_SIZE)
+  if (!fileMap.value[key]) fileMap.value[key] = []
+
+  if (multiple) {
+    const maxAdditional = options?.maxFiles
+      ? Math.max(options.maxFiles - fileMap.value[key].length, 0)
+      : acceptedFiles.length
+    if (maxAdditional <= 0) {
+      input.value = ''
+      return
+    }
+    fileMap.value[key].push(...acceptedFiles.slice(0, maxAdditional))
+  } else {
+    fileMap.value[key] = acceptedFiles.slice(0, 1)
+  }
+
+  fileSizeErrors.value[key] = rejectedFiles.length > 0 ? FILE_SIZE_ERROR_MESSAGE : undefined
+
   input.value = ''
-}
-
-function removeFile(key: string, idx: number) {
-  fileMap.value[key]?.splice(idx, idx + 1)
-}
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  const length = fileMap.value[key]?.length || 0
+  onValueChange?.(length)
+  if (!onValueChange) {
+    syncFileCountField(key, length)
+  }
 }
 
 function triggerFileInput(key: string) {
-  fileInputRefs.value[key]?.click()
+  const input = fileInputRefs.value[key]
+  input?.click()
 }
+
+function removeFile(key: string, index: number, onValueChange?: (value: number) => void) {
+  if (!fileMap.value[key]) return
+  fileMap.value[key].splice(index, 1)
+  fileSizeErrors.value[key] = undefined
+  const length = fileMap.value[key]?.length || 0
+  onValueChange?.(length)
+  if (!onValueChange) {
+    syncFileCountField(key, length, true)
+  }
+}
+
+function getFileErrorMessage(key: string, errors: string[]) {
+  return fileSizeErrors.value[key] || errors[0] || ''
+}
+
+function formatFileSize(bytes: number) {
+  if (!bytes) return '0 KB'
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), sizes.length - 1)
+  const value = bytes / Math.pow(1024, i)
+  return `${value.toFixed(i === 0 ? 0 : 1)} ${sizes[i]}`
+}
+
+function clearType1DependentFields(type: 'salary' | 'work' | 'letter') {
+  if (type === 'salary') {
+    salaryQty.value = ''
+    formRef.value?.setFieldValue('salaryQty', '')
+  }
+
+  if (type === 'work') {
+    workQty.value = ''
+    formRef.value?.setFieldValue('workQty', '')
+  }
+
+  if (type === 'letter') {
+    letterBank.value = ''
+    letterQty.value = ''
+    formRef.value?.setFieldValue('letterBank', '')
+    formRef.value?.setFieldValue('letterQty', '')
+  }
+}
+
+function clearType4LetterFields() {
+  letterBank4.value = ''
+  letterQty4.value = ''
+  formRef.value?.setFieldValue('letterBank4', '')
+  formRef.value?.setFieldValue('letterQty4', '')
+  if (fileMap.value['letter-doc']?.length) {
+    fileMap.value['letter-doc'] = []
+  }
+  fileSizeErrors.value['letter-doc'] = undefined
+  syncFileCountField('letter-doc', 0, true)
+  const letterInput = fileInputRefs.value['letter-doc']
+  if (letterInput) {
+    letterInput.value = ''
+  }
+}
+
+type Type4CheckboxKey = 'chkDegree' | 'chkMarriage' | 'chkDivorce' | 'chkLetter4'
+
+const type4CheckboxRefs: Record<Type4CheckboxKey, typeof chkDegree> = {
+  chkDegree,
+  chkMarriage,
+  chkDivorce,
+  chkLetter4,
+}
+
+function updateType4Checkbox(key: Type4CheckboxKey, value: boolean) {
+  const target = type4CheckboxRefs[key]
+  if (!target) return
+  target.value = value
+  formRef.value?.setFieldValue(key, value)
+}
+
+function clearReasonDocs() {
+  if (fileMap.value['reason-doc']?.length) {
+    fileMap.value['reason-doc'] = []
+  }
+  fileSizeErrors.value['reason-doc'] = undefined
+  syncFileCountField('reason-doc', 0, true)
+  const reasonInput = fileInputRefs.value['reason-doc']
+  if (reasonInput) {
+    reasonInput.value = ''
+  }
+}
+
+const reasonSelectionCount = computed(() => {
+  let count = 0
+  if (chkDegree.value) count += 1
+  if (chkMarriage.value) count += 1
+  if (chkDivorce.value) count += 1
+  return count
+})
+
+const canUploadReasonDocs = computed(() => reasonSelectionCount.value > 0)
+
+watch(reasonSelectionCount, (count) => {
+  if (count <= 0) {
+    clearReasonDocs()
+    return
+  }
+  const reasonFiles = fileMap.value['reason-doc'] || []
+  if (reasonFiles.length > count) {
+    fileMap.value['reason-doc'] = reasonFiles.slice(0, count)
+    syncFileCountField('reason-doc', fileMap.value['reason-doc'].length, true)
+  }
+})
+
+const initialValues = computed(() => ({
+  requestType: requestType.value,
+  title: title.value,
+  chkSalary: false,
+  salaryQty: salaryQty.value,
+  salary_info: salary_info.value,
+  salary_base: salary_base.value,
+  salary_compensation: salary_compensation.value,
+  chkWork: false,
+  workQty: workQty.value,
+  chkLetter: false,
+  letterBank: letterBank.value,
+  letterQty: letterQty.value,
+  slipCount: fileMap.value['slip']?.length || 0,
+  cardDocCount: fileMap.value['card-doc']?.length || 0,
+  abroadDocCount: fileMap.value['abroad-doc']?.length || 0,
+  reportDocCount: fileMap.value['report-doc']?.length || 0,
+  updateDocCount: fileMap.value['update-doc']?.length || 0,
+  letterDocCount: fileMap.value['letter-doc']?.length || 0,
+  reasonDocCount: fileMap.value['reason-doc']?.length || 0,
+  educationRequestDocCount: fileMap.value['education-request-doc']?.length || 0,
+  chkDegree: chkDegree.value,
+  chkMarriage: chkMarriage.value,
+  chkDivorce: chkDivorce.value,
+  chkLetter4: chkLetter4.value,
+  letterBank4: letterBank4.value,
+  letterQty4: letterQty4.value,
+
+  // Education fields
+  education_level: educationData.value.education_level,
+  qualification: educationData.value.qualification,
+  qualification_name: educationData.value.qualification_name,
+  major_group: educationData.value.major_group,
+  minor_group: educationData.value.minor_group,
+  institution: educationData.value.institution,
+  start_date: educationData.value.start_date,
+  graduation_date: educationData.value.graduation_date,
+  country: educationData.value.country,
+  honor_type: educationData.value.honor_type,
+  'qualification-used': educationData.value['qualification-used'],
+}))
 
 /* Reset state when changing request type */
 watch(requestType, () => {
   title.value = ''
-  chkSalary.value = false
   salaryQty.value = ''
-  chkWork.value = false
   workQty.value = ''
-  chkLetter.value = false
   letterBank.value = ''
   letterQty.value = ''
-  chkDegree.value = false
-  chkMarriage.value = false
-  chkDivorce.value = false
-  chkLetter4.value = false
-  letterBank4.value = ''
-  letterQty4.value = ''
+  updateType4Checkbox('chkDegree', false)
+  updateType4Checkbox('chkMarriage', false)
+  updateType4Checkbox('chkDivorce', false)
+  updateType4Checkbox('chkLetter4', false)
+  clearType4LetterFields()
   fileMap.value = {}
-  pa2GroupSubject.value = ''
-  pa2TeachLevel1.value = ''
-  pa2TeachLevel2.value = ''
-  pa2Subject.value = ''
-  pa2TeachHours.value = ''
-  pa2SupportHours.value = ''
-  pa2QualityHours.value = ''
-  pa2PolicyHours.value = ''
-  pa2Evaluator1.value = ''
-  pa2Evaluator2.value = ''
-  pa2Evaluator3.value = ''
+  resetAllFileCounts()
+  syncSlipCountField(0)
+  if (formRef.value) {
+    formRef.value.resetForm({ values: initialValues.value })
+  }
 })
+
+const schema = computed(() => {
+  // base shape
+  const shape: Record<string, any> = {
+    requestType: z.string().min(1, 'กรุณาเลือกประเภทคำร้อง'),
+    title: z.string().optional(),
+
+    chkSalary: z.boolean().optional(),
+    salaryQty: z.string().optional(),
+    // salary detail fields (required when requestType === '1')
+    salary_info: z.string().optional(),
+    salary_base: z.string().optional(),
+    salary_compensation: z.string().optional(),
+    chkWork: z.boolean().optional(),
+    workQty: z.string().optional(),
+    chkLetter: z.boolean().optional(),
+    letterBank: z.string().optional(),
+    letterQty: z.string().optional(),
+    slipCount: z.number().optional(),
+    cardDocCount: z.number().optional(),
+    abroadDocCount: z.number().optional(),
+    reportDocCount: z.number().optional(),
+    updateDocCount: z.number().optional(),
+    letterDocCount: z.number().optional(),
+    reasonDocCount: z.number().optional(),
+    educationRequestDocCount: z.number().optional(),
+
+    chkDegree: z.boolean().optional(),
+    chkMarriage: z.boolean().optional(),
+    chkDivorce: z.boolean().optional(),
+    chkLetter4: z.boolean().optional(),
+    letterBank4: z.string().optional(),
+    letterQty4: z.string().optional(),
+
+    // Education fields (type 5)
+    education_level: z.string().optional(),
+    qualification: z.string().optional(),
+    qualification_name: z.string().optional(),
+    major_group: z.string().optional(),
+    minor_group: z.string().optional(),
+    institution: z.string().optional(),
+    start_date: z.string().optional(),
+    graduation_date: z.string().optional(),
+    country: z.string().optional(),
+    honor_type: z.string().optional(),
+    'qualification-used': z.string().optional(),
+  }
+
+  const base = z.object(shape).superRefine((data, ctx) => {
+    // requestType specific validations
+    if (data.requestType === '1') {
+      const hasType1Selection = Boolean(data.chkSalary || data.chkWork || data.chkLetter)
+      if (!hasType1Selection) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['chkSalary'],
+          message: 'กรุณาเลือกอย่างน้อย 1 รายการ',
+        })
+      }
+      // require salary detail fields for request type 1
+      if (!data.salary_info || String(data.salary_info).trim() === '') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['salary_info'],
+          message: 'กรุณากรอกข้อมูลเงินเดือน',
+        })
+      }
+      if (!data.salary_base || String(data.salary_base).trim() === '') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['salary_base'],
+          message: 'กรุณากรอกเงินวิทยฐานะ',
+        })
+      }
+      if (!data.salary_compensation || String(data.salary_compensation).trim() === '') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['salary_compensation'],
+          message: 'กรุณากรอกเงินค่าตอบแทน',
+        })
+      }
+      // if checkboxes selected, require their qty/bank
+      if (data.chkSalary && (!data.salaryQty || String(data.salaryQty).trim() === '')) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['salaryQty'],
+          message: 'กรุณากรอกจำนวนใบรับรองเงินเดือน',
+        })
+      }
+      if (data.chkWork && (!data.workQty || String(data.workQty).trim() === '')) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['workQty'],
+          message: 'กรุณากรอกจำนวนใบรับรองการปฏิบัติงาน',
+        })
+      }
+      if (data.chkLetter) {
+        if (!data.letterBank || String(data.letterBank).trim() === '') {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['letterBank'],
+            message: 'กรุณาเลือกธนาคาร',
+          })
+        }
+        if (!data.letterQty || String(data.letterQty).trim() === '') {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['letterQty'],
+            message: 'กรุณากรอกจำนวน',
+          })
+        }
+      }
+      // require at least one slip file regardless of checkbox selections
+      if (!data.slipCount || data.slipCount <= 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['slipCount'],
+          message: 'กรุณาแนบสลิปเงินเดือน',
+        })
+      }
+    }
+
+    if (data.requestType === '4') {
+      const hasType4Selection = Boolean(
+        data.chkDegree || data.chkMarriage || data.chkDivorce || data.chkLetter4,
+      )
+      if (!hasType4Selection) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['chkDegree'],
+          message: 'กรุณาเลือกเหตุผลอย่างน้อย 1 รายการ',
+        })
+      }
+    }
+
+    if (data.requestType === '4' || data.requestType === '5') {
+      const reasonSelectionTotal =
+        Number(data.chkDegree ? 1 : 0) +
+        Number(data.chkMarriage ? 1 : 0) +
+        Number(data.chkDivorce ? 1 : 0)
+
+      if (reasonSelectionTotal > 0) {
+        if (!data.reasonDocCount || data.reasonDocCount < 1) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['reasonDocCount'],
+            message: 'กรุณาแนบไฟล์หลักฐานเหตุผลที่เลือก',
+          })
+        }
+        if ((data.reasonDocCount || 0) > reasonSelectionTotal) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['reasonDocCount'],
+            message: 'แนบไฟล์ได้ไม่เกินจำนวนเหตุผลที่เลือก',
+          })
+        }
+      }
+
+      if (data.chkLetter4) {
+        if (!data.letterBank4 || String(data.letterBank4).trim() === '') {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['letterBank4'],
+            message: 'กรุณาเลือกธนาคาร',
+          })
+        }
+        if (!data.letterQty4 || String(data.letterQty4).trim() === '') {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['letterQty4'],
+            message: 'กรุณากรอกจำนวน',
+          })
+        }
+        if (!data.letterDocCount || data.letterDocCount <= 0) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['letterDocCount'],
+            message: 'กรุณาแนบไฟล์หนังสือผ่านสิทธิ์',
+          })
+        }
+      }
+    }
+
+    if (data.requestType === '2' && (!data.cardDocCount || data.cardDocCount <= 0)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['cardDocCount'],
+        message: 'กรุณาแนบไฟล์คำขอบัตรประจำตัว',
+      })
+    }
+
+    if (data.requestType === '3' && (!data.abroadDocCount || data.abroadDocCount <= 0)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['abroadDocCount'],
+        message: 'กรุณาแนบไฟล์คำร้องขออนุญาตไปต่างประเทศ',
+      })
+    }
+
+    if (data.requestType === '5') {
+      // Validate all education fields
+      const educationFields = [
+        { key: 'education_level', label: 'ระดับการศึกษา' },
+        { key: 'qualification', label: 'วุฒิการศึกษา' },
+        { key: 'qualification_name', label: 'ชื่อวุฒิการศึกษา' },
+        { key: 'major_group', label: 'สาขาวิชาเอก' },
+        { key: 'institution', label: 'สถานศึกษา' },
+        { key: 'start_date', label: 'วันที่เข้าศึกษา' },
+        { key: 'graduation_date', label: 'วันที่สำเร็จการศึกษา' },
+        { key: 'country', label: 'ประเทศ' },
+        { key: 'qualification-used', label: 'วุฒิที่ใช้บรรจุ' },
+      ]
+
+      educationFields.forEach(({ key, label }) => {
+        const value = data[key as keyof typeof data]
+        if (!value || String(value).trim() === '') {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [key],
+            message: `${label} จำเป็นต้องกรอก`,
+          })
+        }
+      })
+
+      if (!data.educationRequestDocCount || data.educationRequestDocCount <= 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['educationRequestDocCount'],
+          message: 'กรุณาแนบไฟล์คำร้องขอเพิ่มวุติการศึกษา',
+        })
+      }
+    }
+  })
+
+  return toTypedSchema(base)
+})
+
+function onSubmit(values: Record<string, any>) {
+  // build payload including actual fileMap entries
+  const payload: Record<string, any> = { ...values }
+  // attach file lists
+  payload.files = { ...fileMap.value }
+
+  // for now show a toast and log payload
+  try {
+    console.log(
+      'CreateDocument submit payload:',
+      JSON.parse(JSON.stringify(payload, getCircularReplacer())),
+    )
+  } catch (e) {
+    // ignore
+  }
+  toast.success('Validated — payload ready (check console)')
+}
+
+// helper for safe JSON stringify (in case of File objects)
+function getCircularReplacer() {
+  const seen = new WeakSet()
+  return function (_key: any, value: any) {
+    if (typeof value === 'object' && value !== null) {
+      if (seen.has(value)) return
+      seen.add(value)
+      // replace File objects with filename for logging
+      if (value instanceof File) return { name: value.name, size: value.size, type: value.type }
+    }
+    return value
+  }
+}
+async function submitDocForm() {
+  // sync ค่าเข้า form ก่อน (เหมือนเดิม)
+  formRef.value?.setFieldValue('requestType', requestType.value)
+  formRef.value?.setFieldValue('salaryQty', salaryQty.value)
+
+  formRef.value?.setFieldValue('salary_info', salary_info.value ?? '')
+  formRef.value?.setFieldValue('salary_base', salary_base.value ?? '')
+  formRef.value?.setFieldValue('salary_compensation', salary_compensation.value ?? '')
+
+  formRef.value?.setFieldValue('workQty', workQty.value)
+  formRef.value?.setFieldValue('letterBank', letterBank.value)
+  formRef.value?.setFieldValue('letterQty', letterQty.value)
+  formRef.value?.setFieldValue('letterBank4', letterBank4.value)
+  formRef.value?.setFieldValue('letterQty4', letterQty4.value)
+  formRef.value?.setFieldValue('chkDegree', chkDegree.value)
+  formRef.value?.setFieldValue('chkMarriage', chkMarriage.value)
+  formRef.value?.setFieldValue('chkDivorce', chkDivorce.value)
+  formRef.value?.setFieldValue('chkLetter4', chkLetter4.value)
+
+  // Sync education fields for type 5
+  formRef.value?.setFieldValue('education_level', educationData.value.education_level)
+  formRef.value?.setFieldValue('qualification', educationData.value.qualification)
+  formRef.value?.setFieldValue('qualification_name', educationData.value.qualification_name)
+  formRef.value?.setFieldValue('major_group', educationData.value.major_group)
+  formRef.value?.setFieldValue('minor_group', educationData.value.minor_group)
+  formRef.value?.setFieldValue('institution', educationData.value.institution)
+  formRef.value?.setFieldValue('start_date', educationData.value.start_date)
+  formRef.value?.setFieldValue('graduation_date', educationData.value.graduation_date)
+  formRef.value?.setFieldValue('country', educationData.value.country)
+  formRef.value?.setFieldValue('honor_type', educationData.value.honor_type)
+  formRef.value?.setFieldValue('qualification-used', educationData.value['qualification-used'])
+
+  Object.keys(fileCountFieldMap).forEach((key) => {
+    const length = fileMap.value[key]?.length || 0
+    syncFileCountField(key, length, true)
+  })
+
+  if (requestType.value === '1') {
+    formRef.value?.setFieldTouched?.('chkSalary', true, true)
+    await formRef.value?.validateField?.('chkSalary')
+  }
+
+  if (requestType.value === '4') {
+    formRef.value?.setFieldTouched?.('chkDegree', true, true)
+    await formRef.value?.validateField?.('chkDegree')
+  }
+
+  if (requestType.value === '5') {
+    // Mark all education fields as touched for type 5
+    const educationFields = [
+      'education_level',
+      'qualification',
+      'qualification_name',
+      'major_group',
+      'institution',
+      'start_date',
+      'graduation_date',
+      'country',
+      'qualification-used',
+      'educationRequestDocCount',
+    ]
+    educationFields.forEach((field) => {
+      formRef.value?.setFieldTouched?.(field, true, true)
+    })
+  }
+
+  // 🔥 สำคัญ: ใช้ submitForm ของ form จริง
+  await formRef.value?.submitForm()
+}
 </script>
 
 <template>
   <div class="mx-6 flex flex-col gap-4 pb-6">
     <Card class="w-full gap-3 pb-6">
       <CardContent>
-        <!-- ══════════ Header: หัวข้อ + ประเภทคำร้อง ══════════ -->
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field>
-            <FieldLabel>หัวข้อ <span class="text-red-500">*</span></FieldLabel>
-            <Input v-model="title" type="text" placeholder="หัวข้อ" />
-          </Field>
-          <Field>
-            <FieldLabel>ประเภทคำร้อง <span class="text-red-500">*</span></FieldLabel>
-            <Select v-model="requestType">
-              <SelectTrigger class="w-full">
-                <SelectValue placeholder="เลือกประเภทคำร้อง" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem v-for="opt in requestTypeOptions" :key="opt.value" :value="opt.value">
-                  {{ opt.label }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </Field>
-        </div>
-
-        <!-- Type 1: คำร้องขอเอกสาร -->
-        <template v-if="requestType === '1'">
-          <Separator class="my-4" />
-
-          <!-- ใบรับรองเงินเดือน -->
-          <div class="mb-4 flex flex-wrap items-end gap-4">
-            <div class="mt-2 flex min-w-40 items-center gap-2">
-              <Checkbox id="chk-salary" v-model:checked="chkSalary" />
-              <Label for="chk-salary" class="cursor-pointer">ใบรับรองเงินเดือน</Label>
-            </div>
-            <Field class="w-64">
-              <FieldLabel>จำนวน <span class="text-red-500">*</span></FieldLabel>
-              <Input v-model="letterQty4" type="number" min="1" max="100" placeholder="กรอกจำนวน" />
-            </Field>
-          </div>
-
-          <!-- ใบรับรองการปฏิบัติงาน -->
-          <div class="mb-4 flex flex-wrap items-end gap-4">
-            <div class="mt-2 flex min-w-40 items-center gap-2">
-              <Checkbox id="chk-work" v-model:checked="chkWork" />
-              <Label for="chk-work" class="cursor-pointer">ใบรับรองการปฏิบัติงาน</Label>
-            </div>
-            <Field class="w-64">
-              <FieldLabel>จำนวน <span class="text-red-500">*</span></FieldLabel>
-              <Input v-model="letterQty4" type="number" min="1" max="100" placeholder="กรอกจำนวน" />
-            </Field>
-          </div>
-
-          <!-- เอกสารหนังสือผ่านสิทธิ์ -->
-          <div class="mb-4 flex flex-wrap items-center gap-4">
-            <div class="mt-2 flex min-w-40 items-center gap-2">
-              <Checkbox id="chk-letter" v-model:checked="chkLetter" />
-              <Label for="chk-letter" class="cursor-pointer">เอกสารหนังสือผ่านสิทธิ์</Label>
-            </div>
-            <Field class="w-64">
-              <FieldLabel>ธนาคาร <span class="text-red-500">*</span></FieldLabel>
-              <Select v-model="letterBank">
-                <SelectTrigger class="w-full">
-                  <SelectValue placeholder="เลือก" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem v-for="b in bankOptions" :key="b.value" :value="b.value">
-                    {{ b.label }}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field class="w-64">
-              <FieldLabel>จำนวน <span class="text-red-500">*</span></FieldLabel>
-              <Input v-model="letterQty" type="number" min="1" max="100" placeholder="กรอกจำนวน" />
-            </Field>
-          </div>
-
-          <!-- แนบสลิปเงินเดือน -->
-          <div class="mt-2">
-            <p class="mb-2 text-sm font-semibold">แนบสลิปเงินเดือน</p>
-            <input
-              :ref="
-                (el: any) => {
-                  if (el) fileInputRefs['slip'] = el as HTMLInputElement
-                }
-              "
-              type="file"
-              class="hidden"
-              accept=".pdf,.jpg,.png"
-              @change="handleFileSelect($event, 'slip')"
-            />
-            <Button type="button" class="cursor-pointer" @click="triggerFileInput('slip')">
-              <FileText class="mr-1 h-4 w-4" /> อัปโหลดไฟล์
-            </Button>
-            <div v-if="fileMap['slip']?.length" class="mt-2 flex flex-col gap-1">
-              <div
-                v-for="(file, i) in fileMap['slip']"
-                :key="i"
-                class="border-muted bg-muted/50 flex h-10 w-max items-center gap-2 rounded-2xl border-2 p-2 text-sm"
-              >
-                <span class="truncate">{{ file.name }}</span>
-                <span class="text-muted-foreground shrink-0 text-xs">{{
-                  formatFileSize(file.size)
-                }}</span>
-                <button
-                  type="button"
-                  class="hover:text-destructive text-muted-foreground rounded p-0.5"
-                  @click="removeFile('slip', i)"
-                >
-                  <X class="h-3.5 w-3.5" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </template>
-
-        <!-- Type 2: คำขอบัตรประจำตัว -->
-        <template v-if="requestType === '2'">
-          <Separator class="my-4" />
+        <VeeForm
+          ref="formRef"
+          v-slot="{ values }"
+          :validation-schema="schema"
+          :initial-values="initialValues"
+          id="doc-form"
+          @submit="onSubmit"
+        >
+          <!-- ══════════ Header: หัวข้อ + ประเภทคำร้อง ══════════ -->
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <p class="mb-2 text-sm font-semibold">แบบฟอร์มเอกสารคำขอบัตรประจำตัว</p>
-              <Button type="button" class="cursor-pointer" variant="default">
-                <FileText class="mr-1 h-4 w-4" /> ดาวโหลดไฟล์
-              </Button>
-            </div>
-            <div>
-              <p class="mb-2 text-sm font-semibold">แนบเอกสาร</p>
-              <input
-                :ref="
-                  (el: any) => {
-                    if (el) fileInputRefs['card-doc'] = el as HTMLInputElement
-                  }
-                "
-                type="file"
-                class="hidden"
-                accept=".pdf,.jpg,.png"
-                @change="handleFileSelect($event, 'card-doc')"
-              />
-              <Button
-                type="button"
-                class="cursor-pointer"
-                variant="destructive"
-                @click="triggerFileInput('card-doc')"
-              >
-                <FileText class="mr-1 h-4 w-4" /> อัปโหลดไฟล์
-              </Button>
-              <div v-if="fileMap['card-doc']?.length" class="mt-2 flex flex-col gap-1">
-                <div
-                  v-for="(file, i) in fileMap['card-doc']"
-                  :key="i"
-                  class="border-muted bg-muted/50 flex h-10 w-max items-center gap-2 rounded-2xl border-2 p-2 text-sm"
+            <VeeField name="requestType" v-slot="{ field, errors }">
+              <Field :data-invalid="!!errors.length">
+                <FieldLabel>ประเภทคำร้อง <span class="text-red-500">*</span></FieldLabel>
+                <Select
+                  :model-value="field.value"
+                  @update:model-value="
+                    (v) => {
+                      field.onChange?.(v)
+                      requestType = String(v ?? '')
+                    }
+                  "
                 >
-                  <span class="truncate">{{ file.name }}</span>
-                  <span class="text-muted-foreground shrink-0 text-xs">{{
-                    formatFileSize(file.size)
-                  }}</span>
-                  <button
-                    type="button"
-                    class="hover:text-destructive text-muted-foreground rounded p-0.5"
-                    @click="removeFile('card-doc', i)"
-                  >
-                    <X class="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </template>
-
-        <!-- Type 3: คำร้องขออนุญาตไปต่างประเทศ -->
-        <template v-if="requestType === '3'">
-          <Separator class="my-4" />
-          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <p class="mb-2 text-sm font-semibold">แบบฟอร์มเอกสารคำร้องขออนุญาตไปต่างประเทศ</p>
-              <Button type="button" class="cursor-pointer" variant="default">
-                <FileText class="mr-1 h-4 w-4" /> ดาวโหลดไฟล์
-              </Button>
-            </div>
-            <div>
-              <p class="mb-2 text-sm font-semibold">แนบเอกสาร</p>
-              <input
-                :ref="
-                  (el: any) => {
-                    if (el) fileInputRefs['abroad-doc'] = el as HTMLInputElement
-                  }
-                "
-                type="file"
-                class="hidden"
-                accept=".pdf,.jpg,.png"
-                @change="handleFileSelect($event, 'abroad-doc')"
-              />
-              <Button
-                type="button"
-                class="cursor-pointer"
-                variant="destructive"
-                @click="triggerFileInput('abroad-doc')"
-              >
-                <FileText class="mr-1 h-4 w-4" /> อัปโหลดไฟล์
-              </Button>
-              <div v-if="fileMap['abroad-doc']?.length" class="mt-2 flex flex-col gap-1">
-                <div
-                  v-for="(file, i) in fileMap['abroad-doc']"
-                  :key="i"
-                  class="border-muted bg-muted/50 flex h-10 w-max items-center gap-2 rounded-2xl border-2 p-2 text-sm"
-                >
-                  <span class="truncate">{{ file.name }}</span>
-                  <span class="text-muted-foreground shrink-0 text-xs">{{
-                    formatFileSize(file.size)
-                  }}</span>
-                  <button
-                    type="button"
-                    class="hover:text-destructive text-muted-foreground rounded p-0.5"
-                    @click="removeFile('abroad-doc', i)"
-                  >
-                    <X class="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </template>
-
-        <!-- Type 4: แบบรายงานเปลี่ยนแปลงหรือเพิ่มเติมรายการลงในสมุดประวัติ -->
-        <template v-if="requestType === '4'">
-          <Separator class="my-4" />
-
-          <!-- Checkboxes -->
-          <div class="mb-4 flex flex-wrap items-center gap-6">
-            <div class="flex items-center gap-2">
-              <Checkbox id="chk-degree" v-model:checked="chkDegree" />
-              <Label for="chk-degree" class="cursor-pointer">ได้รับวุฒิเพิ่ม(ปรับวุฒิ)</Label>
-            </div>
-            <div class="flex items-center gap-2">
-              <Checkbox id="chk-marriage" v-model:checked="chkMarriage" />
-              <Label for="chk-marriage" class="cursor-pointer">จดทะเบียนสมรส</Label>
-            </div>
-            <div class="flex items-center gap-2">
-              <Checkbox id="chk-divorce" v-model:checked="chkDivorce" />
-              <Label for="chk-divorce" class="cursor-pointer">จดทะเบียนหย่า</Label>
-            </div>
+                  <SelectTrigger class="w-full">
+                    <SelectValue placeholder="เลือกประเภทคำร้อง" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem
+                      v-for="opt in requestTypeOptions"
+                      :key="opt.value"
+                      :value="opt.value"
+                    >
+                      {{ opt.label }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <FieldError v-if="errors.length" :errors="errors" />
+              </Field>
+            </VeeField>
           </div>
 
-          <!-- Download + Upload แบบรายงาน -->
-          <div class="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <p class="mb-2 text-sm font-semibold">
-                แบบรายงานเปลี่ยนแปลงหรือเพิ่มเติมรายการลงในสมุดประวัติ
-              </p>
-              <Button type="button" class="cursor-pointer" variant="default">
-                <FileText class="mr-1 h-4 w-4" /> ดาวโหลดไฟล์
-              </Button>
-            </div>
-            <div>
-              <p class="mb-2 text-sm font-semibold">แนบเอกสาร</p>
-              <input
-                :ref="
-                  (el: any) => {
-                    if (el) fileInputRefs['report-doc'] = el as HTMLInputElement
-                  }
-                "
-                type="file"
-                class="hidden"
-                accept=".pdf,.jpg,.png"
-                @change="handleFileSelect($event, 'report-doc')"
-              />
-              <Button
-                type="button"
-                class="cursor-pointer"
-                variant="destructive"
-                @click="triggerFileInput('report-doc')"
-              >
-                <FileText class="mr-1 h-4 w-4" /> อัปโหลดไฟล์
-              </Button>
-              <div v-if="fileMap['report-doc']?.length" class="mt-2 flex flex-col gap-1">
-                <div
-                  v-for="(file, i) in fileMap['report-doc']"
-                  :key="i"
-                  class="border-muted bg-muted/50 flex h-10 w-max items-center gap-2 rounded-2xl border-2 p-2 text-sm"
-                >
-                  <span class="truncate">{{ file.name }}</span>
-                  <span class="text-muted-foreground shrink-0 text-xs">{{
-                    formatFileSize(file.size)
-                  }}</span>
-                  <button
-                    type="button"
-                    class="hover:text-destructive text-muted-foreground rounded p-0.5"
-                    @click="removeFile('report-doc', i)"
-                  >
-                    <X class="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+          <!-- Type 1: คำร้องขอเอกสาร -->
+          <template v-if="requestType === '1'">
+            <Separator class="my-4" />
 
-          <Separator class="my-4" />
-
-          <!-- เอกสารหนังสือผ่านสิทธิ์ -->
-          <div class="mb-4 flex flex-wrap items-center gap-4">
-            <div class="mt-2 flex min-w-40 items-center gap-2">
-              <Checkbox id="chk-letter4" v-model:checked="chkLetter4" />
-              <Label for="chk-letter4" class="cursor-pointer">เอกสารหนังสือผ่านสิทธิ์</Label>
-            </div>
-            <Field class="w-64">
-              <FieldLabel>ธนาคาร <span class="text-red-500">*</span></FieldLabel>
-              <Select v-model="letterBank4">
-                <SelectTrigger class="w-full">
-                  <SelectValue placeholder="เลือก" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem v-for="b in bankOptions" :key="b.value" :value="b.value">
-                    {{ b.label }}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field class="w-64">
-              <FieldLabel>จำนวน <span class="text-red-500">*</span></FieldLabel>
-              <Input v-model="letterQty4" type="number" min="1" max="100" placeholder="กรอกจำนวน" />
-            </Field>
-          </div>
-
-          <!-- Download + Upload แบบคำขอเพิ่ม -->
-          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <p class="mb-2 text-sm font-semibold">
-                แบบคำขอเพิ่ม/ปรับปรุงข้อมูลในฐานข้อมูลบุคลากรภาครัฐ
-              </p>
-              <Button type="button" class="cursor-pointer" variant="default">
-                <FileText class="mr-1 h-4 w-4" /> ดาวโหลดไฟล์
-              </Button>
-            </div>
-            <div>
-              <p class="mb-2 text-sm font-semibold">แนบเอกสาร</p>
-              <input
-                :ref="
-                  (el: any) => {
-                    if (el) fileInputRefs['update-doc'] = el as HTMLInputElement
-                  }
-                "
-                type="file"
-                class="hidden"
-                accept=".pdf,.jpg,.png"
-                @change="handleFileSelect($event, 'update-doc')"
-              />
-              <Button
-                type="button"
-                class="cursor-pointer"
-                variant="destructive"
-                @click="triggerFileInput('update-doc')"
-              >
-                <FileText class="mr-1 h-4 w-4" /> อัปโหลดไฟล์
-              </Button>
-              <div v-if="fileMap['update-doc']?.length" class="mt-2 flex flex-col gap-1">
-                <div
-                  v-for="(file, i) in fileMap['update-doc']"
-                  :key="i"
-                  class="border-muted bg-muted/50 flex h-10 w-max items-center gap-2 rounded-2xl border-2 p-2 text-sm"
-                >
-                  <span class="truncate">{{ file.name }}</span>
-                  <span class="text-muted-foreground shrink-0 text-xs">{{
-                    formatFileSize(file.size)
-                  }}</span>
-                  <button
-                    type="button"
-                    class="hover:text-destructive text-muted-foreground rounded p-0.5"
-                    @click="removeFile('update-doc', i)"
-                  >
-                    <X class="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </template>
-
-        <!-- 
-             Type 5: การประเมินผลการพัฒนางานตามข้อตกลง PA
-         -->
-        <template v-if="requestType === '5'">
-          <div class="mt-4 flex flex-col gap-3">
-            <Card
-              v-for="(section, sIdx) in paSections"
-              :key="sIdx"
-              class="w-full gap-0"
-              :class="{ 'pb-0': !paOpenState[sIdx] }"
-            >
-              <CardHeader :class="{ 'pb-0': !paOpenState[sIdx] }">
-                <div
-                  class="flex cursor-pointer flex-row items-center justify-between"
-                  @click="paOpenState[sIdx] = !paOpenState[sIdx]"
-                >
-                  <CardTitle class="text-sm">{{ section }}</CardTitle>
-                  <ChevronUp
-                    class="h-5 w-5 transition-transform"
-                    :class="paOpenState[sIdx] ? 'rotate-0' : 'rotate-180'"
-                  />
-                </div>
-              </CardHeader>
-              <div
-                class="grid overflow-hidden transition-all duration-300 ease-in-out"
-                :class="
-                  paOpenState[sIdx] ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
-                "
-              >
-                <div class="overflow-hidden">
-                  <CardContent class="pt-3">
-                    <p class="mb-2 text-sm font-semibold">แนบไฟล์ PDF</p>
-                    <input
-                      :ref="
-                        (el: any) => {
-                          if (el) fileInputRefs[`pa-${sIdx}`] = el as HTMLInputElement
+            <!-- ใบรับรองเงินเดือน -->
+            <div class="mb-4 flex flex-wrap items-start gap-4">
+              <VeeField name="chkSalary" v-slot="{ field, errors }">
+                <div class="mt-2 flex min-w-40 flex-col gap-1">
+                  <div class="flex items-center gap-2">
+                    <Checkbox
+                      id="chk-salary"
+                      :model-value="Boolean(field.value)"
+                      @update:model-value="
+                        (checked: boolean | 'indeterminate') => {
+                          const isChecked = checked === true
+                          field.onChange?.(isChecked)
+                          if (!isChecked) clearType1DependentFields('salary')
                         }
                       "
-                      type="file"
-                      class="hidden"
-                      accept=".pdf"
-                      @change="handleFileSelect($event, `pa-${sIdx}`)"
                     />
-                    <Button
-                      type="button"
-                      class="cursor-pointer"
-                      @click="triggerFileInput(`pa-${sIdx}`)"
+                    <Label for="chk-salary" class="cursor-pointer"> ใบรับรองเงินเดือน </Label>
+                  </div>
+                  <FieldError v-if="errors.length" :errors="errors" />
+                </div>
+              </VeeField>
+
+              <VeeField name="salaryQty" v-slot="{ field, errors }">
+                <Field class="w-64" :data-invalid="!!errors.length">
+                  <FieldLabel>จำนวน <span class="text-red-500">*</span></FieldLabel>
+                  <Input
+                    :disabled="!values.chkSalary"
+                    :model-value="field.value"
+                    @update:model-value="
+                      (v: any) => {
+                        field.onChange?.(v)
+                        salaryQty = String(v ?? '')
+                      }
+                    "
+                    type="number"
+                    min="1"
+                    max="100"
+                    placeholder="กรอกจำนวน"
+                  />
+                  <FieldError v-if="errors.length" :errors="errors" />
+                </Field>
+              </VeeField>
+            </div>
+
+            <!-- ใบรับรองการปฏิบัติงาน -->
+            <div class="mb-4 flex flex-wrap items-start gap-4">
+              <VeeField name="chkWork" v-slot="{ field }">
+                <div class="mt-2 flex min-w-40 items-center gap-2">
+                  <Checkbox
+                    id="chk-work"
+                    :model-value="Boolean(field.value)"
+                    @update:model-value="
+                      (checked: boolean | 'indeterminate') => {
+                        const isChecked = checked === true
+                        field.onChange?.(isChecked)
+                        if (!isChecked) clearType1DependentFields('work')
+                      }
+                    "
+                  />
+                  <Label for="chk-work" class="cursor-pointer"> ใบรับรองการปฏิบัติงาน </Label>
+                </div>
+              </VeeField>
+
+              <VeeField name="workQty" v-slot="{ field, errors }">
+                <Field class="w-64" :data-invalid="!!errors.length">
+                  <FieldLabel>จำนวน <span class="text-red-500">*</span></FieldLabel>
+                  <Input
+                    :disabled="!values.chkWork"
+                    :model-value="field.value"
+                    @update:model-value="
+                      (v: any) => {
+                        field.onChange?.(v)
+                        workQty = String(v ?? '')
+                      }
+                    "
+                    type="number"
+                    min="1"
+                    max="100"
+                    placeholder="กรอกจำนวน"
+                  />
+                  <FieldError v-if="errors.length" :errors="errors" />
+                </Field>
+              </VeeField>
+            </div>
+
+            <!-- เอกสารหนังสือผ่านสิทธิ์ -->
+            <div class="mb-4 flex flex-wrap items-start gap-4">
+              <VeeField name="chkLetter" v-slot="{ field }">
+                <div class="mt-2 flex min-w-40 items-center gap-2">
+                  <Checkbox
+                    id="chk-letter"
+                    :model-value="Boolean(field.value)"
+                    @update:model-value="
+                      (checked: boolean | 'indeterminate') => {
+                        const isChecked = checked === true
+                        field.onChange?.(isChecked)
+                        if (!isChecked) clearType1DependentFields('letter')
+                      }
+                    "
+                  />
+                  <Label for="chk-letter" class="cursor-pointer"> เอกสารหนังสือผ่านสิทธิ์ </Label>
+                </div>
+              </VeeField>
+
+              <VeeField name="letterBank" v-slot="{ field, errors }">
+                <Field class="w-64" :data-invalid="!!errors.length">
+                  <FieldLabel>ธนาคาร <span class="text-red-500">*</span></FieldLabel>
+                  <Select
+                    :disabled="!values.chkLetter"
+                    :model-value="field.value"
+                    @update:model-value="
+                      (v: any) => {
+                        field.onChange?.(v)
+                        letterBank = String(v ?? '')
+                      }
+                    "
+                  >
+                    <SelectTrigger class="w-full">
+                      <SelectValue placeholder="เลือก" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem v-for="b in bankOptions" :key="b.value" :value="b.value">
+                        {{ b.label }}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FieldError v-if="errors.length" :errors="errors" />
+                </Field>
+              </VeeField>
+
+              <VeeField name="letterQty" v-slot="{ field, errors }">
+                <Field class="w-64" :data-invalid="!!errors.length">
+                  <FieldLabel>จำนวน <span class="text-red-500">*</span></FieldLabel>
+                  <Input
+                    :disabled="!values.chkLetter"
+                    :model-value="field.value"
+                    @update:model-value="
+                      (v: any) => {
+                        field.onChange?.(v)
+                        letterQty = String(v ?? '')
+                      }
+                    "
+                    type="number"
+                    min="1"
+                    max="100"
+                    placeholder="กรอกจำนวน"
+                  />
+                  <FieldError v-if="errors.length" :errors="errors" />
+                </Field>
+              </VeeField>
+            </div>
+
+            <ErrorMessage name="chkSalary" v-slot="{ message }">
+              <p class="text-sm text-red-500">{{ message }}</p>
+            </ErrorMessage>
+
+            <!-- แนบสลิปเงินเดือน -->
+            <div class="mt-2">
+              <div class="mb-4 flex flex-wrap items-end gap-4">
+                <VeeField name="salary_info" v-slot="{ field, errors }">
+                  <Field class="w-64" :data-invalid="!!errors.length">
+                    <FieldLabel>ข้อมูลเงินเดือน <span class="text-red-500">*</span></FieldLabel>
+                    <Input
+                      :model-value="field.value"
+                      @update:model-value="
+                        (v) => {
+                          field.onChange?.(v)
+                          salary_info = String(v ?? '')
+                        }
+                      "
+                      type="text"
+                      placeholder="ข้อมูลเงินเดือน"
+                    />
+                    <FieldError v-if="errors.length" :errors="errors" />
+                  </Field>
+                </VeeField>
+
+                <VeeField name="salary_base" v-slot="{ field, errors }">
+                  <Field class="w-64" :data-invalid="!!errors.length">
+                    <FieldLabel>เงินวิทยฐานะ <span class="text-red-500">*</span></FieldLabel>
+                    <Input
+                      :model-value="field.value"
+                      @update:model-value="
+                        (v) => {
+                          field.onChange?.(v)
+                          salary_base = String(v ?? '')
+                        }
+                      "
+                      type="text"
+                      placeholder="เงินวิทยฐานะ"
+                    />
+                    <FieldError v-if="errors.length" :errors="errors" />
+                  </Field>
+                </VeeField>
+
+                <VeeField name="salary_compensation" v-slot="{ field, errors }">
+                  <Field class="w-64" :data-invalid="!!errors.length">
+                    <FieldLabel>เงินค่าตอบแทน <span class="text-red-500">*</span></FieldLabel>
+                    <Input
+                      :model-value="field.value"
+                      @update:model-value="
+                        (v) => {
+                          field.onChange?.(v)
+                          salary_compensation = String(v ?? '')
+                        }
+                      "
+                      type="text"
+                      placeholder="เงินค่าตอบแทน"
+                    />
+                    <FieldError v-if="errors.length" :errors="errors" />
+                  </Field>
+                </VeeField>
+              </div>
+              <VeeField name="slipCount" v-slot="{ field, errors }">
+                <div>
+                  <p class="mb-2 text-sm font-semibold">
+                    แนบสลิปเงินเดือน<span class="text-red-500"> *</span>
+                  </p>
+                  <input
+                    :ref="
+                      (el: any) => {
+                        if (el) fileInputRefs['slip'] = el as HTMLInputElement
+                      }
+                    "
+                    type="file"
+                    class="hidden"
+                    accept=".pdf,.jpg,.png"
+                    @change="handleFileSelect($event, 'slip', false, field.onChange)"
+                  />
+                  <Button type="button" class="cursor-pointer" @click="triggerFileInput('slip')">
+                    <FileText class="mr-1 h-4 w-4" /> อัปโหลดไฟล์
+                  </Button>
+                  <div v-if="fileMap['slip']?.length" class="mt-2 flex flex-col gap-1">
+                    <div
+                      v-for="(file, i) in fileMap['slip']"
+                      :key="i"
+                      class="border-muted bg-muted/50 flex h-10 w-max items-center gap-2 rounded-2xl border-2 p-2 text-sm"
                     >
-                      <FileText class="mr-1 h-4 w-4" /> อัปโหลดไฟล์
-                    </Button>
-                    <div v-if="fileMap[`pa-${sIdx}`]?.length" class="mt-2 flex flex-col gap-1">
-                      <div
-                        v-for="(file, i) in fileMap[`pa-${sIdx}`]"
-                        :key="i"
-                        class="border-muted bg-muted/50 flex h-10 w-max items-center gap-2 rounded-2xl border-2 p-2 text-sm"
+                      <span class="truncate">{{ file.name }}</span>
+                      <span class="text-muted-foreground shrink-0 text-xs">{{
+                        formatFileSize(file.size)
+                      }}</span>
+                      <button
+                        type="button"
+                        class="hover:text-destructive text-muted-foreground rounded p-0.5"
+                        @click="removeFile('slip', i, field.onChange)"
                       >
-                        <span class="truncate">{{ file.name }}</span>
-                        <span class="text-muted-foreground shrink-0 text-xs">{{
-                          formatFileSize(file.size)
-                        }}</span>
-                        <button
-                          type="button"
-                          class="hover:text-destructive text-muted-foreground rounded p-0.5"
-                          @click="removeFile(`pa-${sIdx}`, i)"
-                        >
-                          <X class="h-3.5 w-3.5" />
-                        </button>
-                      </div>
+                        <X class="h-3.5 w-3.5" />
+                      </button>
                     </div>
-                  </CardContent>
+                  </div>
+                  <p v-if="getFileErrorMessage('slip', errors)" class="mt-2 text-sm text-red-600">
+                    {{ getFileErrorMessage('slip', errors) }}
+                  </p>
                 </div>
-              </div>
-            </Card>
-          </div>
-        </template>
-
-        <!--
-             Type 6: การส่ง PA2 กับ PA3
-        -->
-        <template v-if="requestType === '6'">
-          <Separator class="my-4" />
-
-          <!-- Row 1: กลุ่มสาระ, ปฏิบัติการสอนชั้น/ระดับ x2, รายวิชา -->
-          <div
-            class="mb-4 grid grid-cols-1 items-end gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
-          >
-            <Field>
-              <FieldLabel>กลุ่มสาระ <span class="text-red-500">*</span></FieldLabel>
-              <Select v-model="pa2GroupSubject">
-                <SelectTrigger class="w-full">
-                  <SelectValue placeholder="เลือก" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem v-for="g in groupSubjectOptions" :key="g.value" :value="g.value">
-                    {{ g.label }}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field>
-              <FieldLabel>ปฏิบัติการสอนชั้น/ระดับ <span class="text-red-500">*</span></FieldLabel>
-              <Input v-model="pa2TeachLevel1" type="text" placeholder="" />
-            </Field>
-            <Field>
-              <FieldLabel>ปฏิบัติการสอนชั้น/ระดับ <span class="text-red-500">*</span></FieldLabel>
-              <Input v-model="pa2TeachLevel2" type="text" placeholder="" />
-            </Field>
-            <Field>
-              <FieldLabel>รายวิชา <span class="text-red-500">*</span></FieldLabel>
-              <Input v-model="pa2Subject" type="text" placeholder="เช่น 1.ภาษาอังกฤษ1 ชั้น ม.4" />
-            </Field>
-          </div>
-
-          <!-- Row 2: ชม.การสอน x4 -->
-          <div
-            class="mb-4 grid grid-cols-1 items-end gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
-          >
-            <Field>
-              <FieldLabel>การสอนตามตารางสอน <span class="text-red-500">*</span></FieldLabel>
-              <Input v-model="pa2TeachHours" type="text" placeholder="จำนวนชั่วโมง / สัปดาห์" />
-            </Field>
-            <Field>
-              <FieldLabel
-                >งานส่งเสริมและสนับสนุนการจัดการเรียนรู้
-                <span class="text-red-500">*</span></FieldLabel
-              >
-              <Input v-model="pa2SupportHours" type="text" placeholder="จำนวนชั่วโมง / สัปดาห์" />
-            </Field>
-            <Field>
-              <FieldLabel
-                >งานพัฒนาคุณภาพการศึกษาของสถานศึกษา <span class="text-red-500">*</span></FieldLabel
-              >
-              <Input v-model="pa2QualityHours" type="text" placeholder="จำนวนชั่วโมง / สัปดาห์" />
-            </Field>
-            <Field>
-              <FieldLabel
-                >งานตอบสนองนโยบายและจุดเน้น <span class="text-red-500">*</span></FieldLabel
-              >
-              <Input v-model="pa2PolicyHours" type="text" placeholder="จำนวนชั่วโมง / สัปดาห์" />
-            </Field>
-          </div>
-
-          <!-- Row 3: รายชื่อคณะกรรมการประเมิน -->
-          <div
-            class="mb-4 grid grid-cols-1 items-end gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
-          >
-            <Field>
-              <FieldLabel
-                >รายชื่อคณะกรรมการประเมิน คนที่ 1 <span class="text-red-500">*</span></FieldLabel
-              >
-              <Input v-model="pa2Evaluator1" type="text" placeholder="" />
-            </Field>
-            <Field>
-              <FieldLabel
-                >รายชื่อคณะกรรมการผู้ประเมิน คนที่ 2 <span class="text-red-500">*</span></FieldLabel
-              >
-              <Input v-model="pa2Evaluator2" type="text" placeholder="" />
-            </Field>
-            <Field>
-              <FieldLabel
-                >รายชื่อคณะกรรมการผู้ประเมิน คนที่ 3 <span class="text-red-500">*</span></FieldLabel
-              >
-              <Input v-model="pa2Evaluator3" type="text" placeholder="" />
-            </Field>
-          </div>
-
-          <!-- File uploads: PA1, PA2 (กรรมการ 1-3) -->
-          <div class="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <p class="mb-1 text-sm font-semibold">ข้อตกลงPA (PA1)</p>
-              <p class="text-muted-foreground mb-2 text-xs">
-                ตั้งชื่อไฟล์ : กลุ่มสาระ-ชื่อ-สกุล-คศ.ปัจจุบัน-pa1
-              </p>
-              <input
-                :ref="
-                  (el: any) => {
-                    if (el) fileInputRefs['pa2-pa1'] = el as HTMLInputElement
-                  }
-                "
-                type="file"
-                class="hidden"
-                accept=".pdf"
-                @change="handleFileSelect($event, 'pa2-pa1')"
-              />
-              <Button type="button" class="cursor-pointer" @click="triggerFileInput('pa2-pa1')">
-                <FileText class="mr-1 h-4 w-4" /> อัปโหลดไฟล์
-              </Button>
-              <div v-if="fileMap['pa2-pa1']?.length" class="mt-2 flex flex-col gap-1">
-                <div
-                  v-for="(file, i) in fileMap['pa2-pa1']"
-                  :key="i"
-                  class="border-muted bg-muted/50 flex h-10 w-max items-center gap-2 rounded-2xl border-2 p-2 text-sm"
-                >
-                  <span class="truncate">{{ file.name }}</span>
-                  <span class="text-muted-foreground shrink-0 text-xs">{{
-                    formatFileSize(file.size)
-                  }}</span>
-                  <button
-                    type="button"
-                    class="hover:text-destructive text-muted-foreground rounded p-0.5"
-                    @click="removeFile('pa2-pa1', i)"
-                  >
-                    <X class="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </div>
+              </VeeField>
             </div>
-            <div>
-              <p class="mb-1 text-sm font-semibold">PA2 (กรรมการคนที่1 ผู้อำนวยการ)</p>
-              <p class="text-muted-foreground mb-2 text-xs">
-                ตั้งชื่อไฟล์ : กลุ่มสาระ-ชื่อ-สกุล-คศ.ปัจจุบัน-pa2-กรรมการ1
-              </p>
-              <input
-                :ref="
-                  (el: any) => {
-                    if (el) fileInputRefs['pa2-eval1'] = el as HTMLInputElement
-                  }
-                "
-                type="file"
-                class="hidden"
-                accept=".pdf"
-                @change="handleFileSelect($event, 'pa2-eval1')"
-              />
-              <Button type="button" class="cursor-pointer" @click="triggerFileInput('pa2-eval1')">
-                <FileText class="mr-1 h-4 w-4" /> อัปโหลดไฟล์
-              </Button>
-              <div v-if="fileMap['pa2-eval1']?.length" class="mt-2 flex flex-col gap-1">
-                <div
-                  v-for="(file, i) in fileMap['pa2-eval1']"
-                  :key="i"
-                  class="border-muted bg-muted/50 flex h-10 w-max items-center gap-2 rounded-2xl border-2 p-2 text-sm"
-                >
-                  <span class="truncate">{{ file.name }}</span>
-                  <span class="text-muted-foreground shrink-0 text-xs">{{
-                    formatFileSize(file.size)
-                  }}</span>
-                  <button
-                    type="button"
-                    class="hover:text-destructive text-muted-foreground rounded p-0.5"
-                    @click="removeFile('pa2-eval1', i)"
-                  >
-                    <X class="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+          </template>
 
-          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <p class="mb-1 text-sm font-semibold">PA2 (กรรมการคนที่ 2)</p>
-              <p class="text-muted-foreground mb-2 text-xs">
-                ตั้งชื่อไฟล์ : กลุ่มสาระ-ชื่อ-สกุล-คศ.ปัจจุบัน-pa2-กรรมการ2
-              </p>
-              <input
-                :ref="
-                  (el: any) => {
-                    if (el) fileInputRefs['pa2-eval2'] = el as HTMLInputElement
-                  }
-                "
-                type="file"
-                class="hidden"
-                accept=".pdf"
-                @change="handleFileSelect($event, 'pa2-eval2')"
-              />
-              <Button type="button" class="cursor-pointer" @click="triggerFileInput('pa2-eval2')">
-                <FileText class="mr-1 h-4 w-4" /> อัปโหลดไฟล์
-              </Button>
-              <div v-if="fileMap['pa2-eval2']?.length" class="mt-2 flex flex-col gap-1">
-                <div
-                  v-for="(file, i) in fileMap['pa2-eval2']"
-                  :key="i"
-                  class="border-muted bg-muted/50 flex h-10 w-max items-center gap-2 rounded-2xl border-2 p-2 text-sm"
-                >
-                  <span class="truncate">{{ file.name }}</span>
-                  <span class="text-muted-foreground shrink-0 text-xs">{{
-                    formatFileSize(file.size)
-                  }}</span>
-                  <button
-                    type="button"
-                    class="hover:text-destructive text-muted-foreground rounded p-0.5"
-                    @click="removeFile('pa2-eval2', i)"
-                  >
-                    <X class="h-3.5 w-3.5" />
-                  </button>
-                </div>
+          <!-- Type 2: คำขอบัตรประจำตัว -->
+          <template v-if="requestType === '2'">
+            <Separator class="my-4" />
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <p class="mb-2 text-sm font-semibold">แบบฟอร์มเอกสารคำขอบัตรประจำตัว</p>
+                <Button type="button" class="cursor-pointer" variant="default">
+                  <FileText class="mr-1 h-4 w-4" /> ดาวโหลดไฟล์
+                </Button>
               </div>
-            </div>
-            <div>
-              <p class="mb-1 text-sm font-semibold">PA2 (กรรมการคนที่ 3)</p>
-              <p class="text-muted-foreground mb-2 text-xs">
-                ตั้งชื่อไฟล์ : กลุ่มสาระ-ชื่อ-สกุล-คศ.ปัจจุบัน-pa2-กรรมการ3
-              </p>
-              <input
-                :ref="
-                  (el: any) => {
-                    if (el) fileInputRefs['pa2-eval3'] = el as HTMLInputElement
-                  }
-                "
-                type="file"
-                class="hidden"
-                accept=".pdf"
-                @change="handleFileSelect($event, 'pa2-eval3')"
-              />
-              <Button type="button" class="cursor-pointer" @click="triggerFileInput('pa2-eval3')">
-                <FileText class="mr-1 h-4 w-4" /> อัปโหลดไฟล์
-              </Button>
-              <div v-if="fileMap['pa2-eval3']?.length" class="mt-2 flex flex-col gap-1">
-                <div
-                  v-for="(file, i) in fileMap['pa2-eval3']"
-                  :key="i"
-                  class="border-muted bg-muted/50 flex h-10 w-max items-center gap-2 rounded-2xl border-2 p-2 text-sm"
-                >
-                  <span class="truncate">{{ file.name }}</span>
-                  <span class="text-muted-foreground shrink-0 text-xs">{{
-                    formatFileSize(file.size)
-                  }}</span>
-                  <button
+              <VeeField name="cardDocCount" v-slot="{ field, errors }">
+                <div>
+                  <p class="mb-2 text-sm font-semibold">
+                    แนบเอกสาร<span class="text-red-500"> *</span>
+                  </p>
+                  <input
+                    :ref="
+                      (el: any) => {
+                        if (el) fileInputRefs['card-doc'] = el as HTMLInputElement
+                      }
+                    "
+                    type="file"
+                    class="hidden"
+                    accept=".pdf,.jpg,.png"
+                    @change="handleFileSelect($event, 'card-doc', false, field.onChange)"
+                  />
+                  <Button
                     type="button"
-                    class="hover:text-destructive text-muted-foreground rounded p-0.5"
-                    @click="removeFile('pa2-eval3', i)"
+                    class="cursor-pointer"
+                    variant="destructive"
+                    @click="triggerFileInput('card-doc')"
                   >
-                    <X class="h-3.5 w-3.5" />
-                  </button>
+                    <FileText class="mr-1 h-4 w-4" /> อัปโหลดไฟล์
+                  </Button>
+                  <div v-if="fileMap['card-doc']?.length" class="mt-2 flex flex-col gap-1">
+                    <div
+                      v-for="(file, i) in fileMap['card-doc']"
+                      :key="i"
+                      class="border-muted bg-muted/50 flex h-10 w-max items-center gap-2 rounded-2xl border-2 p-2 text-sm"
+                    >
+                      <span class="truncate">{{ file.name }}</span>
+                      <span class="text-muted-foreground shrink-0 text-xs">{{
+                        formatFileSize(file.size)
+                      }}</span>
+                      <button
+                        type="button"
+                        class="hover:text-destructive text-muted-foreground rounded p-0.5"
+                        @click="removeFile('card-doc', i, field.onChange)"
+                      >
+                        <X class="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                  <p
+                    v-if="getFileErrorMessage('card-doc', errors)"
+                    class="mt-2 text-sm text-red-600"
+                  >
+                    {{ getFileErrorMessage('card-doc', errors) }}
+                  </p>
                 </div>
-              </div>
+              </VeeField>
             </div>
-          </div>
-        </template>
+          </template>
+
+          <!-- Type 3: คำร้องขออนุญาตไปต่างประเทศ -->
+          <template v-if="requestType === '3'">
+            <Separator class="my-4" />
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <p class="mb-2 text-sm font-semibold">แบบฟอร์มเอกสารคำร้องขออนุญาตไปต่างประเทศ</p>
+                <Button type="button" class="cursor-pointer" variant="default">
+                  <FileText class="mr-1 h-4 w-4" /> ดาวโหลดไฟล์
+                </Button>
+              </div>
+              <VeeField name="abroadDocCount" v-slot="{ field, errors }">
+                <div>
+                  <p class="mb-2 text-sm font-semibold">
+                    แนบเอกสาร<span class="text-red-500">*</span>
+                  </p>
+                  <input
+                    :ref="
+                      (el: any) => {
+                        if (el) fileInputRefs['abroad-doc'] = el as HTMLInputElement
+                      }
+                    "
+                    type="file"
+                    class="hidden"
+                    accept=".pdf,.jpg,.png"
+                    @change="handleFileSelect($event, 'abroad-doc', false, field.onChange)"
+                  />
+                  <Button
+                    type="button"
+                    class="cursor-pointer"
+                    variant="destructive"
+                    @click="triggerFileInput('abroad-doc')"
+                  >
+                    <FileText class="mr-1 h-4 w-4" /> อัปโหลดไฟล์
+                  </Button>
+                  <div v-if="fileMap['abroad-doc']?.length" class="mt-2 flex flex-col gap-1">
+                    <div
+                      v-for="(file, i) in fileMap['abroad-doc']"
+                      :key="i"
+                      class="border-muted bg-muted/50 flex h-10 w-max items-center gap-2 rounded-2xl border-2 p-2 text-sm"
+                    >
+                      <span class="truncate">{{ file.name }}</span>
+                      <span class="text-muted-foreground shrink-0 text-xs">{{
+                        formatFileSize(file.size)
+                      }}</span>
+                      <button
+                        type="button"
+                        class="hover:text-destructive text-muted-foreground rounded p-0.5"
+                        @click="removeFile('abroad-doc', i, field.onChange)"
+                      >
+                        <X class="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                  <p
+                    v-if="getFileErrorMessage('abroad-doc', errors)"
+                    class="mt-2 text-sm text-red-600"
+                  >
+                    {{ getFileErrorMessage('abroad-doc', errors) }}
+                  </p>
+                </div>
+              </VeeField>
+            </div>
+          </template>
+
+          <!-- Type 4: แบบรายงานเปลี่ยนแปลงหรือเพิ่มเติมรายการลงในสมุดประวัติ -->
+          <template v-if="requestType === '4'">
+            <Separator class="my-4" />
+
+            <!-- Checkboxes -->
+            <div class="mb-4 flex flex-wrap items-center gap-6">
+              <VeeField name="chkDegree" v-slot="{ field }">
+                <div class="flex items-center gap-2">
+                  <Checkbox
+                    id="chk-degree"
+                    :model-value="Boolean(field.value)"
+                    @update:model-value="
+                      (checked: boolean | 'indeterminate') => {
+                        const isChecked = checked === true
+                        field.onChange?.(isChecked)
+                        chkDegree = isChecked
+                      }
+                    "
+                  />
+                  <Label for="chk-degree" class="cursor-pointer">ได้รับวุฒิเพิ่ม(ปรับวุฒิ)</Label>
+                </div>
+              </VeeField>
+
+              <VeeField name="chkMarriage" v-slot="{ field }">
+                <div class="flex items-center gap-2">
+                  <Checkbox
+                    id="chk-marriage"
+                    :model-value="Boolean(field.value)"
+                    @update:model-value="
+                      (checked: boolean | 'indeterminate') => {
+                        const isChecked = checked === true
+                        field.onChange?.(isChecked)
+                        chkMarriage = isChecked
+                      }
+                    "
+                  />
+                  <Label for="chk-marriage" class="cursor-pointer">จดทะเบียนสมรส</Label>
+                </div>
+              </VeeField>
+
+              <VeeField name="chkDivorce" v-slot="{ field }">
+                <div class="flex items-center gap-2">
+                  <Checkbox
+                    id="chk-divorce"
+                    :model-value="Boolean(field.value)"
+                    @update:model-value="
+                      (checked: boolean | 'indeterminate') => {
+                        const isChecked = checked === true
+                        field.onChange?.(isChecked)
+                        chkDivorce = isChecked
+                      }
+                    "
+                  />
+                  <Label for="chk-divorce" class="cursor-pointer">จดทะเบียนหย่า</Label>
+                </div>
+              </VeeField>
+            </div>
+
+            <ErrorMessage name="chkDegree" v-slot="{ message }">
+              <p class="text-sm text-red-500">{{ message }}</p>
+            </ErrorMessage>
+
+            <!-- Download + Upload แบบรายงาน -->
+            <div class="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <p class="mb-2 text-sm font-semibold">
+                  แบบรายงานเปลี่ยนแปลงหรือเพิ่มเติมรายการลงในสมุดประวัติ
+                </p>
+                <Button type="button" class="cursor-pointer" variant="default">
+                  <FileText class="mr-1 h-4 w-4" /> ดาวโหลดไฟล์
+                </Button>
+              </div>
+
+              <VeeField name="reasonDocCount" v-slot="{ field, errors }">
+                <div>
+                  <div class="mb-2 flex flex-wrap items-center gap-2">
+                    <p class="text-sm font-semibold">
+                      แนบไฟล์หลักฐานเหตุผล<span class="text-red-500">*</span>
+                    </p>
+                    <span class="text-muted-foreground text-xs">
+                      {{
+                        canUploadReasonDocs
+                          ? `อัปโหลดได้สูงสุด ${reasonSelectionCount} ไฟล์`
+                          : 'กรุณาเลือกเหตุผลก่อน'
+                      }}
+                    </span>
+                  </div>
+                  <input
+                    :ref="
+                      (el: any) => {
+                        if (el) fileInputRefs['reason-doc'] = el as HTMLInputElement
+                      }
+                    "
+                    type="file"
+                    class="hidden"
+                    accept=".pdf,.jpg,.png"
+                    multiple
+                    :disabled="!canUploadReasonDocs"
+                    @change="
+                      handleFileSelect($event, 'reason-doc', true, field.onChange, {
+                        maxFiles: canUploadReasonDocs ? reasonSelectionCount : 0,
+                      })
+                    "
+                  />
+                  <Button
+                    type="button"
+                    class="cursor-pointer"
+                    variant="destructive"
+                    :disabled="!canUploadReasonDocs"
+                    @click="triggerFileInput('reason-doc')"
+                  >
+                    <FileText class="mr-1 h-4 w-4" /> อัปโหลดไฟล์
+                  </Button>
+                  <div v-if="fileMap['reason-doc']?.length" class="mt-2 flex flex-col gap-1">
+                    <div
+                      v-for="(file, i) in fileMap['reason-doc']"
+                      :key="i"
+                      class="border-muted bg-muted/50 flex h-10 w-max items-center gap-2 rounded-2xl border-2 p-2 text-sm"
+                    >
+                      <span class="truncate">{{ file.name }}</span>
+                      <span class="text-muted-foreground shrink-0 text-xs">{{
+                        formatFileSize(file.size)
+                      }}</span>
+                      <button
+                        type="button"
+                        class="hover:text-destructive text-muted-foreground rounded p-0.5"
+                        @click="removeFile('reason-doc', i, field.onChange)"
+                      >
+                        <X class="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                  <p
+                    v-if="getFileErrorMessage('reason-doc', errors)"
+                    class="mt-2 text-sm text-red-600"
+                  >
+                    {{ getFileErrorMessage('reason-doc', errors) }}
+                  </p>
+                </div>
+              </VeeField>
+            </div>
+
+            <Separator class="my-4" />
+
+            <!-- เอกสารหนังสือผ่านสิทธิ์ -->
+            <div class="mb-4 flex flex-wrap items-center gap-4">
+              <VeeField name="chkLetter4" v-slot="{ field }">
+                <div class="mt-2 flex min-w-40 items-center gap-2">
+                  <Checkbox
+                    id="chk-letter4"
+                    :model-value="Boolean(field.value)"
+                    @update:model-value="
+                      (checked: boolean | 'indeterminate') => {
+                        const isChecked = checked === true
+                        field.onChange?.(isChecked)
+                        chkLetter4 = isChecked
+                        if (!isChecked) {
+                          clearType4LetterFields()
+                        }
+                      }
+                    "
+                  />
+                  <Label for="chk-letter4" class="cursor-pointer">เอกสารหนังสือผ่านสิทธิ์</Label>
+                </div>
+              </VeeField>
+
+              <VeeField name="letterBank4" v-slot="{ field, errors }">
+                <Field class="w-64" :data-invalid="!!errors.length">
+                  <FieldLabel>ธนาคาร <span class="text-red-500">*</span></FieldLabel>
+                  <Select
+                    :disabled="!values.chkLetter4"
+                    :model-value="field.value"
+                    @update:model-value="
+                      (v: any) => {
+                        field.onChange?.(v)
+                        letterBank4 = String(v ?? '')
+                      }
+                    "
+                  >
+                    <SelectTrigger class="w-full">
+                      <SelectValue placeholder="เลือก" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem v-for="b in bankOptions" :key="b.value" :value="b.value">
+                        {{ b.label }}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FieldError v-if="errors.length" :errors="errors" />
+                </Field>
+              </VeeField>
+
+              <VeeField name="letterQty4" v-slot="{ field, errors }">
+                <Field class="w-64" :data-invalid="!!errors.length">
+                  <FieldLabel>จำนวน <span class="text-red-500">*</span></FieldLabel>
+                  <Input
+                    :disabled="!values.chkLetter4"
+                    :model-value="field.value"
+                    @update:model-value="
+                      (v: any) => {
+                        field.onChange?.(v)
+                        letterQty4 = String(v ?? '')
+                      }
+                    "
+                    type="number"
+                    min="1"
+                    max="100"
+                    placeholder="กรอกจำนวน"
+                  />
+                  <FieldError v-if="errors.length" :errors="errors" />
+                </Field>
+              </VeeField>
+            </div>
+
+            <!-- Download + Upload แบบคำขอเพิ่ม -->
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <p class="mb-2 text-sm font-semibold">
+                  แบบคำขอเพิ่ม/ปรับปรุงข้อมูลในฐานข้อมูลบุคลากรภาครัฐ
+                </p>
+                <Button type="button" class="cursor-pointer" variant="default">
+                  <FileText class="mr-1 h-4 w-4" /> ดาวโหลดไฟล์
+                </Button>
+              </div>
+              <VeeField name="letterDocCount" v-slot="{ field, errors }">
+                <div class="w-full max-w-sm">
+                  <p class="mb-2 text-sm font-semibold">
+                    แนบไฟล์หนังสือผ่านสิทธิ์<span class="text-red-500">*</span>
+                  </p>
+                  <input
+                    :ref="
+                      (el: any) => {
+                        if (el) fileInputRefs['letter-doc'] = el as HTMLInputElement
+                      }
+                    "
+                    type="file"
+                    class="hidden"
+                    accept=".pdf,.jpg,.png"
+                    :disabled="!values.chkLetter4"
+                    @change="handleFileSelect($event, 'letter-doc', false, field.onChange)"
+                  />
+                  <Button
+                    type="button"
+                    class="cursor-pointer"
+                    variant="destructive"
+                    :disabled="!values.chkLetter4"
+                    @click="triggerFileInput('letter-doc')"
+                  >
+                    <FileText class="mr-1 h-4 w-4" /> อัปโหลดไฟล์
+                  </Button>
+                  <div v-if="fileMap['letter-doc']?.length" class="mt-2 flex flex-col gap-1">
+                    <div
+                      v-for="(file, i) in fileMap['letter-doc']"
+                      :key="i"
+                      class="border-muted bg-muted/50 flex h-10 w-max items-center gap-2 rounded-2xl border-2 p-2 text-sm"
+                    >
+                      <span class="truncate">{{ file.name }}</span>
+                      <span class="text-muted-foreground shrink-0 text-xs">{{
+                        formatFileSize(file.size)
+                      }}</span>
+                      <button
+                        type="button"
+                        class="hover:text-destructive text-muted-foreground rounded p-0.5"
+                        @click="removeFile('letter-doc', i, field.onChange)"
+                      >
+                        <X class="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                  <p
+                    v-if="getFileErrorMessage('letter-doc', errors)"
+                    class="mt-2 text-sm text-red-600"
+                  >
+                    {{ getFileErrorMessage('letter-doc', errors) }}
+                  </p>
+                </div>
+              </VeeField>
+            </div>
+          </template>
+
+          <!-- Type 5: คำร้องขอเพิ่มวุติการศึกษา -->
+          <template v-if="requestType === '5'">
+            <Separator class="my-4" />
+
+            <!-- Education Information Form using VeeForm -->
+            <div class="space-y-4">
+              <!-- Row 1: Education Level, Qualification -->
+              <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <VeeField name="education_level" v-slot="{ field, errors }">
+                  <Field :data-invalid="!!errors.length">
+                    <FieldLabel>ระดับการศึกษา<span class="text-red-500">*</span></FieldLabel>
+                    <Input
+                      :model-value="field.value"
+                      @update:model-value="field.onChange"
+                      placeholder="เช่น ปริญญาตรี"
+                    />
+                    <FieldError v-if="errors.length" :errors="errors" />
+                  </Field>
+                </VeeField>
+                <VeeField name="qualification" v-slot="{ field, errors }">
+                  <Field :data-invalid="!!errors.length">
+                    <FieldLabel>วุฒิการศึกษา<span class="text-red-500">*</span></FieldLabel>
+                    <Input
+                      :model-value="field.value"
+                      @update:model-value="field.onChange"
+                      placeholder="เช่น B.A., B.Sc."
+                    />
+                    <FieldError v-if="errors.length" :errors="errors" />
+                  </Field>
+                </VeeField>
+              </div>
+
+              <!-- Row 2: Qualification Name, Major Group -->
+              <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <VeeField name="qualification_name" v-slot="{ field, errors }">
+                  <Field :data-invalid="!!errors.length">
+                    <FieldLabel>ชื่อวุฒิการศึกษา<span class="text-red-500">*</span></FieldLabel>
+                    <Input
+                      :model-value="field.value"
+                      @update:model-value="field.onChange"
+                      placeholder="เช่น ศิลปศาสตร์"
+                    />
+                    <FieldError v-if="errors.length" :errors="errors" />
+                  </Field>
+                </VeeField>
+                <VeeField name="major_group" v-slot="{ field, errors }">
+                  <Field :data-invalid="!!errors.length">
+                    <FieldLabel>สาขาวิชาเอก<span class="text-red-500">*</span></FieldLabel>
+                    <Input
+                      :model-value="field.value"
+                      @update:model-value="field.onChange"
+                      placeholder="เช่น ภาษาไทย"
+                    />
+                    <FieldError v-if="errors.length" :errors="errors" />
+                  </Field>
+                </VeeField>
+              </div>
+
+              <!-- Row 3: Minor Group, Institution -->
+              <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <VeeField name="minor_group" v-slot="{ field }">
+                  <Field>
+                    <FieldLabel>สาขาวิชาโท</FieldLabel>
+                    <Input
+                      :model-value="field.value"
+                      @update:model-value="field.onChange"
+                      placeholder="หากมี"
+                    />
+                  </Field>
+                </VeeField>
+                <VeeField name="institution" v-slot="{ field, errors }">
+                  <Field :data-invalid="!!errors.length">
+                    <FieldLabel>สถานศึกษา<span class="text-red-500">*</span></FieldLabel>
+                    <Input
+                      :model-value="field.value"
+                      @update:model-value="field.onChange"
+                      placeholder="เช่น มหาวิทยาลัยศรีนครินทร์วิโรฒ"
+                    />
+                    <FieldError v-if="errors.length" :errors="errors" />
+                  </Field>
+                </VeeField>
+              </div>
+
+              <!-- Row 4: Start Date, Graduation Date -->
+              <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <VeeField name="start_date" v-slot="{ field, errors }">
+                  <Field :data-invalid="!!errors.length">
+                    <FieldLabel>วันที่เข้าศึกษา<span class="text-red-500">*</span></FieldLabel>
+                    <Popover v-model:open="datePopoverOpen['start_date']">
+                      <PopoverTrigger as-child>
+                        <Button
+                          variant="outline"
+                          :class="[
+                            'w-full justify-start text-left font-normal',
+                            !field.value && 'text-muted-foreground',
+                          ]"
+                        >
+                          <CalendarIcon class="mr-2 h-4 w-4" />
+                          {{
+                            field.value
+                              ? formatDisplayDate(field.value as string)
+                              : 'วว / ดด / ปปปป'
+                          }}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent class="w-auto p-0" align="start">
+                        <Calendar
+                          :model-value="stringToDateValue(field.value as string)"
+                          layout="month-and-year"
+                          @update:model-value="
+                            (val: DateValue | undefined) => {
+                              if (val) {
+                                field.onChange?.(dateValueToString(val))
+                                datePopoverOpen['start_date'] = false
+                              }
+                            }
+                          "
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FieldError v-if="errors.length" :errors="errors" />
+                  </Field>
+                </VeeField>
+                <VeeField name="graduation_date" v-slot="{ field, errors }">
+                  <Field :data-invalid="!!errors.length">
+                    <FieldLabel>วันที่สำเร็จการศึกษา<span class="text-red-500">*</span></FieldLabel>
+                    <Popover v-model:open="datePopoverOpen['graduation_date']">
+                      <PopoverTrigger as-child>
+                        <Button
+                          variant="outline"
+                          :class="[
+                            'w-full justify-start text-left font-normal',
+                            !field.value && 'text-muted-foreground',
+                          ]"
+                        >
+                          <CalendarIcon class="mr-2 h-4 w-4" />
+                          {{
+                            field.value
+                              ? formatDisplayDate(field.value as string)
+                              : 'วว / ดด / ปปปป'
+                          }}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent class="w-auto p-0" align="start">
+                        <Calendar
+                          :model-value="stringToDateValue(field.value as string)"
+                          layout="month-and-year"
+                          @update:model-value="
+                            (val: DateValue | undefined) => {
+                              if (val) {
+                                field.onChange?.(dateValueToString(val))
+                                datePopoverOpen['graduation_date'] = false
+                              }
+                            }
+                          "
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FieldError v-if="errors.length" :errors="errors" />
+                  </Field>
+                </VeeField>
+              </div>
+
+              <!-- Row 5: Country, Honor Type -->
+              <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <VeeField name="country" v-slot="{ field, errors }">
+                  <Field :data-invalid="!!errors.length">
+                    <FieldLabel>ประเทศ<span class="text-red-500">*</span></FieldLabel>
+                    <Input
+                      :model-value="field.value"
+                      @update:model-value="field.onChange"
+                      placeholder="เช่น ไทย"
+                    />
+                    <FieldError v-if="errors.length" :errors="errors" />
+                  </Field>
+                </VeeField>
+                <VeeField name="honor_type" v-slot="{ field }">
+                  <Field>
+                    <FieldLabel>เกียรตินิยม</FieldLabel>
+                    <Input
+                      :model-value="field.value"
+                      @update:model-value="field.onChange"
+                      placeholder="หากมี"
+                    />
+                  </Field>
+                </VeeField>
+              </div>
+
+              <!-- Qualification Used -->
+              <VeeField name="qualification-used" v-slot="{ field, errors }">
+                <Field :data-invalid="!!errors.length">
+                  <FieldLabel
+                    >วุฒิที่ใช้บรรจุ/วุฒิการศึกษาสูงสุด<span class="text-red-500"
+                      >*</span
+                    ></FieldLabel
+                  >
+                  <Input
+                    :model-value="field.value"
+                    @update:model-value="field.onChange"
+                    placeholder="ระบุวุฒิ"
+                  />
+                  <FieldError v-if="errors.length" :errors="errors" />
+                </Field>
+              </VeeField>
+            </div>
+
+            <Separator class="my-4" />
+
+            <!-- Education Request File Upload -->
+            <VeeField name="educationRequestDocCount" v-slot="{ field, errors }">
+              <div>
+                <p class="mb-2 text-sm font-semibold">
+                  แนบไฟล์คำร้องขอเพิ่มวุติการศึกษา<span class="text-red-500">*</span>
+                </p>
+                <input
+                  :ref="
+                    (el: any) => {
+                      if (el) fileInputRefs['education-request-doc'] = el as HTMLInputElement
+                    }
+                  "
+                  type="file"
+                  class="hidden"
+                  accept=".pdf,.jpg,.png"
+                  @change="handleFileSelect($event, 'education-request-doc', false, field.onChange)"
+                />
+                <Button
+                  type="button"
+                  class="cursor-pointer"
+                  variant="destructive"
+                  @click="triggerFileInput('education-request-doc')"
+                >
+                  <FileText class="mr-1 h-4 w-4" /> อัปโหลดไฟล์
+                </Button>
+                <div
+                  v-if="fileMap['education-request-doc']?.length"
+                  class="mt-2 flex flex-col gap-1"
+                >
+                  <div
+                    v-for="(file, i) in fileMap['education-request-doc']"
+                    :key="i"
+                    class="border-muted bg-muted/50 flex h-10 w-max items-center gap-2 rounded-2xl border-2 p-2 text-sm"
+                  >
+                    <span class="truncate">{{ file.name }}</span>
+                    <span class="text-muted-foreground shrink-0 text-xs">{{
+                      formatFileSize(file.size)
+                    }}</span>
+                    <button
+                      type="button"
+                      class="hover:text-destructive text-muted-foreground rounded p-0.5"
+                      @click="removeFile('education-request-doc', i, field.onChange)"
+                    >
+                      <X class="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+                <p
+                  v-if="getFileErrorMessage('education-request-doc', errors)"
+                  class="mt-2 text-sm text-red-600"
+                >
+                  {{ getFileErrorMessage('education-request-doc', errors) }}
+                </p>
+              </div>
+            </VeeField>
+          </template>
+        </VeeForm>
       </CardContent>
 
       <!-- ══════════ Footer: Submit button ══════════ -->
@@ -875,7 +1686,9 @@ watch(requestType, () => {
     class="sticky right-0 bottom-0 z-40 flex w-full justify-end border-t border-gray-200 bg-white p-3"
   >
     <Button
+      type="button"
       class="rounded-lg bg-[#16A34A] px-8 py-2 font-semibold text-white shadow-sm hover:bg-[#15803D]"
+      @click="submitDocForm()"
     >
       บันทึก
     </Button>

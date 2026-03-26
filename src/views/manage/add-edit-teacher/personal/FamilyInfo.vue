@@ -99,7 +99,7 @@ const handleNext = () => {
       <DropDownForm
         :topic="`สมาชิกครอบครัวคนที่ ${index + 1}`"
         :values="entry"
-        @update:values="(v) => handleEntryUpdate(index, v)"
+        @change="(payload) => handleEntryUpdate(index, payload.values)"
         :fields="[
           {
             name: 'relation_type', label: 'ความสัมพันธ์', type: 'select', required: true,

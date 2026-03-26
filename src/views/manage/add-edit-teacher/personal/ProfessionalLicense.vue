@@ -25,8 +25,8 @@ onMounted(() => {
 const formValues = ref<Record<string, any>>({})
 const isSaving = ref(false)
 
-function handleValuesUpdate(values: Record<string, any>) {
-  formValues.value = { ...formValues.value, ...values }
+function handleValuesUpdate(payload: { values: Record<string, any>; isDirty: boolean }) {
+  formValues.value = { ...formValues.value, ...payload.values }
 }
 
 async function handleSave() {
@@ -71,7 +71,7 @@ async function handleSave() {
     <DropDownForm
       topic="ข้อมูลใบอนุญาตประกอบวิชาชีพ"
       :values="formValues"
-      @update:values="handleValuesUpdate"
+      @change="handleValuesUpdate"
       :fields="[
         {
           name: 'license_type', label: 'ประเภทใบอนุญาต', type: 'select', required: true, placeholder: 'เลือกประเภทใบอนุญาต',

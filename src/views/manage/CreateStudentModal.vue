@@ -38,16 +38,19 @@ const studentFormValues = ref<Record<string, any>>({})
 const addressFormValues = ref<Record<string, any>>({})
 const parentFormValues = ref<Record<string, any>[]>([{}])
 
-const handleStudentValuesUpdate = (values: Record<string, any>) => {
-  studentFormValues.value = { ...studentFormValues.value, ...values }
+const handleStudentValuesUpdate = (payload: { values: Record<string, any>; isDirty: boolean }) => {
+  studentFormValues.value = { ...studentFormValues.value, ...payload.values }
 }
 
-const handleAddressValuesUpdate = (values: Record<string, any>) => {
-  addressFormValues.value = { ...addressFormValues.value, ...values }
+const handleAddressValuesUpdate = (payload: { values: Record<string, any>; isDirty: boolean }) => {
+  addressFormValues.value = { ...addressFormValues.value, ...payload.values }
 }
 
-const handleParentValueUpdate = (index: number, values: Record<string, any>) => {
-  parentFormValues.value[index] = { ...parentFormValues.value[index], ...values }
+const handleParentValueUpdate = (
+  index: number,
+  payload: { values: Record<string, any>; isDirty: boolean },
+) => {
+  parentFormValues.value[index] = { ...parentFormValues.value[index], ...payload.values }
 }
 
 const stepTitle = computed(() => {
@@ -225,7 +228,7 @@ const removeParent = (index: number) => {
         <DropDownForm
           topic="ข้อมูลทั่วไป"
           :values="studentFormValues"
-          @update:values="handleStudentValuesUpdate"
+          @change="handleStudentValuesUpdate"
           :fields="[
             { name: 'student_id', label: 'เลขประจำตัวนักเรียน', type: 'text', required: true, placeholder: 'กรุณาระบุเลขประจำตัว' },
             {
@@ -301,7 +304,7 @@ const removeParent = (index: number) => {
         <DropDownForm
           topic="ข้อมูลที่อยู่"
           :values="addressFormValues"
-          @update:values="handleAddressValuesUpdate"
+          @change="handleAddressValuesUpdate"
           :fields="[
             { name: 'province', label: 'จังหวัด', type: 'text', placeholder: 'กรุณาระบุจังหวัด' },
             { name: 'district', label: 'อำเภอ', type: 'text', placeholder: 'กรุณาระบุอำเภอ' },
@@ -332,7 +335,7 @@ const removeParent = (index: number) => {
           </div>
           <DropDownForm
             :values="parent"
-            @update:values="(v) => handleParentValueUpdate(index, v)"
+            @change="(payload) => handleParentValueUpdate(index, payload)"
             :fields="[
               {
                 name: 'prefixe_id',

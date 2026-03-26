@@ -95,7 +95,7 @@ const handleNext = () => {
       <DropDownForm
         :topic="`ประวัติการศึกษาลำดับที่ ${index + 1}`"
         :values="entry"
-        @update:values="(v) => handleEntryUpdate(index, v)"
+        @change="(payload) => handleEntryUpdate(index, payload.values)"
         :fields="[
           { name: 'education_level', label: 'ระดับการศึกษา', type: 'text', required: true, placeholder: 'เช่น ปริญญาตรี' },
           { name: 'qualification', label: 'วุฒิการศึกษา', type: 'text', required: true, placeholder: 'เช่น วท.บ.' },

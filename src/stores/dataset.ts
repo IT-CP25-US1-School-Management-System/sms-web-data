@@ -4,16 +4,14 @@ import type {
   DatasetRowResponse,
   DatasetQueryParams,
 } from '@/types/dataset'
-
-export const DATASET_ID = 'capstone'
-export const DATASET_VERSION = 'v1.2.4'
-
+export const DATASET_ID = import.meta.env.VITE_DATASET_ID
+export const DATASET_VERSION = import.meta.env.VITE_DATASET_VERSION
 /**
  * Generic function to list rows from a dataset version
  */
 export async function getDatasetRows<T = Record<string, any>>(
-  datasetId: string,
-  version: string,
+  datasetId: string = DATASET_ID,
+  version: string = DATASET_VERSION,
   params?: DatasetQueryParams,
 ): Promise<DatasetListResponse<T>> {
   const queryParams: Record<string, any> = {
@@ -26,7 +24,6 @@ export async function getDatasetRows<T = Record<string, any>>(
   if (params?.where) queryParams.where = JSON.stringify(params.where)
   if (params?.sort_by) queryParams.sort_by = params.sort_by
   if (params?.sort_order) queryParams.sort_order = params.sort_order
-
   const response = await dataApiInstance.get<DatasetListResponse<T>>(
     `/v1/datasets/${datasetId}/versions/${version}/data`,
     { params: queryParams },

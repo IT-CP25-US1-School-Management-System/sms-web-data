@@ -37,7 +37,7 @@ const breadcrumbConfig = {
   Personal: { label: "ข้อมูลบุคคล", icon: User },
   WorkHistory: { label: "ประวัติการทำงาน", icon: FileClock },
   Achievements: { label: "ผลงานและนวัตกรรม", icon: Notebook },
-  Documents: { label: "คำร้อง", icon: TicketSlash },
+  Documents: { label: "คำร้อง และ การประเมิน PA", icon: TicketSlash },
   Users: { label: "จัดการผู้ใช้งาน", icon: Users },
   UserDetail: { label: "รายละเอียดผู้ใช้งาน", icon: User },
   Roles: { label: "จัดการบทบาท", icon: FileKey },

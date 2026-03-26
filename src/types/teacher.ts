@@ -20,7 +20,7 @@ export interface AppointmentType {
 
 export interface PersonData {
   id: string
-  prefix_id: number
+  prefix_id: number | string
   role_id: string
   is_government: boolean | string // ข้าราชการ หรือ ครูอัตราจ้าง (API returns as string "true"/"false")
   
@@ -34,7 +34,8 @@ export interface PersonData {
   
   national_id?: string // เลขบัตรประชาชน
   passport_id?: string // เลขpassport
-  
+  department_id?: number
+
   gender?: Gender
   religion?: string // ศาสนา
   nationality?: string // สัญชาติ
@@ -103,7 +104,7 @@ export interface EmploymentContract {
 // For API operations
 export interface TeacherCreateDTO {
   id?: string
-  prefix_id: number
+  prefix_id: number | string
   role_id: string
   is_government: boolean | string
   first_name_th: string

@@ -1,14 +1,4 @@
-/**
- * Create document request (view: documents, version: 2.0.2)
- */
-export async function createDocumentRequestV202(data: Omit<DocumentRequest, 'id' | 'created_at' | 'updated_at'>) {
-  const now = new Date().toISOString()
-  return createDatasetRow<DocumentRequest>(DATASET_ID, DATASET_VERSION, {
-    ...data,
-    id: generateUUID(),
-    created_at: now,
-  })
-}
+
 import {
   DATASET_ID,
   getDatasetRows,
@@ -24,7 +14,7 @@ import type { DatasetListResponse, DatasetRowResponse, DatasetQueryParams } from
 import type {
   DocumentRequest,
   ApprovalLog,
-} from '@/types/document'
+} from '@/types/document_request'
 
 const DATASET_VERSION = 'v2.0.2'
 // Approval logs dataset version for view approval_logs

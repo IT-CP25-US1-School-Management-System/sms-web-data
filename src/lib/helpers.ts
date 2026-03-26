@@ -18,6 +18,16 @@ export const formatDateTime = (date: string | Date): string => {
   });
 };
 
+export const formatDateInput = (date?: string | Date | null): string => {
+  if (!date) return "";
+  if (typeof date === "string") {
+    return date.split("T")[0] || "";
+  }
+
+  const isoString = date.toISOString();
+  return isoString.split("T")[0] || "";
+};
+
 export const formatTime = (date: string | Date): string => {
   const d = new Date(date);
   return d.toLocaleTimeString("th-TH", {
@@ -87,3 +97,14 @@ export const getPrefixName = (prefixId?: number | string | null): string => {
   if (!prefixId) return ''
   return prefixMap[prefixId] || ''
 };
+export const calAge = (birthDate: string | Date): number => {
+  const today = new Date();
+  const birth = new Date(birthDate);
+  let age = today.getFullYear() - birth.getFullYear();
+  const monthDiff = today.getMonth() - birth.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+  return age;
+};
+

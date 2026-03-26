@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { computed, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import DropDownForm from '@/components/form/DropDownForm.vue'
 import { Button } from '@/components/ui/button'
-import { ROUTE_NAMES } from '@/lib/constants'
-import { createTeacher, getTeachers, getTeacherById, updateTeacher } from '@/stores/teachers'
-import { useTeacherStore } from '@/stores/teachers'
-import type { TeacherCreateDTO } from '@/types/teacher'
 import { useToast } from '@/composables/useToast'
+import { ROUTE_NAMES } from '@/lib/constants'
 import { generateUUID } from '@/lib/helpers'
 import { createUser } from '@/stores/api'
+import { getDatasetRows } from '@/stores/dataset'
+import { createTeacher, getTeacherById, getTeachers, updateTeacher, useTeacherStore } from '@/stores/teachers'
+import type { TeacherCreateDTO } from '@/types/teacher'
 
 const router = useRouter()
 const route = useRoute()
@@ -18,83 +18,66 @@ const teacherStore = useTeacherStore()
 
 const isSubmitting = ref(false)
 const isEditing = ref(false)
+const defaultRoleId = ref<string | null>(null)
+const prefixOptions = ref<{ label: string; value: string }[]>([
+  { label: 'นาย', value: '1' },
+  { label: 'นาง', value: '2' },
+  { label: 'นางสาว', value: '3' },
+])
+
+type PrefixRow = {
+  id?: number | string
+  prefix_id?: number | string
+  prefixes_id?: number | string
+  prefixes_name_th?: string
+  name_th?: string
+  name?: string
+}
+
 const formValues = ref<Record<string, any>>({
   is_government: true,
-
 })
-const originalFormValues = ref<Record<string, any>>({})
+const formValuesUpdate = ref<Record<string, any>>({
+  is_government: true,
+})
 
-const handleValuesUpdate = (values: Record<string, any>) => {
-  formValues.value = { ...formValues.value, ...values }
+const generalForm = ref<any>(null)
+const sensitiveForm = ref<any>(null)
+const contactForm = ref<any>(null)
+
+const handleFormSave = (values: Record<string, any>) => {
+  formValuesUpdate.value = { ...formValuesUpdate.value, ...values }
 }
 
-// Check if form has changes
-const isFormModified = computed(() => {
-  if (!isEditing.value) {
-    // In add mode, check if user has entered any data
-    return Object.values(formValues.value).some(v => v && v !== true)
-  }
-  // In edit mode, check if any field differs from original
-  for (const key in formValues.value) {
-    if (formValues.value[key] !== originalFormValues.value[key]) {
-      return true
-    }
-  }
-  return false
-})
-
-// Button should be enabled only if form is modified
-const canSave = computed(() => isFormModified.value)
-
-const prefixMap: Record<string, number> = {
-  นาย: 1,
-  นาง: 2,
-  นางสาว: 3,
+const handleFormChange = (payload: { values: Record<string, any>; isDirty: boolean }) => {
+  formValuesUpdate.value = { ...formValuesUpdate.value, ...payload.values }
 }
 
-// Load personId from URL query on mount
-onMounted(async () => {
-  const idFromUrl = route.query.id as string
-  if (idFromUrl) {
-    // Edit mode: load teacher data from API
-    isEditing.value = true
-    teacherStore.setPersonId(idFromUrl)
-    try {
-      const response = await getTeacherById(idFromUrl)
-      if (response.data) {
-        const teacher = response.data
-        // Populate form with existing data
-        formValues.value = {
-          prefix_id: ['นาย', 'นาง', 'นางสาว'][teacher.prefix_id - 1],
-          first_name_th: teacher.first_name_th,
-          middle_name_th: teacher.middle_name_th,
-          last_name_th: teacher.last_name_th,
-          first_name_en: teacher.first_name_en,
-          middle_name_en: teacher.middle_name_en,
-          last_name_en: teacher.last_name_en,
-          'id-card': teacher.national_id,
-          'blood-type': teacher.blood_type,
-          birth_date: teacher.birth_date,
-          gender: teacher.gender === 'ชาย' ? 'male' : teacher.gender === 'หญิง' ? 'female' : '',
-          religion: teacher.religion,
-          nationality: teacher.nationality,
-          ethnicity: teacher.ethnicity,
-          'physical-status': teacher.physical_status,
-          phone: teacher.phone,
-          email: teacher.personal_email,
-          'marital-status': teacher.marital_status === 'โสด' ? 'single' : teacher.marital_status === 'สมรส' ? 'married' : teacher.marital_status === 'หม้าย' ? 'widowed' : teacher.marital_status === 'หย่า' ? 'divorced' : '',
-          'spouse-name': teacher.spouse_name,
-          is_government: teacher.is_government,
-        }
-        originalFormValues.value = { ...formValues.value }
-        teacherStore.setCurrentTeacher(teacher)
-      }
-    } catch (error) {
-      console.error('Failed to load teacher data:', error)
-      showError('ไม่สามารถโหลดข้อมูลคุณครูได้')
-    }
-  }
-})
+const requiredFields = [
+  { key: 'prefix_id', label: 'คำนำหน้า' },
+  { key: 'first_name_th', label: 'ชื่อ' },
+  { key: 'last_name_th', label: 'นามสกุล' },
+  { key: 'id-card', label: 'เลขบัตรประชาชน' },
+  { key: 'phone', label: 'เบอร์โทรศัพท์' },
+  { key: 'personal_email', label: 'E-mail' },
+  { key: 'line-id', label: 'Line ID' },
+]
+
+const getMissingRequiredFieldLabels = (values: Record<string, any>) => {
+  return requiredFields
+    .filter(({ key }) => !String(values[key] ?? '').trim())
+    .map(({ label }) => label)
+}
+
+const hasRequiredFieldsCompleted = computed(
+  () => getMissingRequiredFieldLabels(formValuesUpdate.value).length === 0,
+)
+
+const hasAnyChanges = computed(() =>
+  [generalForm.value, sensitiveForm.value, contactForm.value].some((form) => Boolean(form?.isDirty)),
+)
+
+const canSave = computed(() => hasAnyChanges.value && hasRequiredFieldsCompleted.value)
 
 const genderMap: Record<string, string> = {
   male: 'ชาย',
@@ -108,25 +91,137 @@ const maritalStatusMap: Record<string, string> = {
   divorced: 'หย่า',
 }
 
+async function fetchPrefixOptions() {
+  try {
+    const response = await getDatasetRows<PrefixRow>('data_get_dropdown', 'v1.0.0', {
+      view: 'prefixes',
+      page: 1,
+      per_page: 100,
+    })
+
+    const mappedOptions = (response.data || [])
+      .map((item) => {
+        const value = item.id ?? item.prefix_id ?? item.prefixes_id
+        const label = item.prefixes_name_th || item.name_th || item.name
+        if (value === undefined || !label) return null
+        return { label, value: String(value) }
+      })
+      .filter((item): item is { label: string; value: string } => Boolean(item))
+
+    if (mappedOptions.length > 0) {
+      prefixOptions.value = mappedOptions
+    }
+  } catch (error) {
+    console.error('Failed to load prefix options:', error)
+  }
+}
+
+watch( 
+  () => route.query.id,
+  async (idQuery) => {
+    const idFromUrl = idQuery as string | undefined
+    isEditing.value = Boolean(idFromUrl)
+
+    if (!idFromUrl) {
+      formValues.value = { is_government: true }
+      formValuesUpdate.value = { is_government: true }
+      teacherStore.clearCurrentTeacher()
+      try {
+        const response = await getTeachers({ page: 1, per_page: 1 })
+        defaultRoleId.value = response.data?.[0]?.role_id || null
+      } catch (error) {
+        defaultRoleId.value = null
+      }
+      return
+    }
+
+    teacherStore.setPersonId(idFromUrl)
+    try {
+      const response = await getTeacherById(idFromUrl)
+      if (!response.data) return
+
+      const teacher = response.data
+      formValues.value = {
+        prefix_id: teacher.prefix_id ? String(teacher.prefix_id) : '',
+        first_name_th: teacher.first_name_th,
+        middle_name_th: teacher.middle_name_th,
+        last_name_th: teacher.last_name_th,
+        first_name_en: teacher.first_name_en,
+        middle_name_en: teacher.middle_name_en,
+        last_name_en: teacher.last_name_en,
+        'id-card': teacher.national_id,
+        'blood-type': teacher.blood_type,
+        birth_date: teacher.birth_date,
+        gender: teacher.gender === 'ชาย' ? 'male' : teacher.gender === 'หญิง' ? 'female' : '',
+        religion: teacher.religion,
+        nationality: teacher.nationality,
+        ethnicity: teacher.ethnicity,
+        'physical-status': teacher.physical_status,
+        phone: teacher.phone,
+        personal_email: teacher.personal_email,
+        'marital-status':
+          teacher.marital_status === 'โสด'
+            ? 'single'
+            : teacher.marital_status === 'สมรส'
+              ? 'married'
+              : teacher.marital_status === 'หม้าย'
+                ? 'widowed'
+                : teacher.marital_status === 'หย่า'
+                  ? 'divorced'
+                  : '',
+        'spouse-name': teacher.spouse_name,
+        is_government: teacher.is_government,
+      }
+      formValuesUpdate.value = { ...formValues.value }
+      teacherStore.setCurrentTeacher(teacher)
+    } catch (error) {
+      console.error('Failed to load teacher data:', error)
+      showError('ไม่สามารถโหลดข้อมูลคุณครูได้')
+    }
+  },
+  { immediate: true },
+)
+
+fetchPrefixOptions()
+
 async function getRoleId(): Promise<string> {
-  // In edit mode, use the existing role_id from loaded data
   if (isEditing.value && teacherStore.currentTeacher?.role_id) {
     return teacherStore.currentTeacher.role_id
   }
-  // In add mode, fetch fallback role_id from first teacher
-  const response = await getTeachers({ page: 1, per_page: 1 })
-  const firstRoleId = response.data?.[0]?.role_id
-  if (!firstRoleId) {
-    throw new Error('ไม่พบ role_id สำหรับใช้สร้างข้อมูลคุณครู')
+  if (!isEditing.value && defaultRoleId.value) {
+    return defaultRoleId.value
   }
-  return firstRoleId
+  throw new Error('Missing role_id for creating teacher')
 }
 
 const handleSave = async () => {
-  if (isSubmitting.value) return
+  if (isSubmitting.value) return // Prevent multiple submissions
+  
+  const forms = [generalForm, sensitiveForm, contactForm]
+  const isAllValid: boolean[] = []
 
-  const firstName = formValues.value.first_name_th?.trim()
-  const lastName = formValues.value.last_name_th?.trim()
+  for (const fRef of forms) {
+    if (fRef.value?.submitForm) {
+      const isValid = await fRef.value.submitForm()
+      if (!isValid) {
+        isAllValid.push(false)
+      }
+    }
+  }
+  if (isAllValid.some((valid) => valid === false)) {
+    const missingLabels = getMissingRequiredFieldLabels(formValuesUpdate.value)
+
+    if (missingLabels.length > 0) {
+      showError(`กรุณากรอกข้อมูลให้ครบ: ${missingLabels.join(', ')}`)
+    } else {
+      showError('กรุณาตรวจสอบรูปแบบข้อมูลที่กรอก เช่น E-mail หรือเบอร์โทรศัพท์')
+    }
+    return // If any form is invalid, do not proceed
+  }
+
+  const currentValues = formValuesUpdate.value
+  const firstName = currentValues.first_name_th?.trim()
+  const lastName = currentValues.last_name_th?.trim()
 
   if (!firstName || !lastName) {
     showError('กรุณากรอกชื่อและนามสกุลภาษาไทย')
@@ -135,34 +230,39 @@ const handleSave = async () => {
 
   try {
     isSubmitting.value = true
-
     const roleId = await getRoleId()
     const now = new Date().toISOString()
     const personId = isEditing.value ? teacherStore.personId! : generateUUID()
+    const prefixId = String(currentValues.prefix_id ?? '').trim()
+
+    if (!prefixId) {
+      showError('กรุณาเลือกคำนำหน้า')
+      return
+    }
 
     const payload: TeacherCreateDTO = {
       id: personId,
-      prefix_id: prefixMap[formValues.value.prefix_id] ?? 1,
+      prefix_id: prefixId,
       role_id: roleId,
-      is_government: formValues.value.is_government ?? true,
+      is_government: currentValues.is_government ?? true,
       first_name_th: firstName,
-      middle_name_th: formValues.value.middle_name_th || undefined,
+      middle_name_th: currentValues.middle_name_th || undefined,
       last_name_th: lastName,
-      first_name_en: formValues.value.first_name_en || undefined,
-      middle_name_en: formValues.value.middle_name_en || undefined,
-      last_name_en: formValues.value.last_name_en || undefined,
-      birth_date: formValues.value.birth_date || undefined,
-      national_id: formValues.value['id-card'] || undefined,
-      gender: (genderMap[formValues.value.gender] as any) || undefined,
-      religion: formValues.value.religion || undefined,
-      nationality: formValues.value.nationality || undefined,
-      ethnicity: formValues.value.ethnicity || undefined,
-      blood_type: formValues.value['blood-type'] || undefined,
-      physical_status: formValues.value['physical-status'] || undefined,
-      phone: formValues.value.phone || undefined,
-      personal_email: formValues.value.email || undefined,
-      marital_status: maritalStatusMap[formValues.value['marital-status']] || undefined,
-      spouse_name: formValues.value['spouse-name'] || undefined,
+      first_name_en: currentValues.first_name_en || undefined,
+      middle_name_en: currentValues.middle_name_en || undefined,
+      last_name_en: currentValues.last_name_en || undefined,
+      birth_date: currentValues.birth_date || undefined,
+      national_id: currentValues['id-card'] || undefined,
+      gender: (genderMap[currentValues.gender] as any) || undefined,
+      religion: currentValues.religion || undefined,
+      nationality: currentValues.nationality || undefined,
+      ethnicity: currentValues.ethnicity || undefined,
+      blood_type: currentValues['blood-type'] || undefined,
+      physical_status: currentValues['physical-status'] || undefined,
+      phone: currentValues.phone || undefined,
+      personal_email: currentValues.personal_email || undefined,
+      marital_status: maritalStatusMap[currentValues['marital-status']] || undefined,
+      spouse_name: currentValues['spouse-name'] || undefined,
       created_at: isEditing.value ? (teacherStore.currentTeacher?.created_at || now) : now,
       updated_at: now,
     }
@@ -172,36 +272,39 @@ const handleSave = async () => {
       showSuccess('แก้ไขข้อมูลส่วนบุคคลสำเร็จ', { description: 'กรุณากรอกข้อมูลที่อยู่ต่อไป' })
     } else {
       await createTeacher(payload)
-      
-      // Create user account with teacher's email
-      if (formValues.value.email) {
+
+      if (currentValues.personal_email) {
         try {
-          await createUser({ email: formValues.value.email, first_name: firstName, last_name: lastName })
+          await createUser({
+            email: currentValues.personal_email,
+            first_name: firstName,
+            last_name: lastName,
+          })
         } catch (userError: any) {
           console.error('Failed to create user account:', userError)
           showError('สร้างบัญชีผู้ใช้ไม่สำเร็จ', {
-            description: userError?.response?.data?.message || 'อาจจำเป็นต้องสร้างบัญชีผู้ใช้ด้วยตนเองต่อมา',
+            description:
+              userError?.response?.data?.message || 'อาจจำเป็นต้องสร้างบัญชีผู้ใช้ด้วยตนเองต่อมา',
           })
-          // Continue even if user creation fails, as teacher record was created
         }
       }
-      
+
       showSuccess('เพิ่มข้อมูลส่วนบุคคลสำเร็จ', { description: 'กรุณากรอกข้อมูลที่อยู่ต่อไป' })
     }
 
-    // Store the teacher data for use in sidebar and other pages
     teacherStore.setCurrentTeacher({
       id: personId,
       first_name_th: firstName,
       last_name_th: lastName,
-      prefix_id: prefixMap[formValues.value.prefix_id] ?? 1,
+      prefix_id: prefixId,
     })
 
     await router.push({ name: ROUTE_NAMES.ADD_TEACHER_ADDRESS, query: { id: personId } })
   } catch (error: any) {
     const action = isEditing.value ? 'แก้ไข' : 'เพิ่ม'
     showError(`ไม่สามารถ${action}ข้อมูลคุณครูได้`, {
-      description: error?.response?.data?.message || error?.message || 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ',
+      description:
+        error?.response?.data?.message || error?.message || 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ',
     })
   } finally {
     isSubmitting.value = false
@@ -212,9 +315,11 @@ const handleSave = async () => {
 <template>
   <div class="mx-6 flex flex-col gap-4">
     <DropDownForm
+      ref="generalForm"
       topic="ข้อมูลทั่วไป"
       :values="formValues"
-      @update:values="handleValuesUpdate"
+      @save="handleFormSave"
+      @change="handleFormChange"
       :fields="[
         {
           name: 'prefix_id',
@@ -222,11 +327,7 @@ const handleSave = async () => {
           type: 'select',
           required: true,
           placeholder: 'เลือกคำนำหน้า',
-          options: [
-            { label: 'นาย', value: 'นาย' },
-            { label: 'นาง', value: 'นาง' },
-            { label: 'นางสาว', value: 'นางสาว' },
-          ],
+          options: prefixOptions,
         },
         { name: 'first_name_th', label: 'ชื่อ', type: 'text', required: true, placeholder: 'กรุณาระบุชื่อ' },
         { name: 'middle_name_th', label: 'ชื่อกลาง', type: 'text', placeholder: 'กรุณาระบุชื่อกลาง' },
@@ -271,9 +372,11 @@ const handleSave = async () => {
     />
 
     <DropDownForm
+      ref="sensitiveForm"
       topic="ข้อมูล Sensitive"
       :values="formValues"
-      @update:values="handleValuesUpdate"
+      @save="handleFormSave"
+      @change="handleFormChange"
       :fields="[
         {
           name: 'gender',
@@ -343,37 +446,34 @@ const handleSave = async () => {
     />
 
     <DropDownForm
+      ref="contactForm"
       topic="ช่องทางการติดต่อ"
       :values="formValues"
-      @update:values="handleValuesUpdate"
+      @save="handleFormSave"
+      @change="handleFormChange"
       :fields="[
         {
           name: 'phone',
           label: 'เบอร์โทรศัพท์',
           type: 'text',
           required: true,
-          placeholder: 'กรุณาระบุเบอร์โทรศัพท์',
+          placeholder: '0xxxxxxxxx',
         },
         {
-          name: 'email',
+          name: 'personal_email',
           label: 'E-mail',
           type: 'email',
           required: true,
-          placeholder: 'กรุณาระบุอีเมล',
+          placeholder: 'example@email.com',
         },
-        {
-          name: 'line-id',
-          label: 'Line ID',
-          type: 'text',
-          placeholder: 'กรุณาระบุ Line ID',
-        },
+        { name: 'line-id', label: 'Line ID', type: 'text', required: true, placeholder: 'กรุณาระบุ Line ID' },
       ]"
     />
   </div>
 
   <div class="sticky bottom-0 right-0 z-40 flex w-full justify-end border-t border-gray-200 bg-white p-3">
     <Button
-      class="rounded-lg bg-[#16A34A] px-8 py-2 font-semibold text-white shadow-sm hover:bg-[#15803D] disabled:opacity-50 disabled:cursor-not-allowed"
+      class="rounded-lg bg-[#16A34A] px-8 py-2 font-semibold text-white shadow-sm hover:bg-[#15803D] disabled:cursor-not-allowed disabled:opacity-50"
       :disabled="isSubmitting || !canSave"
       @click="handleSave"
     >

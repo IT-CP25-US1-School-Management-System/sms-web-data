@@ -161,6 +161,18 @@ const router = createRouter({
           meta: { requiresAuth: true, label: 'ยื่นคำร้อง' },
         },
         {
+          path: 'pa-documents',
+          name: ROUTE_NAMES.PA_DOCUMENT,
+          component: () => import('@/views/web/documents_request/PADocuments.vue'),
+          meta: { requiresAuth: true, label: 'การส่งเอกสาร PA' },
+        },
+        {
+          path: 'evaluation-pa',
+          name: ROUTE_NAMES.EVALUATION_PA,
+          component: () => import('@/views/web/documents_request/EvaluationPA.vue'),
+          meta: { requiresAuth: true, label: 'การประเมิน PA' },
+        },
+        {
           path: 'track-documents',
           name: ROUTE_NAMES.TRACK_DOCUMENTS,
           component: () => import('@/views/web/documents_request/TrackDocument.vue'),

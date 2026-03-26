@@ -24,8 +24,8 @@ import { Search, Plus, MoreHorizontal, Pencil, Trash2, Loader2 } from 'lucide-vu
 import { usePagination } from '@/composables/usePagination'
 import type { PaginationData } from '@/composables/usePagination'
 import { toast } from 'vue-sonner'
-import type { DocumentRequest } from '@/types/document'
-import { getDocumentRequests, deleteDocumentRequest, createDocumentRequest } from '@/stores/documents'
+import type { DocumentRequest } from '@/types/document_request'
+import { getDocumentRequests, deleteDocumentRequest, createDocumentRequest } from '@/stores/document_request'
 import { ROUTE_NAMES } from '@/lib/constants'
 import { getPrefixName } from '@/lib/helpers'
 
