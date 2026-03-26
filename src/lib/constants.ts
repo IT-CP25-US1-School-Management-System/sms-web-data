@@ -28,9 +28,23 @@ export const ROUTE_NAMES = {
   EDUCATION: 'ข้อมูลการศึกษา',
   PROFESSIONAL_LICENSE: 'ใบประกอบวิชาชีพ',
   MANAGE_TEACHERS: 'ManageTeachers',
+  ADD_TEACHER: 'AddTeacher',
+  ADD_TEACHER_PERSONAL: 'AddTeacherPersonal',
+  ADD_TEACHER_ADDRESS: 'AddTeacherAddress',
+  ADD_TEACHER_FAMILY: 'AddTeacherFamily',
+  ADD_TEACHER_EDUCATION: 'AddTeacherEducation',
+  ADD_TEACHER_PROFESSIONAL_LICENSE: 'AddTeacherProfessionalLicense',
+  ADD_TEACHER_POSITION_HISTORY: 'AddTeacherPositionHistory',
+  ADD_TEACHER_ROYAL_DECORATIONS: 'AddTeacherRoyalDecorations',
+  ADD_TEACHER_ACADEMIC_RANK: 'AddTeacherAcademicRank',
+  ADD_TEACHER_EMPLOYMENT: 'AddTeacherEmployment',
+  ADD_TEACHER_CONTRACT_POSITION: 'AddTeacherContractPosition',
+  ADD_TEACHER_TRAINING: 'AddTeacherTraining',
+  ADD_TEACHER_INNOVATIONS: 'AddTeacherInnovations',
   MANAGE_STUDENTS: 'ManageStudents',
   IMPORT_DATA: 'ImportData',
-  REQUESTS: 'Requests',
+  REQUEST_LIST: 'RequestList',
+  REQUEST_EDIT: 'RequestEdit',
 } as const
 
 export const DATASET_SENSITIVITY = {
@@ -41,3 +55,5 @@ export const DATASET_SENSITIVITY = {
 } as const
 
 export type DatasetSensitivity = (typeof DATASET_SENSITIVITY)[keyof typeof DATASET_SENSITIVITY]
+
+export type PrefixType = keyof typeof PREFIX_OPTIONS

@@ -18,6 +18,7 @@ import {
   User,
   Database,
   FileText,
+  UserPlus,
 } from 'lucide-vue-next'
 import AppSidebar from '@/layouts/manage/AppSidebar.vue'
 import ModeToggle from '@/components/ModeToggle.vue'
@@ -29,9 +30,11 @@ const breadcrumbConfig = {
   Settings: { label: 'ตั้งค่าระบบ', icon: Settings },
   Profile: { label: 'โปรไฟล์', icon: User },
   ManageTeachers: { label: 'รายชื่อคุณครู', icon: Users },
+  AddTeacher: { label: 'ข้อมูลบุคคล', icon: UserPlus },
   ManageStudents: { label: 'รายชื่อนักเรียน', icon: Users },
   ImportData: { label: 'นำเข้าข้อมูล', icon: Database },
-  Requests: { label: 'คำร้อง', icon: FileText },
+  RequestList: { label: 'คำร้องเอกสาร', icon: FileText },
+  RequestEdit: { label: 'แก้ไขคำร้อง', icon: FileText },
 }
 
 const currentBreadcrumbs = computed(() => {
@@ -78,6 +81,22 @@ const currentBreadcrumbs = computed(() => {
       to: { name: ROUTE_NAMES.MANAGE_TEACHERS },
       isLast: true,
     })
+  } else if (routeName?.startsWith('AddTeacher')) {
+    const addTeacherLabel = route.meta.label?.toString() || breadcrumbConfig.AddTeacher.label
+
+    breadcrumbs.push({
+      label: breadcrumbConfig.ManageTeachers.label,
+      icon: breadcrumbConfig.ManageTeachers.icon,
+      to: { name: ROUTE_NAMES.MANAGE_TEACHERS },
+      isLast: false,
+    })
+
+    breadcrumbs.push({
+      label: addTeacherLabel,
+      icon: breadcrumbConfig.AddTeacher.icon,
+      to: null,
+      isLast: true,
+    })
   } else if (routeName === ROUTE_NAMES.MANAGE_STUDENTS) {
     breadcrumbs.push({
       label: breadcrumbConfig.ManageStudents.label,
@@ -92,11 +111,24 @@ const currentBreadcrumbs = computed(() => {
       to: { name: ROUTE_NAMES.IMPORT_DATA },
       isLast: true,
     })
-  } else if (routeName === ROUTE_NAMES.REQUESTS) {
+  } else if (routeName === ROUTE_NAMES.REQUEST_LIST) {
     breadcrumbs.push({
-      label: breadcrumbConfig.Requests.label,
-      icon: breadcrumbConfig.Requests.icon,
-      to: { name: ROUTE_NAMES.REQUESTS },
+      label: breadcrumbConfig.RequestList.label,
+      icon: breadcrumbConfig.RequestList.icon,
+      to: { name: ROUTE_NAMES.REQUEST_LIST },
+      isLast: true,
+    })
+  } else if (routeName === ROUTE_NAMES.REQUEST_EDIT) {
+    breadcrumbs.push({
+      label: breadcrumbConfig.RequestList.label,
+      icon: breadcrumbConfig.RequestList.icon,
+      to: { name: ROUTE_NAMES.REQUEST_LIST },
+      isLast: false,
+    })
+    breadcrumbs.push({
+      label: breadcrumbConfig.RequestEdit.label,
+      icon: breadcrumbConfig.RequestEdit.icon,
+      to: null,
       isLast: true,
     })
   } else {

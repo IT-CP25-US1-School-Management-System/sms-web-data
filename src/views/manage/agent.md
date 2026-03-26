@@ -897,3 +897,229 @@ onMounted(() => {
 - **API Functions**: `src/stores/dataset.ts`, `src/stores/students.ts`, `src/stores/teachers.ts`
 
 For questions, modifications, or bug reports, refer to this documentation and the component source code.
+
+---
+
+# DMS API Knowledge Base
+
+## POST Data Endpoint (Create Row)
+
+### Endpoint
+```
+POST /v1/datasets/{dataset_id}/versions/{version}/data
+```
+
+### Request Structure
+- **Content-Type**: `application/json`
+- **Body**: Plain JSON object with field names as keys
+- **Example**:
+```json
+{
+  "first_name_th": "สมชาย",
+  "last_name_th": "ใจดี",
+  "prefix_id": 1,
+  "is_government": true
+}
+```
+
+### Response Structure
+```json
+{
+  "code": 201,
+  "message": "Row created successfully",
+  "data": {
+    "id": "uuid-string",
+    "first_name_th": "สมชาย",
+    "last_name_th": "ใจดี",
+    ...
+  }
+}
+```
+
+### Error Responses
+| Code | Scenario | Example |
+|------|----------|---------|
+| 400 | Config error in dataset policy | `"config error: field 'building' in AllowEdit not found in schema for table 'person_data'"` |
+| 400 | Validation error (missing required field) | `"validation failed: field 'first_name_th' is required"` |
+| 401 | Unauthorized (invalid/expired token) | `"Unauthorized"` |
+| 403 | Forbidden (no write permission for policy) | `"Forbidden"` |
+| 404 | Dataset or version not found | `"Dataset or version not found"` |
+| 409 | Conflict (duplicate key or constraint violation) | `"Conflict - duplicate key or constraint violation"` |
+
+## DMS Validation Pipeline
+
+### Step 1: Authentication
+- Check Bearer token in Authorization header
+- Return 401 if invalid/expired
+
+### Step 2: Authorization
+- Check access policies (`access_policies`) for write permission
+- Return 403 if user doesn't have write permission
+
+### Step 3: Policy Configuration Validation ⚠️ **CRITICAL**
+- Load dataset version's `policies.write` section:
+  ```json
+  "write": {
+    "query": {
+      "from": {
+        "source": "source_id",
+        "schema": "schema_name",
+        "table": "table_name"  // ← where data will be inserted
+      }
+    },
+    "allow_edit": ["col1", "col2", "col3", ...]  // ← allowed fields
+  }
+  ```
+- **Validate**: Every field in `allow_edit` must exist as a column in the target `table`
+- **If failed**: Return 400 error
+  ```
+  config error: field '{field_name}' in AllowEdit not found in schema for table '{table_name}'
+  ```
+
+### Step 4: Schema Validation
+- Check request JSON keys against `allow_edit` list
+- Reject any field not in `allow_edit`
+
+### Step 5: Data Validation
+- Check required fields (no NULL constraints)
+- Validate data types, formats, constraints
+- Return 400 if any validation fails
+
+### Step 6: Insert Row
+- Execute INSERT using target table and validated data
+- Generate row ID (UUID)
+- Return 201 with full row data
+
+## Common DMS Configuration Errors
+
+### Error 1: AllowEdit Field from Wrong Table
+**Symptom**: "field 'X' in AllowEdit not found in schema for table 'Y'"
+
+**Cause**: Backend admin configured `allow_edit` with fields from a related/joined table instead of the target table.
+
+**Example**:
+```json
+{
+  "write": {
+    "query": { "from": { "table": "person_data" } },
+    "allow_edit": [
+      "first_name_th",      // ✅ exists in person_data
+      "last_name_th",       // ✅ exists in person_data
+      "building",           // ❌ exists in person_addresses (wrong table!)
+      "phone",              // ❌ exists in person_phones (wrong table!)
+      "minor_group"         // ❌ exists in education_records (wrong table!)
+    ]
+  }
+}
+```
+
+**Solution**: Admin must remove fields that don't belong to the target table from `allow_edit`:
+```json
+"allow_edit": [
+  "first_name_th",
+  "last_name_th",
+  "prefix_id",
+  "gender",
+  "phone",
+  "email",
+  "birth_date"
+  // REMOVE: building, minor_group, etc. (use separate datasets for those tables)
+]
+```
+
+**Frontend Workaround** (temporary, not recommended):
+- Filter payload to only include whitelisted fields before sending
+- But this only masks the problem — request will eventually fail for allowed cross-table fields
+
+### Error 2: Missing Required Fields
+**Symptom**: `validation failed: field 'X' is required`
+
+**Cause**: Request missing a field that has NOT NULL constraint and no default value.
+
+**Solution**: Include all required fields in request body.
+
+### Error 3: Trying to Update Related Tables via Main Table
+**Symptom**: Same as Error 1 (field not in schema)
+
+**Cause**: Trying to insert `person_addresses`, `person_family`, `education_records` etc. via the `person_data` dataset.
+
+**Solution**: Create separate dataset versions for each related table:
+- Dataset: `data_get_view`, Version: `v1.3.0` → for `person_data` CREATE
+- Dataset: `data_get_view`, Version: `v1.3.1` → for `person_addresses` CREATE (separate `allow_edit`)
+- Dataset: `data_get_view`, Version: `v1.3.2` → for `person_family` CREATE (separate `allow_edit`)
+- etc.
+
+**Current Implementation** (Add Teacher Feature):
+```typescript
+// src/stores/teachers.ts
+const ADDRESS_DATASET_ID = DATASET_ID  // TODO: replace with real dataset ID
+const FAMILY_DATASET_ID = DATASET_ID    // TODO: replace with real dataset ID
+const EDUCATION_DATASET_ID = DATASET_ID // TODO: replace with real dataset ID
+const LICENSE_DATASET_ID = DATASET_ID   // TODO: replace with real dataset ID
+
+// These all use the same dataset version (v1.3.0)
+// which is configured for person_data / allow_edit=['person_data fields only']
+// So createFamilyMember, createEducationRecord etc. will FAIL
+```
+
+**Fix Required**: Backend must provide separate dataset versions or update main dataset's `allow_edit` to include all related table fields safely.
+
+## Add Teacher Feature Implementation
+
+### File Structure
+```
+src/stores/
+├── addTeacher.ts ← Pinia store to pass personId between wizard pages
+└── teachers.ts ← API functions
+
+src/types/
+└── teacher.ts ← DTOs: TeacherCreateDTO, PersonAddressCreateDTO, etc.
+
+src/views/manage/add-edit-teacher/personal/
+├── PersonalDetail.vue ← Creates person_data row → saves personId to store
+├── AddressInfo.vue ← Creates person_addresses row → uses personId from store
+├── FamilyInfo.vue ← Creates person_family rows → uses personId from store
+├── EducationInfo.vue ← Creates education_records rows → uses personId from store
+└── ProfessionalLicense.vue ← Creates professional_licenses rows → uses personId from store
+```
+
+### Wizard Data Flow
+1. **PersonalDetail**: Collect Thai name, prefix, gender, etc. → Call `createTeacher(TeacherCreateDTO)` → Save `result.data.id` to `addTeacherStore.personId` → Redirect to AddressInfo
+2. **AddressInfo**: Collect address fields → Call `createPersonAddress({ person_id: store.personId, ...address })` → Redirect to FamilyInfo
+3. **FamilyInfo**: Multi-entry family members → For each: Call `createFamilyMember({ person_id: store.personId, ...family })` → Redirect to EducationInfo
+4. **EducationInfo**: Multi-entry education → For each: Call `createEducationRecord({ person_id: store.personId, ...education })` → Redirect to ProfessionalLicense
+5. **ProfessionalLicense**: Single professional license → Call `createProfessionalLicense({ person_id: store.personId, ...license })` → Clear store → Redirect to ManageTeachers
+
+### Implementation Status
+- ✅ `useAddTeacherStore` (Pinia) created — stores `personId` across pages
+- ✅ DTOs created — PersonAddressCreateDTO, FamilyMemberCreateDTO, EducationRecordCreateDTO, ProfessionalLicenseCreateDTO
+- ✅ API functions created — createPersonAddress, createFamilyMember, createEducationRecord, createProfessionalLicense
+- ✅ PersonalDetail.vue — wired to createTeacher API, saves personId
+- ✅ AddressInfo.vue — wired to createPersonAddress API
+- ✅ FamilyInfo.vue — multi-entry form, wired to createFamilyMember API
+- ✅ EducationInfo.vue — multi-entry form, wired to createEducationRecord API
+- ✅ ProfessionalLicense.vue — single form, wired to createProfessionalLicense API
+
+### Current Blocker
+**DMS Configuration Error**: Dataset `data_get_view` v1.3.0 has mismatched `allow_edit` policy:
+- `write.query.from = person_data`
+- `allow_edit` includes fields from `person_addresses` (building, province_code, etc.)
+- Solution: Backend admin must fix by either:
+  - Option A: Remove cross-table fields from `allow_edit` (breaks ADDRESS creation)
+  - Option B: Create separate dataset versions for ADDRESS, FAMILY, EDUCATION, LICENSE tables
+  - Option C: Server validates and filters `allow_edit` based on actual `from` table schema (dynamic policy)
+
+### Test Case
+Add a new teacher with minimal data:
+```json
+{
+  "first_name_th": "สมชาย",
+  "last_name_th": "ใจดี",
+  "prefix_id": 1,
+  "is_government": true
+}
+```
+**Expected**: 201, personId returned  
+**Actual**: 400, "config error: field 'building' in AllowEdit not found in schema..."
+
+---

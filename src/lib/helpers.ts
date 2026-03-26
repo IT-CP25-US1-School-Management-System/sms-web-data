@@ -74,6 +74,15 @@ export const generateUUID = (): string => {
   })
 }
 
+export const toDateInputFormat = (date: string | Date | undefined | null): string => {
+  if (!date) return ''
+  const d = new Date(date)
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+};
+
 export const debounce = <T extends (...args: any[]) => any>(
   func: T,
   wait: number
@@ -94,6 +103,16 @@ export const getImgInitials = (name: string) => {
     .join("")
     .toUpperCase()
     .slice(0, 2);
+};
+
+export const getPrefixName = (prefixId?: number | string | null): string => {
+  const prefixMap: Record<number | string, string> = {
+  '250ae8ee-9f0a-4b94-a2c4-a475752dc3e6': 'นาย',
+  '6ec2c1dd-ab31-47d3-8870-680baac1b8da': 'นาง',
+  '9b91d6d5-c414-4a92-b44a-2ad07250271c': 'นางสาว',
+  }
+  if (!prefixId) return ''
+  return prefixMap[prefixId] || ''
 };
 
 export const calAge = (birthDate: string | Date): number => {

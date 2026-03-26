@@ -1,6 +1,34 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ROUTE_NAMES } from '@/lib/constants'
+import { getTeacherById, useTeacherStore } from '@/stores/teachers'
+
+const validateTeacherIdGuard = async (to: any) => {
+  const teacherStore = useTeacherStore()
+  const idFromUrl = to.query.id as string
+  if (idFromUrl) {
+    if (teacherStore.currentTeacher?.id === idFromUrl) {
+      teacherStore.setPersonId(idFromUrl)
+      return true
+    }
+
+    try {
+      const response = await getTeacherById(idFromUrl)
+      if (!response.data) {
+        return { name: ROUTE_NAMES.HOME }
+      }
+
+      teacherStore.setCurrentTeacher(response.data)
+      // ID exists, allow navigation
+      return true
+    } catch (error) {
+      // ID not found or invalid
+      return { name: ROUTE_NAMES.HOME }
+    }
+  }
+  // No ID in URL, allow navigation (add mode)
+  return true
+}
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -175,6 +203,87 @@ const router = createRouter({
       meta: { requiresAuth: true, adminOnly: true },
     },
     {
+      path: '/manage/teachers/add',
+      component: () => import('@/views/manage/add-edit-teacher/AddTeacherView.vue'),
+      meta: { requiresAuth: true, adminOnly: true },
+      redirect: { name: ROUTE_NAMES.ADD_TEACHER_PERSONAL },
+      beforeEnter: validateTeacherIdGuard,
+      children: [
+        {
+          path: 'personal',
+          name: ROUTE_NAMES.ADD_TEACHER_PERSONAL,
+          component: () => import('@/views/manage/add-edit-teacher/personal/PersonalDetail.vue'),
+          meta: { requiresAuth: true, adminOnly: true, label: 'ข้อมูลส่วนบุคคล' },
+        },
+        {
+          path: 'address',
+          name: ROUTE_NAMES.ADD_TEACHER_ADDRESS,
+          component: () => import('@/views/manage/add-edit-teacher/personal/AddressInfo.vue'),
+          meta: { requiresAuth: true, adminOnly: true, label: 'ข้อมูลที่อยู่' },
+        },
+        {
+          path: 'family',
+          name: ROUTE_NAMES.ADD_TEACHER_FAMILY,
+          component: () => import('@/views/manage/add-edit-teacher/personal/FamilyInfo.vue'),
+          meta: { requiresAuth: true, adminOnly: true, label: 'ข้อมูลครอบครัว' },
+        },
+        {
+          path: 'education',
+          name: ROUTE_NAMES.ADD_TEACHER_EDUCATION,
+          component: () => import('@/views/manage/add-edit-teacher/personal/EducationInfo.vue'),
+          meta: { requiresAuth: true, adminOnly: true, label: 'ข้อมูลการศึกษา' },
+        },
+        {
+          path: 'professional-license',
+          name: ROUTE_NAMES.ADD_TEACHER_PROFESSIONAL_LICENSE,
+          component: () => import('@/views/manage/add-edit-teacher/personal/ProfessionalLicense.vue'),
+          meta: { requiresAuth: true, adminOnly: true, label: 'ใบประกอบวิชาชีพ' },
+        },
+        {
+          path: 'position-history',
+          name: ROUTE_NAMES.ADD_TEACHER_POSITION_HISTORY,
+          component: () => import('@/views/manage/add-edit-teacher/work_history/PositionHistory.vue'),
+          meta: { requiresAuth: true, adminOnly: true, label: 'ข้อมูลการดำรงตำแหน่ง' },
+        },
+        {
+          path: 'royal-decorations',
+          name: ROUTE_NAMES.ADD_TEACHER_ROYAL_DECORATIONS,
+          component: () => import('@/views/manage/add-edit-teacher/work_history/RoyalDecorations.vue'),
+          meta: { requiresAuth: true, adminOnly: true, label: 'เครื่องราชอิสริยาภรณ์' },
+        },
+        {
+          path: 'academic-rank',
+          name: ROUTE_NAMES.ADD_TEACHER_ACADEMIC_RANK,
+          component: () => import('@/views/manage/add-edit-teacher/work_history/AcademicRankHistory.vue'),
+          meta: { requiresAuth: true, adminOnly: true, label: 'ประวัติวิทยฐานะ' },
+        },
+        {
+          path: 'employment',
+          name: ROUTE_NAMES.ADD_TEACHER_EMPLOYMENT,
+          component: () => import('@/views/manage/add-edit-teacher/work_history/Employment.vue'),
+          meta: { requiresAuth: true, adminOnly: true, label: 'ข้อมูลการจ้างงาน' },
+        },
+        {
+          path: 'contract-position',
+          name: ROUTE_NAMES.ADD_TEACHER_CONTRACT_POSITION,
+          component: () => import('@/views/manage/add-edit-teacher/work_history/ContractPosition.vue'),
+          meta: { requiresAuth: true, adminOnly: true, label: 'ประวัติการดำรงตำแหน่ง' },
+        },
+        {
+          path: 'training',
+          name: ROUTE_NAMES.ADD_TEACHER_TRAINING,
+          component: () => import('@/views/manage/add-edit-teacher/achievements/Training.vue'),
+          meta: { requiresAuth: true, adminOnly: true, label: 'ข้อมูลการอบรม/ศึกษาดูงาน' },
+        },
+        {
+          path: 'innovations',
+          name: ROUTE_NAMES.ADD_TEACHER_INNOVATIONS,
+          component: () => import('@/views/manage/add-edit-teacher/achievements/Innovations.vue'),
+          meta: { requiresAuth: true, adminOnly: true, label: 'ข้อมูลผลงานและนวัตกรรม' },
+        },
+      ],
+    },
+    {
       path: '/manage/students',
       name: ROUTE_NAMES.MANAGE_STUDENTS,
       component: () => import('@/views/manage/ManageStudentView.vue'),
@@ -187,9 +296,15 @@ const router = createRouter({
       meta: { requiresAuth: true, adminOnly: true },
     },
     {
-      path: '/requests',
-      name: ROUTE_NAMES.REQUESTS,
-      component: () => import('@/views/manage/RequestsView.vue'),
+      path: '/manage/requests',
+      name: ROUTE_NAMES.REQUEST_LIST,
+      component: () => import('@/views/manage/requests/RequestsListView.vue'),
+      meta: { requiresAuth: true, adminOnly: true },
+    },
+    {
+      path: '/manage/requests/:id',
+      name: ROUTE_NAMES.REQUEST_EDIT,
+      component: () => import('@/views/manage/requests/RequestEditView.vue'),
       meta: { requiresAuth: true, adminOnly: true },
     },
   ],

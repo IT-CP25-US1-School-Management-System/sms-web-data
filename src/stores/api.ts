@@ -187,3 +187,20 @@ export async function logout(): Promise<void> {
   setTokens(null)
   router.push({ name: ROUTE_NAMES.LOGIN })
 }
+
+/**
+ * Create a new user account
+ */
+export async function createUser(userData: { email: string; first_name: string; last_name: string }): Promise<any> {
+  const response = await authApiInstance.post('/v1/auth/users', userData)
+  return response.data
+}
+
+/**
+ * Delete user account by id
+ */
+export async function deleteUser(userId: string): Promise<any> {
+  if (!userId) throw new Error('Missing user id for deleting user')
+  const response = await authApiInstance.delete(`/v1/auth/users/${userId}`)
+  return response.data
+}

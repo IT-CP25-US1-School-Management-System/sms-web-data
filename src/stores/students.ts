@@ -8,7 +8,13 @@ import {
   deleteDatasetRow,
 } from '@/stores/dataset'
 import type { DatasetListResponse, DatasetRowResponse, DatasetQueryParams } from '@/types/dataset'
-import type { Student, StudentCreateDTO, StudentUpdateDTO } from '@/types/student'
+import type { Student, StudentCreateDTO, StudentUpdateDTO, AddressCreateDTO, ParentCreateDTO, Address, Parent } from '@/types/student'
+
+// TODO: Replace with correct dataset IDs once configured in DMS backend
+const ADDRESS_DATASET_ID = DATASET_ID
+const ADDRESS_DATASET_VERSION = DATASET_VERSION
+const PARENT_DATASET_ID = DATASET_ID
+const PARENT_DATASET_VERSION = DATASET_VERSION
 
 /**
  * Get list of students with pagination and filters
@@ -16,7 +22,7 @@ import type { Student, StudentCreateDTO, StudentUpdateDTO } from '@/types/studen
 export async function getStudents(
   params?: DatasetQueryParams,
 ): Promise<DatasetListResponse<Student>> {
-  return getDatasetRows<Student>({
+  return getDatasetRows<Student>(DATASET_ID, DATASET_VERSION, {
     ...params,
     view: 'Student',
   })
@@ -32,7 +38,9 @@ export async function getStudentById(studentId: string): Promise<DatasetRowRespo
 /**
  * Create a new student
  */
-export async function createStudent(data: StudentCreateDTO): Promise<DatasetRowResponse<Student>> {
+export async function createStudent(
+  data: StudentCreateDTO,
+): Promise<DatasetRowResponse<Student>> {
   return createDatasetRow<Student>(DATASET_ID, DATASET_VERSION, data)
 }
 
@@ -51,4 +59,22 @@ export async function updateStudent(
  */
 export async function deleteStudent(studentId: string): Promise<void> {
   return deleteDatasetRow(DATASET_ID, DATASET_VERSION, studentId)
+}
+
+/**
+ * Create a student address
+ */
+export async function createStudentAddress(
+  data: AddressCreateDTO,
+): Promise<DatasetRowResponse<Address>> {
+  return createDatasetRow<Address>(ADDRESS_DATASET_ID, ADDRESS_DATASET_VERSION, data)
+}
+
+/**
+ * Create a student parent
+ */
+export async function createStudentParent(
+  data: ParentCreateDTO,
+): Promise<DatasetRowResponse<Parent>> {
+  return createDatasetRow<Parent>(PARENT_DATASET_ID, PARENT_DATASET_VERSION, data)
 }

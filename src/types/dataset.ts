@@ -95,8 +95,8 @@ export interface DatasetVersionSearchResponse {
 
 export interface DatasetQueryParams {
   view?: string
-  filter?: any // JSON string or object
-  filter_logic?: 'AND' | 'OR'
+  where_logical_operator?: 'AND' | 'OR'
+  where?: any // JSON string or object for advanced filtering
   page?: number
   per_page?: number
   sort_by?: string

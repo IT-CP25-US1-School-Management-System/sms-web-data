@@ -1,12 +1,17 @@
 import { dataApiInstance } from '@/stores/api'
-import type { DatasetListResponse, DatasetRowResponse, DatasetQueryParams } from '@/types/dataset'
-
+import type {
+  DatasetListResponse,
+  DatasetRowResponse,
+  DatasetQueryParams,
+} from '@/types/dataset'
 export const DATASET_ID = import.meta.env.VITE_DATASET_ID
 export const DATASET_VERSION = import.meta.env.VITE_DATASET_VERSION
 /**
  * Generic function to list rows from a dataset version
  */
 export async function getDatasetRows<T = Record<string, any>>(
+  datasetId: string = DATASET_ID,
+  version: string = DATASET_VERSION,
   params?: DatasetQueryParams,
 ): Promise<DatasetListResponse<T>> {
   const queryParams: Record<string, any> = {
@@ -15,12 +20,12 @@ export async function getDatasetRows<T = Record<string, any>>(
   }
 
   if (params?.view) queryParams.view = params.view
-  if (params?.filter) queryParams.filter = JSON.stringify(params.filter)
-  if (params?.filter_logic) queryParams.filter_logic = params.filter_logic
+  if (params?.where_logical_operator) queryParams.where_logical_operator = params.where_logical_operator
+  if (params?.where) queryParams.where = JSON.stringify(params.where)
   if (params?.sort_by) queryParams.sort_by = params.sort_by
   if (params?.sort_order) queryParams.sort_order = params.sort_order
   const response = await dataApiInstance.get<DatasetListResponse<T>>(
-    `/v1/datasets/${DATASET_ID}/versions/${DATASET_VERSION}/data`,
+    `/v1/datasets/${datasetId}/versions/${version}/data`,
     { params: queryParams },
   )
   return response.data
@@ -50,10 +55,13 @@ export async function createDatasetRow<T = Record<string, any>>(
   datasetId: string,
   version: string,
   data: Partial<T>,
+  viewName?: string,
 ): Promise<DatasetRowResponse<T>> {
+  const params = viewName ? { view: viewName } : undefined
   const response = await dataApiInstance.post<DatasetRowResponse<T>>(
     `/v1/datasets/${datasetId}/versions/${version}/data`,
     data,
+    params ? { params } : undefined,
   )
   return response.data
 }
@@ -66,10 +74,13 @@ export async function updateDatasetRow<T = Record<string, any>>(
   version: string,
   key: string,
   data: Partial<T>,
+  viewName?: string,
 ): Promise<DatasetRowResponse<T>> {
+  const params = viewName ? { view: viewName } : undefined
   const response = await dataApiInstance.put<DatasetRowResponse<T>>(
     `/v1/datasets/${datasetId}/versions/${version}/data/key/${key}`,
     data,
+    params ? { params } : undefined,
   )
   return response.data
 }
