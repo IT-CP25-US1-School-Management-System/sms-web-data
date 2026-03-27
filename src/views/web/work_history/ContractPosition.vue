@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button'
 import CreateForm from '@/components/form/CreateForm.vue'
+import { DATASET_GET } from '@/lib/constants'
 import { onMounted, ref } from 'vue'
 import { toast } from 'vue-sonner'
 import { getDatasetRows } from '@/stores/dataset'
@@ -10,8 +11,7 @@ const contractPositionData = ref<Record<string, any>[]>([])
 async function getContractPositionData() {
   loading.value = true
   try {
-
-    const response = await getDatasetRows({
+    const response = await getDatasetRows(DATASET_GET.DATASET_ID, DATASET_GET.DATASET_VERSION, {
       view: 'contract_get',
       page: 1,
       per_page: 50,

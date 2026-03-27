@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import DropDownForm from '@/components/form/DropDownForm.vue'
 import { Button } from '@/components/ui/button'
+import { DATASET_GET } from '@/lib/constants'
 import { getDatasetRows ,updateDatasetRow } from '@/stores/dataset'
 import { onMounted, ref ,computed } from 'vue'
 import { toast } from 'vue-sonner'
@@ -33,9 +34,8 @@ const contactForm = ref<any>(null)
 
 async function getPersonalDetailData() {
   loading.value = true
-
   try {
-    const response = await getDatasetRows( {
+    const response = await getDatasetRows(DATASET_GET.DATASET_ID, DATASET_GET.DATASET_VERSION, {
       view: 'personal_get',
       page: 1,
       per_page: 50,

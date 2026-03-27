@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import CreateForm from '@/components/form/CreateForm.vue'
+import { DATASET_GET } from '@/lib/constants'
 import { onMounted, ref } from 'vue'
 import { toast } from 'vue-sonner'
 import { getDatasetRows } from '@/stores/dataset'
@@ -9,8 +10,7 @@ const innovationData = ref<Record<string, any>[]>([])
 async function getInnovationData() {
   loading.value = true
   try {
- 
-    const response = await getDatasetRows( {
+    const response = await getDatasetRows(DATASET_GET.DATASET_ID, DATASET_GET.DATASET_VERSION, {
       view: 'innovations_get',
       page: 1,
       per_page: 50,

@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { toast } from 'vue-sonner'
-import { onMounted, ref } from 'vue'
-import { getDatasetRows } from '@/stores/dataset'
 import NormalForm from '@/components/form/NormalForm.vue'
+import { DATASET_GET } from '@/lib/constants'
+import { getDatasetRows } from '@/stores/dataset'
+import { onMounted, ref } from 'vue'
+import { toast } from 'vue-sonner'
 
 // TODO: เปลี่ยนเป็น false เมื่อต้องการดูอย่างเดียว (readonly)
 const isEditMode = true
@@ -12,7 +13,7 @@ const educationData = ref<Record<string, any>[]>([])
 async function getEducationRecordData() {
   loading.value = true
   try {
-    const response = await getDatasetRows({
+    const response = await getDatasetRows(DATASET_GET.DATASET_ID, DATASET_GET.DATASET_VERSION, {
       view: 'education_get',
       page: 1,
       per_page: 50,

@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { usePagination } from '@/composables/usePagination'
+import { DATASET_GET } from '@/lib/constants'
 import { ChevronLeft, ChevronRight, FileX2 } from 'lucide-vue-next'
 import { computed, reactive } from 'vue'
 
@@ -15,8 +16,7 @@ const statusData = ref<Record<string, any>[]>([])
 async function trackStatusData() {
   loading.value = true
   try {
-
-    const response = await getDatasetRows({
+    const response = await getDatasetRows(DATASET_GET.DATASET_ID, DATASET_GET.DATASET_VERSION, {
       view: 'track_documents',
       page: 1,
       per_page: 50,

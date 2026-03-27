@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import CreateForm from '@/components/form/CreateForm.vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
+import { DATASET_GET } from '@/lib/constants'
 import { getDatasetRows, updateDatasetRow } from '@/stores/dataset'
 import type { FamilyMember } from '@/types/teacher'
 import { onMounted, ref } from 'vue'
@@ -29,7 +30,7 @@ function mapFamilyMemberForForm(member: Partial<FamilyMember>) {
 async function getFamilyData() {
   loading.value = true
   try {
-    const response = await getDatasetRows({
+    const response = await getDatasetRows(DATASET_GET.DATASET_ID, DATASET_GET.DATASET_VERSION, {
       view: 'family_get',
       page: 1,
       per_page: 50,

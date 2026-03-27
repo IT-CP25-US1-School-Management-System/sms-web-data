@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import CreateForm from '@/components/form/CreateForm.vue'
+import { DATASET_GET } from '@/lib/constants'
 import { getDatasetRows } from '@/stores/dataset'
 import { onMounted, ref } from 'vue'
 import { toast } from 'vue-sonner'
@@ -9,7 +10,7 @@ const professionalLicenseData = ref<Record<string, any>[]>([])
 async function getProfessionalLicenseData() {
   loading.value = true
   try {
-    const response = await getDatasetRows({
+    const response = await getDatasetRows(DATASET_GET.DATASET_ID, DATASET_GET.DATASET_VERSION, {
       view: 'license_get',
       page: 1,
       per_page: 50,
@@ -17,9 +18,6 @@ async function getProfessionalLicenseData() {
     professionalLicenseData.value = response.data[0]?.professional_licenses || []
     console.log('Professional License API Response:', response)
     console.log('Professional License Data:', response.data)
-    toast.success(`โหลดข้อมูลใบประกอบวิชาชีพสำเร็จ (${response.total_rows} รายการ)`, {
-      position: 'bottom-right',
-    })
   } catch (error: any) {
     console.error('Personal Detail API Error:', error)
     console.error('Error Response:', error?.response?.data)

@@ -32,7 +32,9 @@ function mapApiToForm(data: any) {
 // }
 
 // async function getTrainingData() {
-//   const response = await getDatasetRows({
+//   const datasetId = 'data_get_view'
+//   const version = 'v1.0.6'
+//   const response = await getDatasetRows(datasetId, version, {
 //     view: 'training_get',
 //     page: 1,
 //     per_page: 50,

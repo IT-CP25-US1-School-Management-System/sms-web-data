@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import NormalForm, { type NormalFormField } from '@/components/form/NormalForm.vue'
 import { Button } from '@/components/ui/button'
+import { DATASET_GET } from '@/lib/constants'
 import { computed, onMounted, ref } from 'vue'
 import { toast } from 'vue-sonner'
 import { getDatasetRows } from '@/stores/dataset'
@@ -72,7 +73,11 @@ const positionFields: NormalFormField[] = [
 async function getPositionData() {
   loading.value = true
   try {
-    const response = await getDatasetRows({ view: 'position_get', page: 1, per_page: 50 })
+    const response = await getDatasetRows(DATASET_GET.DATASET_ID, DATASET_GET.DATASET_VERSION, {
+      view: 'position_get',
+      page: 1,
+      per_page: 50,
+    })
     positionData.value = response.data?.[0]?.governments || []
     toast.success(`โหลดข้อมูลตำแหน่งสำเร็จ (${response.total_rows} รายการ)`, { position: 'bottom-right' })
   } catch (error: any) {

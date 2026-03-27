@@ -54,6 +54,19 @@ export const DATASET_SENSITIVITY = {
   RESTRICTED: 'restricted',
 } as const
 
+export const DATASET_GET = {
+  DATASET_ID: 'data_get_view',
+  DATASET_VERSION: 'v1.0.6',
+} as const
+
+export const  FILE_KEY_TEMPLATES = {
+  DOCUMENT_TYPE_2: '3a68b6bf-4631-4835-a77f-eff8da31a796',
+  DOCUMENT_TYPE_3: '074053f7-0e7a-4870-9091-84f0cd945aed',
+  DOCUMENT_TYPE_4_1: 'cc01791c-658e-44ed-aa4a-ccb7be9418fe',
+  DOCUMENT_TYPE_4_2: '99261424-7b09-48e9-820d-ffcb6115729c',
+
+} as const
+
 export type DatasetSensitivity = (typeof DATASET_SENSITIVITY)[keyof typeof DATASET_SENSITIVITY]
 
 export type PrefixType = keyof typeof PREFIX_OPTIONS

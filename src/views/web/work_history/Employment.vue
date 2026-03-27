@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import DropDownForm from '@/components/form/DropDownForm.vue'
 import { Button } from '@/components/ui/button'
+import { DATASET_GET } from '@/lib/constants'
 
 import { onMounted, ref } from 'vue'
 import { toast } from 'vue-sonner'
@@ -11,8 +12,7 @@ const employmentData = ref<Record<string, any>[]>([])
 async function getEmploymentData() {
   loading.value = true
   try {
-
-    const response = await getDatasetRows( {
+    const response = await getDatasetRows(DATASET_GET.DATASET_ID, DATASET_GET.DATASET_VERSION, {
       view: 'employment_get',
       page: 1,
       per_page: 50,
