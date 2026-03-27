@@ -55,5 +55,3 @@ export const DATASET_SENSITIVITY = {
 } as const
 
 export type DatasetSensitivity = (typeof DATASET_SENSITIVITY)[keyof typeof DATASET_SENSITIVITY]
-
-export type PrefixType = keyof typeof PREFIX_OPTIONS
