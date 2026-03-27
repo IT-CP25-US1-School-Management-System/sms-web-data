@@ -113,6 +113,7 @@ export interface DatasetListResponse<T = Record<string, any>> {
 
 export interface DatasetRowResponse<T = Record<string, any>> {
   data: T
+  message?: string
 }
 
 // ============================================================

@@ -13,16 +13,23 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
+import { Spinner } from '@/components/ui/spinner'
 import { FileText, X, CalendarIcon } from 'lucide-vue-next'
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed ,onMounted } from 'vue'
 import { Form as VeeForm, Field as VeeField, ErrorMessage } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { z } from 'zod'
 import { toast } from 'vue-sonner'
+import { generateUUID } from '@/lib/helpers'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { type DateValue, CalendarDate } from '@internationalized/date'
-
+import { useAuthStore } from '@/stores/auth'
+import { createDatasetRow } from '@/stores/dataset'
+import { createFileDocument } from '@/stores/document'
+import type { CreateFileDocumentParams, FileDocument } from '@/types/document'
+import type { DocumentRequest ,DocumentLink ,RequestEducationRecords ,RequestGeneral ,RequestHistory } from '@/types/document_request'
+import { getFileDocumentRows } from '@/stores/document'
 /* ──────────────────── ประเภทคำร้อง ──────────────────── */
 const requestTypeOptions = [
   { label: 'คำร้องขอเอกสาร', value: '1' },
@@ -36,6 +43,9 @@ const requestTypeOptions = [
 const title = ref('')
 const requestType = ref('')
 const formRef = ref<any>(null)
+const authStore = useAuthStore()
+const uploadedDocumentKeys = ref<string[]>([])
+const isSubmitting = ref(false)
 
 /* ──────────────────── Type 1: คำร้องขอเอกสาร ──────────────────── */
 const salaryQty = ref('')
@@ -47,6 +57,67 @@ const letterQty = ref('')
 const salary_info = ref('')
 const salary_base = ref('')
 const salary_compensation = ref('')
+
+
+const documentRequest = ref<DocumentRequest>({
+  id: '',
+  person_id: '',
+  document_type: null,
+  status: 'กำลังดำเนินการ',
+  created_at: '',
+  updated_at: '',
+})
+
+const documentLink = ref<DocumentLink>({
+  document_key: '',
+  entity_table: '',
+  entity_id: '',
+  purpose: '',
+  person_id: '',
+  created_at: '',
+})  
+
+const requestEducationRecords = ref<RequestEducationRecords>({
+  id: '',
+  request_id: '',
+  education_level: '',
+  qualification: '',
+  qualification_name: '',
+  major_group: '',
+  minor_group: '',
+  institution: '',
+  country: '',
+  start_date: '',
+  graduation_date: '',
+  honor_type: '',
+  is_used_for_first_appointment: null,
+  is_highest_degree: null,
+  is_meets_position_standard: null,
+  is_recognized_by_kksa: null,
+  is_recognized_by_ocsc: null,
+})
+
+const requestGeneral = ref<RequestGeneral>({
+  id: '',
+  request_id: '',
+  salary_cert_qty: null,
+  work_cert_qty: null,
+  rights_auth_bank: '',
+  rights_auth_qty: null,
+  salary_info: '',
+  academic_allowance: null,
+  compensation_allowance: null,
+})
+
+const requestHistory = ref<RequestHistory>({
+  id: '',
+  request_id: '',
+  is_qualification_added: null,
+  is_marriage_registered: null,
+  is_divorce_registered: null,
+  rights_auth_bank: '',
+  rights_auth_qty: null,
+})
 
 const bankOptions = [
   { label: 'ธนาคารกรุงไทย', value: 'krungthai' },
@@ -78,6 +149,15 @@ const educationData = ref<Record<string, any>>({
   honor_type: '',
   'qualification-used': '',
 })
+
+const urlDownload2 = ref('')
+const urlDownload3 = ref('')
+const urlDownload4_1 = ref('')
+const urlDownload4_2 = ref('')
+const downloadFileName2 = ref('')
+const downloadFileName3 = ref('')
+const downloadFileName4_1 = ref('')
+const downloadFileName4_2 = ref('')
 
 /* ──────────────────── Date picker helpers ──────────────────── */
 const datePopoverOpen = ref<Record<string, boolean>>({})
@@ -121,7 +201,373 @@ const fileCountFieldMap: Record<string, string> = {
   'education-request-doc': 'educationRequestDocCount',
 }
 
-type FileSelectOptions = {
+function getRequestTypeLabel() {
+  return requestTypeOptions.find((option) => option.value === requestType.value)?.label || ''
+}
+
+function getCurrentUserName() {
+  return authStore.user?.name || authStore.user?.given_name || authStore.user?.email || 'current-user'
+}
+
+function getSelectedFiles(): File[] {
+  return Object.values(fileMap.value).flatMap((files) => files ?? [])
+}
+
+function toNullableNumber(value: unknown): number | null {
+  if (value === '' || value === null || value === undefined) return null
+  const parsed = Number(value)
+  return Number.isNaN(parsed) ? null : parsed
+}
+
+function normalizeStringInput(value: unknown): string {
+  if (value === null || value === undefined) return ''
+  return value.toString()
+}
+
+function resetCreateDocumentForm() {
+  title.value = ''
+  requestType.value = ''
+  salaryQty.value = ''
+  workQty.value = ''
+  letterBank.value = ''
+  letterQty.value = ''
+  salary_info.value = ''
+  salary_base.value = ''
+  salary_compensation.value = ''
+  chkDegree.value = false
+  chkMarriage.value = false
+  chkDivorce.value = false
+  chkLetter4.value = false
+  letterBank4.value = ''
+  letterQty4.value = ''
+  educationData.value = {
+    education_level: '',
+    qualification: '',
+    qualification_name: '',
+    major_group: '',
+    minor_group: '',
+    institution: '',
+    start_date: '',
+    graduation_date: '',
+    country: '',
+    honor_type: '',
+    'qualification-used': '',
+  }
+  uploadedDocumentKeys.value = []
+  fileMap.value = {}
+  fileSizeErrors.value = {}
+  datePopoverOpen.value = {}
+  resetAllFileCounts()
+  syncSlipCountField(0)
+
+  Object.values(fileInputRefs.value).forEach((input) => {
+    if (input) input.value = ''
+  })
+
+  formRef.value?.resetForm({
+    values: {
+      requestType: '',
+      title: '',
+      chkSalary: false,
+      salaryQty: '',
+      salary_info: '',
+      salary_base: '',
+      salary_compensation: '',
+      chkWork: false,
+      workQty: '',
+      chkLetter: false,
+      letterBank: '',
+      letterQty: '',
+      slipCount: 0,
+      cardDocCount: 0,
+      abroadDocCount: 0,
+      reportDocCount: 0,
+      updateDocCount: 0,
+      letterDocCount: 0,
+      reasonDocCount: 0,
+      educationRequestDocCount: 0,
+      chkDegree: false,
+      chkMarriage: false,
+      chkDivorce: false,
+      chkLetter4: false,
+      letterBank4: '',
+      letterQty4: '',
+      education_level: '',
+      qualification: '',
+      qualification_name: '',
+      major_group: '',
+      minor_group: '',
+      institution: '',
+      start_date: '',
+      graduation_date: '',
+      country: '',
+      honor_type: '',
+      'qualification-used': '',
+    },
+  })
+}
+
+async function downloadTemplateFile(fileUrl: string, fileName: string) {
+  const response = await fetch(fileUrl)
+  if (!response.ok) {
+    throw new Error('ดาวน์โหลดไฟล์ไม่สำเร็จ')
+  }
+
+  const blob = await response.blob()
+  const blobUrl = window.URL.createObjectURL(blob)
+  const link = document.createElement('a')
+
+  link.href = blobUrl
+  link.download = fileName
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  window.URL.revokeObjectURL(blobUrl)
+}
+
+function buildDocumentDetailPayload(values: Record<string, any>) {
+  if (!documentRequest.value.id) {
+    throw new Error('ไม่พบรหัสคำร้องหลัก')
+  }
+
+  switch (requestType.value) {
+    case '1':
+      requestGeneral.value = {
+        ...requestGeneral.value,
+        id: requestGeneral.value.id || generateUUID(),
+        request_id: documentRequest.value.id,
+        salary_cert_qty: values.chkSalary ? toNullableNumber(values.salaryQty) : null,
+        work_cert_qty: values.chkWork ? toNullableNumber(values.workQty) : null,
+        rights_auth_bank: values.chkLetter ? String(values.letterBank ?? '') : '',
+        rights_auth_qty: values.chkLetter ? toNullableNumber(values.letterQty) : null,
+        salary_info: String(values.salary_info ?? ''),
+        academic_allowance: String(values.salary_base ?? ''),
+        compensation_allowance: String(values.salary_compensation ?? ''),
+      }
+      return requestGeneral.value
+    case '4':
+      requestHistory.value = {
+        ...requestHistory.value,
+        id: requestHistory.value.id || generateUUID(),
+        request_id: documentRequest.value.id,
+        is_qualification_added: Boolean(values.chkDegree),
+        is_marriage_registered: Boolean(values.chkMarriage),
+        is_divorce_registered: Boolean(values.chkDivorce),
+        rights_auth_bank: values.chkLetter4 ? String(values.letterBank4 ?? '') : '',
+        rights_auth_qty: values.chkLetter4 ? toNullableNumber(values.letterQty4) : null,
+      }
+      return requestHistory.value
+    case '5':
+      requestEducationRecords.value = {
+        ...requestEducationRecords.value,
+        id: requestEducationRecords.value.id || generateUUID(),
+        request_id: documentRequest.value.id,
+        education_level: String(values.education_level ?? ''),
+        qualification: String(values.qualification ?? ''),
+        qualification_name: String(values.qualification_name ?? ''),
+        major_group: String(values.major_group ?? ''),
+        minor_group: String(values.minor_group ?? ''),
+        institution: String(values.institution ?? ''),
+        country: String(values.country ?? ''),
+        start_date: String(values.start_date ?? ''),
+        graduation_date: String(values.graduation_date ?? ''),
+        honor_type: String(values.honor_type ?? ''),
+        is_used_for_first_appointment: String(values['qualification-used'] ?? '').includes('บรรจุ'),
+        is_highest_degree: String(values['qualification-used'] ?? '').includes('สูงสุด'),
+        is_meets_position_standard: null,
+        is_recognized_by_kksa: null,
+        is_recognized_by_ocsc: null,
+      }
+      return requestEducationRecords.value
+    default:
+      return null
+  }
+}
+
+async function createDocumentType() {
+  const datasetId = 'document_create'
+  const version = 'v1.0.0'
+
+  documentRequest.value.id = generateUUID()
+  documentRequest.value.person_id = authStore.user?.id || ''
+  documentRequest.value.document_type = (getRequestTypeLabel() as DocumentRequest['document_type']) || null
+  documentRequest.value.created_at = new Date().toISOString()
+  documentRequest.value.updated_at = new Date().toISOString()
+
+  try {
+    await createDatasetRow(datasetId, version, documentRequest.value)
+    return documentRequest.value.id
+  } catch (error: any) {
+    console.error('Create Document Type API Error:', error)
+    console.error('Error Response:', error?.response?.data)
+    toast.error(`สร้างคำร้องไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
+      position: 'bottom-right',
+    })
+    throw error
+  }
+}
+
+async function uploadFile() {
+  const files = getSelectedFiles()
+  const params: CreateFileDocumentParams = {
+    path: 'file-req',
+    folder: 'file',
+    uploaded_by: getCurrentUserName(),
+    description: getRequestTypeLabel() || '-',
+  }
+
+  try {
+    const uploadedKeys: string[] = []
+
+    for (const file of files) {
+      const response = await createFileDocument<FileDocument>(file, params)
+      if (!response.data?.resource_id) {
+        throw new Error('อัปโหลดไฟล์ไม่สำเร็จ')
+      }
+      uploadedKeys.push(response.data.resource_id)
+    }
+
+    uploadedDocumentKeys.value = uploadedKeys
+    return uploadedKeys
+  } catch (error: any) {
+    console.error('Document Upload API Error:', error)
+    console.error('Error Response:', error?.response?.data)
+    toast.error(`อัปโหลดไฟล์ไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
+      position: 'bottom-right',
+    })
+    throw error
+  }
+}
+
+async function getFileTemplateType2() {
+  
+  try {
+    const response = await getFileDocumentRows('3a68b6bf-4631-4835-a77f-eff8da31a796')
+    console.log('getFileTemplateType2:', response.data)
+    urlDownload2.value = response.data?.url || ''
+    downloadFileName2.value = response.data?.original_filename || 'template-type-2'
+  } catch (error: any) {
+   
+    throw error
+  }
+}
+
+async function getFileTemplateType3() {
+  
+  try {
+    const response = await getFileDocumentRows('074053f7-0e7a-4870-9091-84f0cd945aed')
+    console.log('getFileTemplateType3:', response.data)
+    urlDownload3.value = response.data?.url || ''
+    downloadFileName3.value = response.data?.original_filename || 'template-type-3'
+  } catch (error: any) {
+    
+    throw error
+  }
+}
+async function getFileTemplateType4_1() {
+  
+  try {
+    const response = await getFileDocumentRows('cc01791c-658e-44ed-aa4a-ccb7be9418fe')
+    console.log('getFileTemplateType4_1:', response.data)
+    urlDownload4_1.value = response.data?.url || ''
+    downloadFileName4_1.value = response.data?.original_filename || 'template-type-4-1'
+  } catch (error: any) {
+    
+    throw error
+  }
+}
+async function getFileTemplateType4_2() {
+  
+  try {
+    const response = await getFileDocumentRows('99261424-7b09-48e9-820d-ffcb6115729c')
+    console.log('getFileTemplateType4_2:', response.data)
+    urlDownload4_2.value = response.data?.url || ''
+    downloadFileName4_2.value = response.data?.original_filename || 'template-type-4-2'
+  } catch (error: any) {
+    throw error
+  }
+}
+
+async function handleDownloadTemplate(fileUrl: string, fileName: string) {
+  if (!fileUrl) {
+    toast.error('ไม่พบไฟล์สำหรับดาวน์โหลด', {
+      position: 'bottom-right',
+    })
+    return
+  }
+
+  try {
+    await downloadTemplateFile(fileUrl, fileName || 'template')
+  } catch (error: any) {
+    toast.error(`ดาวน์โหลดไฟล์ไม่สำเร็จ: ${error?.message || 'เกิดข้อผิดพลาด'}`, {
+      position: 'bottom-right',
+    })
+  }
+}
+async function storeFile(documentIds: string[]) {
+  const datasetId = 'document_create'
+  const version = 'v1.1.0'
+
+  try {
+    for (const documentId of documentIds) {
+      documentLink.value = {
+        document_key: documentId,
+        entity_table: 'document_request',
+        entity_id: documentRequest.value.id,
+        purpose: getRequestTypeLabel(),
+        person_id: documentRequest.value.person_id,
+        created_at: new Date().toISOString(),
+      }
+
+      await createDatasetRow(datasetId, version, documentLink.value)
+    }
+  } catch (error: any) {
+    console.error('Store File API Error:', error)
+    console.error('Error Response:', error?.response?.data)
+    toast.error(`บันทึกลิงก์ไฟล์ไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
+      position: 'bottom-right',
+    })
+    throw error
+  }
+}
+
+async function createDocumentDetail(values: Record<string, any>) {
+  const data = buildDocumentDetailPayload(values)
+  const datasetId = 'document_create'
+  let version: 'v1.2.0' | 'v1.2.1' | 'v1.2.2' | null = null
+
+  switch (requestType.value) {
+    case '1':
+      version = 'v1.2.1'
+      break
+    case '4':
+      version = 'v1.2.2'
+      break
+    case '5':
+      version = 'v1.2.0'
+      break
+    default:
+      return null
+  }
+
+  if (!data || !version) {
+    return null
+  }
+
+  try {
+    await createDatasetRow(datasetId, version, data)
+    return data
+  } catch (error: any) {
+    console.error('Create Document Detail API Error:', error)
+    console.error('Error Response:', error?.response?.data)
+    toast.error(`บันทึกรายละเอียดคำร้องไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
+      position: 'bottom-right',
+    })
+    throw error
+  }
+}
+
+ type FileSelectOptions = {
   maxFiles?: number
 }
 
@@ -592,22 +1038,44 @@ const schema = computed(() => {
   return toTypedSchema(base)
 })
 
-function onSubmit(values: Record<string, any>) {
-  // build payload including actual fileMap entries
+
+
+async function onSubmit(values: Record<string, any>) {
+  isSubmitting.value = true
   const payload: Record<string, any> = { ...values }
-  // attach file lists
   payload.files = { ...fileMap.value }
 
-  // for now show a toast and log payload
   try {
     console.log(
       'CreateDocument submit payload:',
       JSON.parse(JSON.stringify(payload, getCircularReplacer())),
     )
-  } catch (e) {
+  } catch (_error) {
     // ignore
+     toast.error(`เกิดข้อผิดพลาด: ${_error}`, {
+      position: 'bottom-right',
+    })
   }
-  toast.success('Validated — payload ready (check console)')
+  try {
+    await createDocumentType()
+    const uploadedKeys = await uploadFile()
+    await storeFile(uploadedKeys)
+    if (requestType.value === '1' || requestType.value === '4' || requestType.value === '5') {
+      await createDocumentDetail(values)
+    }
+
+    toast.success('ยื่นคำร้องสำเร็จ', {
+      position: 'bottom-right',
+    })
+    resetCreateDocumentForm()
+  } catch (_error) {
+    // แต่ละฟังก์ชันจัดการ error toast ของตัวเองแล้ว
+     toast.error(`ยื่นคำร้องไม่สำเร็จ: ${_error}`, {
+      position: 'bottom-right',
+    })
+  } finally {
+    isSubmitting.value = false
+  }
 }
 
 // helper for safe JSON stringify (in case of File objects)
@@ -624,6 +1092,8 @@ function getCircularReplacer() {
   }
 }
 async function submitDocForm() {
+  if (isSubmitting.value) return
+
   // sync ค่าเข้า form ก่อน (เหมือนเดิม)
   formRef.value?.setFieldValue('requestType', requestType.value)
   formRef.value?.setFieldValue('salaryQty', salaryQty.value)
@@ -689,9 +1159,17 @@ async function submitDocForm() {
     })
   }
 
-  // 🔥 สำคัญ: ใช้ submitForm ของ form จริง
-  await formRef.value?.submitForm()
+  const formElement = document.getElementById('doc-form') as HTMLFormElement | null
+  formElement?.requestSubmit()
 }
+
+onMounted(() => {
+  getFileTemplateType2()
+  getFileTemplateType3()
+  getFileTemplateType4_1()
+  getFileTemplateType4_2()
+})
+
 </script>
 
 <template>
@@ -772,8 +1250,9 @@ async function submitDocForm() {
                     :model-value="field.value"
                     @update:model-value="
                       (v: any) => {
-                        field.onChange?.(v)
-                        salaryQty = String(v ?? '')
+                        const normalizedValue = normalizeStringInput(v)
+                        field.onChange?.(normalizedValue)
+                        salaryQty = normalizedValue
                       }
                     "
                     type="number"
@@ -813,8 +1292,9 @@ async function submitDocForm() {
                     :model-value="field.value"
                     @update:model-value="
                       (v: any) => {
-                        field.onChange?.(v)
-                        workQty = String(v ?? '')
+                        const normalizedValue = normalizeStringInput(v)
+                        field.onChange?.(normalizedValue)
+                        workQty = normalizedValue
                       }
                     "
                     type="number"
@@ -880,8 +1360,9 @@ async function submitDocForm() {
                     :model-value="field.value"
                     @update:model-value="
                       (v: any) => {
-                        field.onChange?.(v)
-                        letterQty = String(v ?? '')
+                        const normalizedValue = normalizeStringInput(v)
+                        field.onChange?.(normalizedValue)
+                        letterQty = normalizedValue
                       }
                     "
                     type="number"
@@ -978,7 +1459,7 @@ async function submitDocForm() {
                     <div
                       v-for="(file, i) in fileMap['slip']"
                       :key="i"
-                      class="border-muted bg-muted/50 flex h-10 w-max items-center gap-2 rounded-2xl border-2 p-2 text-sm"
+                      class="border-muted bg-muted/40 flex min-h-11 w-fit max-w-xl items-center gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
                     >
                       <span class="truncate">{{ file.name }}</span>
                       <span class="text-muted-foreground shrink-0 text-xs">{{
@@ -986,7 +1467,7 @@ async function submitDocForm() {
                       }}</span>
                       <button
                         type="button"
-                        class="hover:text-destructive text-muted-foreground rounded p-0.5"
+                        class="hover:text-destructive text-muted-foreground rounded p-0.5 cursor-pointer"
                         @click="removeFile('slip', i, field.onChange)"
                       >
                         <X class="h-3.5 w-3.5" />
@@ -1007,7 +1488,12 @@ async function submitDocForm() {
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <p class="mb-2 text-sm font-semibold">แบบฟอร์มเอกสารคำขอบัตรประจำตัว</p>
-                <Button type="button" class="cursor-pointer" variant="default">
+                <Button
+                  type="button"
+                  class="cursor-pointer"
+                  variant="default"
+                  @click="handleDownloadTemplate(urlDownload2, downloadFileName2)"
+                >
                   <FileText class="mr-1 h-4 w-4" /> ดาวโหลดไฟล์
                 </Button>
               </div>
@@ -1039,7 +1525,7 @@ async function submitDocForm() {
                     <div
                       v-for="(file, i) in fileMap['card-doc']"
                       :key="i"
-                      class="border-muted bg-muted/50 flex h-10 w-max items-center gap-2 rounded-2xl border-2 p-2 text-sm"
+                      class="border-muted bg-muted/40 flex min-h-11 w-fit max-w-xl items-center gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
                     >
                       <span class="truncate">{{ file.name }}</span>
                       <span class="text-muted-foreground shrink-0 text-xs">{{
@@ -1047,7 +1533,7 @@ async function submitDocForm() {
                       }}</span>
                       <button
                         type="button"
-                        class="hover:text-destructive text-muted-foreground rounded p-0.5"
+                        class="hover:text-destructive text-muted-foreground rounded p-0.5 cursor-pointer"
                         @click="removeFile('card-doc', i, field.onChange)"
                       >
                         <X class="h-3.5 w-3.5" />
@@ -1071,7 +1557,12 @@ async function submitDocForm() {
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <p class="mb-2 text-sm font-semibold">แบบฟอร์มเอกสารคำร้องขออนุญาตไปต่างประเทศ</p>
-                <Button type="button" class="cursor-pointer" variant="default">
+                <Button
+                  type="button"
+                  class="cursor-pointer"
+                  variant="default"
+                  @click="handleDownloadTemplate(urlDownload3, downloadFileName3)"
+                >
                   <FileText class="mr-1 h-4 w-4" /> ดาวโหลดไฟล์
                 </Button>
               </div>
@@ -1103,7 +1594,7 @@ async function submitDocForm() {
                     <div
                       v-for="(file, i) in fileMap['abroad-doc']"
                       :key="i"
-                      class="border-muted bg-muted/50 flex h-10 w-max items-center gap-2 rounded-2xl border-2 p-2 text-sm"
+                      class="border-muted bg-muted/40 flex min-h-11 w-fit  max-w-xl items-center gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
                     >
                       <span class="truncate">{{ file.name }}</span>
                       <span class="text-muted-foreground shrink-0 text-xs">{{
@@ -1111,7 +1602,7 @@ async function submitDocForm() {
                       }}</span>
                       <button
                         type="button"
-                        class="hover:text-destructive text-muted-foreground rounded p-0.5"
+                        class="hover:text-destructive text-muted-foreground rounded p-0.5 cursor-pointer"
                         @click="removeFile('abroad-doc', i, field.onChange)"
                       >
                         <X class="h-3.5 w-3.5" />
@@ -1197,7 +1688,12 @@ async function submitDocForm() {
                 <p class="mb-2 text-sm font-semibold">
                   แบบรายงานเปลี่ยนแปลงหรือเพิ่มเติมรายการลงในสมุดประวัติ
                 </p>
-                <Button type="button" class="cursor-pointer" variant="default">
+                <Button
+                  type="button"
+                  class="cursor-pointer"
+                  variant="default"
+                  @click="handleDownloadTemplate(urlDownload4_1, downloadFileName4_1)"
+                >
                   <FileText class="mr-1 h-4 w-4" /> ดาวโหลดไฟล์
                 </Button>
               </div>
@@ -1246,7 +1742,7 @@ async function submitDocForm() {
                     <div
                       v-for="(file, i) in fileMap['reason-doc']"
                       :key="i"
-                      class="border-muted bg-muted/50 flex h-10 w-max items-center gap-2 rounded-2xl border-2 p-2 text-sm"
+                      class="border-muted bg-muted/40 flex min-h-11 w-fit max-w-xl items-center gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
                     >
                       <span class="truncate">{{ file.name }}</span>
                       <span class="text-muted-foreground shrink-0 text-xs">{{
@@ -1254,7 +1750,7 @@ async function submitDocForm() {
                       }}</span>
                       <button
                         type="button"
-                        class="hover:text-destructive text-muted-foreground rounded p-0.5"
+                        class="hover:text-destructive text-muted-foreground rounded p-0.5 cursor-pointer"
                         @click="removeFile('reason-doc', i, field.onChange)"
                       >
                         <X class="h-3.5 w-3.5" />
@@ -1329,8 +1825,9 @@ async function submitDocForm() {
                     :model-value="field.value"
                     @update:model-value="
                       (v: any) => {
-                        field.onChange?.(v)
-                        letterQty4 = String(v ?? '')
+                        const normalizedValue = normalizeStringInput(v)
+                        field.onChange?.(normalizedValue)
+                        letterQty4 = normalizedValue
                       }
                     "
                     type="number"
@@ -1349,7 +1846,12 @@ async function submitDocForm() {
                 <p class="mb-2 text-sm font-semibold">
                   แบบคำขอเพิ่ม/ปรับปรุงข้อมูลในฐานข้อมูลบุคลากรภาครัฐ
                 </p>
-                <Button type="button" class="cursor-pointer" variant="default">
+                <Button
+                  type="button"
+                  class="cursor-pointer"
+                  variant="default"
+                  @click="handleDownloadTemplate(urlDownload4_2, downloadFileName4_2)"
+                >
                   <FileText class="mr-1 h-4 w-4" /> ดาวโหลดไฟล์
                 </Button>
               </div>
@@ -1383,7 +1885,7 @@ async function submitDocForm() {
                     <div
                       v-for="(file, i) in fileMap['letter-doc']"
                       :key="i"
-                      class="border-muted bg-muted/50 flex h-10 w-max items-center gap-2 rounded-2xl border-2 p-2 text-sm"
+                      class="border-muted bg-muted/40 flex min-h-11 w-fit max-w-xl items-center gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
                     >
                       <span class="truncate">{{ file.name }}</span>
                       <span class="text-muted-foreground shrink-0 text-xs">{{
@@ -1391,7 +1893,7 @@ async function submitDocForm() {
                       }}</span>
                       <button
                         type="button"
-                        class="hover:text-destructive text-muted-foreground rounded p-0.5"
+                        class="hover:text-destructive text-muted-foreground rounded p-0.5 cursor-pointer"
                         @click="removeFile('letter-doc', i, field.onChange)"
                       >
                         <X class="h-3.5 w-3.5" />
@@ -1649,7 +2151,7 @@ async function submitDocForm() {
                   <div
                     v-for="(file, i) in fileMap['education-request-doc']"
                     :key="i"
-                    class="border-muted bg-muted/50 flex h-10 w-max items-center gap-2 rounded-2xl border-2 p-2 text-sm"
+                    class="border-muted bg-muted/40 flex min-h-11 w-fit max-w-xl items-center gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
                   >
                     <span class="truncate">{{ file.name }}</span>
                     <span class="text-muted-foreground shrink-0 text-xs">{{
@@ -1657,7 +2159,7 @@ async function submitDocForm() {
                     }}</span>
                     <button
                       type="button"
-                      class="hover:text-destructive text-muted-foreground rounded p-0.5"
+                      class="hover:text-destructive text-muted-foreground rounded p-0.5 cursor-pointer"
                       @click="removeFile('education-request-doc', i, field.onChange)"
                     >
                       <X class="h-3.5 w-3.5" />
@@ -1683,14 +2185,16 @@ async function submitDocForm() {
     </Card>
   </div>
   <div
-    class="sticky right-0 bottom-0 z-40 flex w-full justify-end border-t border-gray-200 bg-white p-3"
+    class="sticky right-0 bottom-0 z-40 mt-8 flex w-full justify-end border-t border-gray-200 bg-white/95 px-6 py-4 backdrop-blur"
   >
     <Button
       type="button"
-      class="rounded-lg bg-[#16A34A] px-8 py-2 font-semibold text-white shadow-sm hover:bg-[#15803D]"
+      class="min-w-32 cursor-pointer rounded-xl bg-[#16A34A] px-8 py-2.5 font-semibold text-white shadow-sm hover:bg-[#15803D]"
+      :disabled="isSubmitting"
       @click="submitDocForm()"
     >
-      บันทึก
+      <Spinner v-if="isSubmitting" class="mr-2 h-4 w-4" />
+      ยื่นคำร้อง
     </Button>
   </div>
 </template>

@@ -9,7 +9,7 @@ import { computed, reactive } from 'vue'
 import { onMounted, ref, watch } from 'vue'
 import { toast } from 'vue-sonner'
 import { getDatasetRows } from '@/stores/dataset'
-
+import { formatDateThaiInput ,formatTime } from '@/lib/helpers'
 const loading = ref(false)
 const statusData = ref<Record<string, any>[]>([])
 async function trackStatusData() {
@@ -25,17 +25,8 @@ async function trackStatusData() {
     // contains a `document_requests` property. Support both shapes and fallback
     // to an empty array to avoid runtime errors.
     statusData.value = response?.data?.[0]?.document_requests ?? response?.data ?? []
-    console.log('Address API Response:', response)
-    console.log('Address Data:', response.data)
-    toast.success(`โหลดข้อมูลที่อยู่สำเร็จ (${response.total_rows} รายการ)`, {
-      position: 'bottom-right',
-    })
   } catch (error: any) {
-    console.error('Personal Detail API Error:', error)
-    console.error('Error Response:', error?.response?.data)
-    toast.error(`โหลดข้อมูลครอบครัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
-      position: 'bottom-right',
-    })
+    throw error
   } 
   loading.value = false
 }
@@ -46,15 +37,15 @@ onMounted(() => {
 })
 
 /* ──────────────────── Types ──────────────────── */
-type DocumentStatus = 'กำลังดำเนินการ' | 'เสร็จสิ้น' | 'ไม่ผ่าน'
+type DocumentStatus = 'กำลังดำเนินการ' | 'อนุมัติ' | 'ไม่อนุมัติ'
 
 /* ──────────────────── (example/mock data removed) ──────────────────── */
 
 /* ──────────────────── Status badge config ──────────────────── */
 const statusConfig: Record<DocumentStatus, { bg: string; text: string }> = {
   กำลังดำเนินการ: { bg: 'bg-amber-400 hover:bg-amber-400', text: 'text-white' },
-  เสร็จสิ้น: { bg: 'bg-green-500 hover:bg-green-500', text: 'text-white' },
-  ไม่ผ่าน: { bg: 'bg-red-500 hover:bg-red-500', text: 'text-white' },
+  อนุมัติ: { bg: 'bg-green-500 hover:bg-green-500', text: 'text-white' },
+  ไม่อนุมัติ: { bg: 'bg-red-500 hover:bg-red-500', text: 'text-white' },
 }
 
 function getStatusClass(status: unknown) {
@@ -119,7 +110,7 @@ function goToPage(page: number | string) {
                 :key="idx"
                 class="border-b last:border-b-0 hover:bg-muted/20 transition-colors"
               >
-                <td class="px-6 py-4 text-center">{{ item.type }}</td>
+                <td class="px-6 py-4 text-center">{{ item.document_type }}</td>
                 <td class="px-6 py-4 text-center">
                   <Badge
                     class="border-0 px-3 py-1 text-xs font-semibold"
@@ -128,7 +119,7 @@ function goToPage(page: number | string) {
                     {{ item.status }}
                   </Badge>
                 </td>
-                <td class="px-6 py-4 text-center">{{ item.datetime }}</td>
+                <td class="px-6 py-4 text-center"> {{ formatDateThaiInput(item.created_at) }} : {{ formatTime(item.created_at) }}</td>
               </tr>
             </tbody>
           </table>

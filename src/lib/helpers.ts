@@ -36,6 +36,23 @@ export const formatTime = (date: string | Date): string => {
   });
 };
 
+export const formatDateThaiInput = (date?: string | Date | null): string => {
+  if (!date) return "";
+
+  const formatDateParts = (value: string) => {
+    const [year, month, day] = value.split("-");
+    if (!year || !month || !day) return "";
+    return `${day}-${month}-${year}`;
+  };
+
+  if (typeof date === "string") {
+    return formatDateParts(date.split("T")[0] || "");
+  }
+
+  const isoString = date.toISOString();
+  return formatDateParts(isoString.split("T")[0] || "");
+};
+
 export const formatPrice = (price: number) => {
   return new Intl.NumberFormat("th-TH").format(price);
 };

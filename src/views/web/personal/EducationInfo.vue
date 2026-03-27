@@ -21,14 +21,10 @@ async function getEducationRecordData() {
     // Previously this used `response.data[0]` which is a single object and
     // caused a type/assignment mismatch with `educationData: Ref<Record<string, any>[]>`.
     educationData.value = response.data[0]?.education_records || []
-    console.log('Education API Response:', response)
-    console.log('Education Data:', educationData.value)
-    toast.success(`โหลดข้อมูลการศึกษาสำเร็จ (${response.total_rows} รายการ)`, {
-      position: 'bottom-right',
-    })
+
+   
   } catch (error: any) {
-    console.error('Personal Detail API Error:', error)
-    console.error('Error Response:', error?.response?.data)
+  
     toast.error(`โหลดข้อมูลครอบครัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
       position: 'bottom-right',
     })
@@ -54,41 +50,48 @@ onMounted(() => {
           label: 'ระดับการศึกษา',
           type: 'text',
           placeholder: '-',
+          disabled: true,
         },
         {
           name: 'qualification',
           label: 'วุฒิการศึกษา',
           type: 'text',
           placeholder: '-',
+          disabled: true,
         },
         {
           name: 'qualification_name',
           label: 'ชื่อวุฒิการศึกษา',
           type: 'text',
           placeholder: '-',
+          disabled: true,
         },
         {
           name: 'major_group',
           label: 'สาขาวิชาเอก',
           type: 'text',
           placeholder: '-',
+          disabled: true,
         },
         {
           name: 'minor_group',
           label: 'สาขาวิชาโท',
           type: 'text',
           placeholder: '-',
+          disabled: true,
         },
         {
           name: 'institution',
           label: 'สถานศึกษา',
           type: 'text',
           placeholder: '-',
+          disabled: true,
         },
         {
           name: 'start_date',
           label: 'วันที่เข้าศึกษา',
           type: 'date',
+          disabled: true,
           placeholder: '-',
         },
         {
@@ -96,11 +99,13 @@ onMounted(() => {
           label: 'วันที่สำเร็จการศึกษา',
           type: 'date',
           placeholder: '-',
+          disabled: true,
         },
         {
           name: 'country',
           label: 'ประเทศ',
           type: 'text',
+          disabled: true,
           placeholder: '-',
         },
         {
@@ -108,11 +113,13 @@ onMounted(() => {
           label: 'เกียรตินิยม',
           type: 'text',
           placeholder: '-',
+          disabled: true,
         },
         {
           name: 'qualification-used',
           label: 'วุฒิที่ใช้บรรจุ /วุฒิการศึกษาสูงสุด',
           type: 'text',
+          disabled: true,
           placeholder: '-',
         },
       ]"
