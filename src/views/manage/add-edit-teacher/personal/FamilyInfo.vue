@@ -1,208 +1,614 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import DropDownForm from '@/components/form/DropDownForm.vue'
-import { Button } from '@/components/ui/button'
-import { Plus, Trash2 } from 'lucide-vue-next'
-import { ROUTE_NAMES } from '@/lib/constants'
-import { createFamilyMember, useTeacherStore } from '@/stores/teachers'
-import type { FamilyMemberCreateDTO } from '@/types/teacher'
-import { useToast } from '@/composables/useToast'
+import CreateForm from '@/components/form/CreateForm.vue'
+import ConfirmModal from '@/components/ConfirmModal.vue'
+import provincesJson from '@/assets/thai-province-data/provinces.json'
+import districtsJson from '@/assets/thai-province-data/districts.json'
+import subDistrictsJson from '@/assets/thai-province-data/sub_districts.json'
+import {
+  createFamilyMember,
+  getFamilyById,
+  updateFamilyMember,
+  useTeacherStore,
+} from '@/stores/teachers'
+import type { District, Province, SubDistrict } from '@/types/address'
+import type { FamilyMember, FamilyMemberCreateDTO } from '@/types/teacher'
+import { onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
+import { toast } from 'vue-sonner'
 
-const router = useRouter()
+type CreateFormField = {
+  name: string
+  label?: string
+  type:
+    | 'text'
+    | 'date'
+    | 'date-range'
+    | 'select'
+    | 'combobox'
+    | 'number'
+    | 'email'
+    | 'textarea'
+    | 'file'
+  placeholder?: string
+  required?: boolean
+  disabled?: boolean
+  isShow?: boolean
+  options?: { label: string; value: any }[]
+  accept?: string
+  multiple?: boolean
+}
+
+type CreateFormSection = {
+  topic?: string
+  content: CreateFormField[]
+}
+
 const route = useRoute()
-const { showError, showSuccess } = useToast()
 const teacherStore = useTeacherStore()
 
-// Load personId from URL query on mount
-onMounted(() => {
-  const idFromUrl = route.query.id as string
-  if (idFromUrl && !teacherStore.personId) {
-    teacherStore.setPersonId(idFromUrl)
+const loading = ref(false)
+const familyData = ref<Record<string, any>[]>([])
+const familyFields = ref<CreateFormSection[][]>([])
+
+const action = ref('update')
+const modalTopic = ref('ข้อมูลครอบครัว')
+const modalValue = ref('')
+const confirmModal = ref(false)
+const pendingGroupIndex = ref<number | null>(null)
+const pendingValues = ref<Record<string, any>>({})
+
+const provinceData = provincesJson as Province[]
+const districtData = districtsJson as District[]
+const subDistrictData = subDistrictsJson as SubDistrict[]
+
+const provinceOptions = provinceData.map((province) => ({
+  label: province.name_th,
+  value: String(province.id),
+}))
+
+const provinceNameMap = new Map(provinceOptions.map((option) => [String(option.value), option.label]))
+const districtOptionsByProvince = new Map<string, { label: string; value: string }[]>()
+const districtNameMap = new Map<string, string>()
+const subDistrictOptionsByDistrict = new Map<string, { label: string; value: string }[]>()
+const subDistrictNameMap = new Map<string, string>()
+const postalCodeBySubDistrict = new Map<string, string>()
+
+districtData.forEach((district) => {
+  const provinceId = String(district.province_id)
+  const option = {
+    label: district.name_th,
+    value: String(district.id),
+  }
+
+  if (!districtOptionsByProvince.has(provinceId)) {
+    districtOptionsByProvince.set(provinceId, [])
+  }
+
+  districtOptionsByProvince.get(provinceId)!.push(option)
+  districtNameMap.set(option.value, option.label)
+})
+
+subDistrictData.forEach((subDistrict) => {
+  const districtId = String(subDistrict.district_id)
+  const option = {
+    label: subDistrict.name_th,
+    value: String(subDistrict.id),
+  }
+
+  if (!subDistrictOptionsByDistrict.has(districtId)) {
+    subDistrictOptionsByDistrict.set(districtId, [])
+  }
+
+  subDistrictOptionsByDistrict.get(districtId)!.push(option)
+  subDistrictNameMap.set(option.value, option.label)
+
+  if (subDistrict.zip_code) {
+    postalCodeBySubDistrict.set(option.value, String(subDistrict.zip_code))
   }
 })
 
-type EntryValues = Record<string, any>
-
-const entries = ref<EntryValues[]>([{}])
-const savingIndex = ref<number | null>(null)
-
-function addEntry() {
-  entries.value.push({})
+function cloneOptions(options?: { label: string; value: string }[]) {
+  return (options || []).map((option) => ({ ...option }))
 }
 
-function removeEntry(index: number) {
-  entries.value.splice(index, 1)
+function getDistrictOptions(provinceCode?: string) {
+  return cloneOptions(districtOptionsByProvince.get(String(provinceCode || '')) || [])
 }
 
-function handleEntryUpdate(index: number, values: Record<string, any>) {
-  entries.value[index] = { ...entries.value[index], ...values }
+function getSubDistrictOptions(districtCode?: string) {
+  return cloneOptions(subDistrictOptionsByDistrict.get(String(districtCode || '')) || [])
 }
 
-const prefixMap: Record<string, number> = { นาย: 1, นาง: 2, นางสาว: 3 }
+function normalizeText(value: unknown) {
+  const text = String(value ?? '').trim()
+  return text || undefined
+}
 
-async function saveEntry(index: number) {
-  const idFromUrl = route.query.id as string
+function normalizeAliveStatus(value: unknown) {
+  if (value === 'มีชีวิต') return true
+  if (value === 'ไม่มีชีวิต') return false
+  return Boolean(value)
+}
+
+function normalizeGender(value: unknown): FamilyMember['gender'] | undefined {
+  if (value === 'ชาย' || value === 'หญิง' || value === 'อื่นๆ') {
+    return value
+  }
+
+  return undefined
+}
+
+function mapFamilyMemberForForm(member: Partial<FamilyMember>) {
+  return {
+    ...member,
+    is_alive:
+      member.is_alive === undefined || member.is_alive === null
+        ? ''
+        : member.is_alive
+          ? 'มีชีวิต'
+          : 'ไม่มีชีวิต',
+    phone: member.phone ?? '',
+    email: member.email ?? '',
+    province_code: member.province_code ?? '',
+    district_code: member.district_code ?? '',
+    subdistrict_code: member.subdistrict_code ?? '',
+    province: member.province ?? '',
+    district: member.district ?? '',
+    subdistrict: member.subdistrict ?? '',
+    postal_code: member.postal_code ?? '',
+    moo: member.moo ?? '',
+    house_no: member.house_no ?? '',
+    road: member.road ?? '',
+    soi: member.soi ?? '',
+    building: member.building ?? '',
+  }
+}
+
+function getPersonId() {
+  const idFromUrl = route.query.id as string | undefined
   const personId = idFromUrl || teacherStore.personId
-  if (!personId) {
-    showError('ไม่พบข้อมูลครู', { description: 'กรุณากรอกข้อมูลส่วนบุคคลก่อน' })
-    return
+
+  if (idFromUrl && teacherStore.personId !== idFromUrl) {
+    teacherStore.setPersonId(idFromUrl)
   }
 
-  const v = entries.value[index]!
-  if (!v.first_name_th?.trim() || !v.last_name_th?.trim() || !v.relation_type) {
-    showError('กรุณากรอกความสัมพันธ์ ชื่อ และนามสกุล')
-    return
+  return personId
+}
+
+function generateUuid() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
   }
 
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (char) => {
+    const random = Math.floor(Math.random() * 16)
+    const value = char === 'x' ? random : (random & 0x3) | 0x8
+    return value.toString(16)
+  })
+}
+
+function createFamilyFields(values: Record<string, any>): CreateFormSection[] {
+  return [
+    {
+      topic: 'ข้อมูลส่วนตัว',
+      content: [
+        {
+          name: 'relation_type',
+          label: 'ความสัมพันธ์',
+          type: 'text',
+          isShow: true,
+          placeholder: 'เช่น บิดา / มารดา / คู่สมรส',
+        },
+        {
+          name: 'prefix_id',
+          label: 'คำนำหน้า',
+          type: 'text',
+          placeholder: 'เช่น นาย / นาง / นางสาว',
+        },
+        {
+          name: 'first_name_th',
+          label: 'ชื่อ',
+          type: 'text',
+          isShow: true,
+          placeholder: 'กรุณาระบุชื่อ',
+        },
+        {
+          name: 'last_name_th',
+          label: 'นามสกุล',
+          type: 'text',
+          isShow: true,
+          placeholder: 'กรุณาระบุนามสกุล',
+        },
+        {
+          name: 'former_last_name_th',
+          label: 'นามสกุลเดิม',
+          type: 'text',
+          placeholder: 'กรุณาระบุนามสกุลเดิม',
+        },
+        {
+          name: 'middle_name_th',
+          label: 'ชื่อกลาง',
+          type: 'text',
+          placeholder: 'กรุณาระบุชื่อกลาง',
+        },
+        {
+          name: 'national_id',
+          label: 'เลขบัตรประชาชน',
+          type: 'text',
+          placeholder: 'กรุณาระบุเลขบัตรประชาชน',
+        },
+        {
+          name: 'gender',
+          label: 'เพศ',
+          type: 'text',
+          placeholder: 'เช่น ชาย / หญิง',
+        },
+        {
+          name: 'is_alive',
+          label: 'การมีชีวิต',
+          type: 'text',
+          placeholder: 'เช่น มีชีวิต / ไม่มีชีวิต',
+        },
+        {
+          name: 'birth_date',
+          label: 'วัน / เดือน / ปี เกิด',
+          type: 'date',
+          placeholder: 'วว / ดด / ปปปป',
+        },
+        {
+          name: 'phone',
+          label: 'โทรศัพท์',
+          type: 'text',
+          required: true,
+          placeholder: '0xxxxxxxxx',
+        },
+        {
+          name: 'email',
+          label: 'อีเมล',
+          type: 'email',
+          required: true,
+          placeholder: 'เช่น name@example.com',
+        },
+        {
+          name: 'marital_status',
+          label: 'สถานภาพ',
+          type: 'text',
+          placeholder: 'เช่น โสด / สมรส',
+        },
+      ],
+    },
+    {
+      topic: 'ที่อยู่ตามทะเบียนบ้าน',
+      content: [
+        {
+          name: 'province_code',
+          label: 'จังหวัด',
+          type: 'combobox',
+          required: true,
+          placeholder: 'ค้นหาจังหวัด',
+          options: cloneOptions(provinceOptions),
+        },
+        {
+          name: 'district_code',
+          label: 'อำเภอ/เขต',
+          type: 'combobox',
+          required: true,
+          placeholder: 'ค้นหาอำเภอ/เขต',
+          options: getDistrictOptions(values.province_code),
+          disabled: !values.province_code,
+        },
+        {
+          name: 'subdistrict_code',
+          label: 'ตำบล/แขวง',
+          type: 'combobox',
+          required: true,
+          placeholder: 'ค้นหาตำบล/แขวง',
+          options: getSubDistrictOptions(values.district_code),
+          disabled: !values.district_code,
+        },
+        {
+          name: 'postal_code',
+          label: 'รหัสไปรษณีย์',
+          type: 'text',
+          required: true,
+          placeholder: 'กรุณาระบุรหัสไปรษณีย์',
+        },
+        {
+          name: 'road',
+          label: 'ถนน',
+          type: 'text',
+          placeholder: 'กรุณาระบุถนน',
+        },
+        {
+          name: 'soi',
+          label: 'ตรอก/ซอย',
+          type: 'text',
+          placeholder: 'กรุณาระบุตรอก/ซอย',
+        },
+        {
+          name: 'building',
+          label: 'หมู่บ้าน/อาคาร',
+          type: 'text',
+          placeholder: 'กรุณาระบุหมู่บ้านหรืออาคาร',
+        },
+        {
+          name: 'moo',
+          label: 'หมู่ที่',
+          type: 'text',
+          placeholder: 'กรุณาระบุหมู่ที่',
+        },
+        {
+          name: 'house_no',
+          label: 'บ้านเลขที่',
+          type: 'text',
+          required: true,
+          placeholder: 'กรุณาระบุบ้านเลขที่',
+        },
+      ],
+    },
+  ]
+}
+
+function setFamilyFieldsAt(index: number, values: Record<string, any>) {
+  const nextFields = [...familyFields.value]
+  nextFields[index] = createFamilyFields(values)
+  familyFields.value = nextFields
+}
+
+function syncFamilyAddress(index: number, incomingValues?: Record<string, any>) {
+  const currentValues = familyData.value[index] || {}
+  const values = {
+    ...currentValues,
+    ...incomingValues,
+  }
+
+  const previousProvinceCode = String(currentValues.province_code || '')
+  const previousDistrictCode = String(currentValues.district_code || '')
+  const previousSubDistrictCode = String(currentValues.subdistrict_code || '')
+  const nextProvinceCode = String(values.province_code || '')
+  const nextDistrictCode = String(values.district_code || '')
+
+  const provinceChanged = nextProvinceCode !== previousProvinceCode
+  const districtChanged = nextDistrictCode !== previousDistrictCode
+
+  if (provinceChanged) {
+    values.district_code = ''
+    values.district = ''
+    values.subdistrict_code = ''
+    values.subdistrict = ''
+    values.postal_code = ''
+  }
+
+  if (districtChanged) {
+    values.subdistrict_code = ''
+    values.subdistrict = ''
+    values.postal_code = ''
+  }
+
+  const resolvedProvinceCode = String(values.province_code || '')
+  const resolvedDistrictCode = String(values.district_code || '')
+  const resolvedSubDistrictCode = String(values.subdistrict_code || '')
+
+  values.province = provinceNameMap.get(resolvedProvinceCode) || ''
+  values.district = districtNameMap.get(resolvedDistrictCode) || ''
+  values.subdistrict = subDistrictNameMap.get(resolvedSubDistrictCode) || ''
+
+  if (resolvedSubDistrictCode) {
+    values.postal_code =
+      postalCodeBySubDistrict.get(resolvedSubDistrictCode) || values.postal_code || ''
+  }
+
+  familyData.value[index] = values
+
+  if (
+    provinceChanged ||
+    districtChanged ||
+    resolvedSubDistrictCode !== previousSubDistrictCode ||
+    !familyFields.value[index]
+  ) {
+    setFamilyFieldsAt(index, values)
+  }
+}
+
+function normalizeFamilyPayload(
+  currentMember: Record<string, any>,
+  values?: Record<string, any>,
+): Record<string, any> {
+  const mergedValues: Record<string, any> = {
+    ...currentMember,
+    ...values,
+  }
+
+  const provinceCode = String(mergedValues.province_code || '')
+  const districtCode = String(mergedValues.district_code || '')
+  const subDistrictCode = String(mergedValues.subdistrict_code || '')
+
+  return {
+    ...mergedValues,
+    province_code: provinceCode || undefined,
+    district_code: districtCode || undefined,
+    subdistrict_code: subDistrictCode || undefined,
+    province: provinceNameMap.get(provinceCode) || mergedValues.province || undefined,
+    district: districtNameMap.get(districtCode) || mergedValues.district || undefined,
+    subdistrict: subDistrictNameMap.get(subDistrictCode) || mergedValues.subdistrict || undefined,
+    postal_code:
+      mergedValues.postal_code || postalCodeBySubDistrict.get(subDistrictCode) || undefined,
+  }
+}
+
+async function getFamilyData() {
+  loading.value = true
   try {
-    savingIndex.value = index
-    const payload: FamilyMemberCreateDTO = {
-      person_id: personId,
-      relation_type: v.relation_type,
-      prefix_id: prefixMap[v.prefix_id] ?? undefined,
-      first_name_th: v.first_name_th.trim(),
-      middle_name_th: v.middle_name_th || undefined,
-      last_name_th: v.last_name_th.trim(),
-      former_last_name_th: v.former_last_name_th || undefined,
-      national_id: v.national_id || undefined,
-      gender: v.gender || undefined,
-      is_alive: v.is_alive !== undefined ? v.is_alive === 'มีชีวิต' || v.is_alive === true : undefined,
-      birth_date: v.birth_date || undefined,
-      phone: v.phone || undefined,
-      email: v.email || undefined,
-      marital_status: v.marital_status || undefined,
-      is_emergency_contact: v.is_emergency_contact === 'true' || v.is_emergency_contact === true,
-      house_no: v.house_no || undefined,
-      moo: v.moo || undefined,
-      building: v.building || undefined,
-      soi: v.soi || undefined,
-      road: v.road || undefined,
-      subdistrict: v.subdistrict || undefined,
-      district: v.district || undefined,
-      province: v.province || undefined,
-      postal_code: v.postal_code || undefined,
+    const personId = getPersonId()
+
+    if (!personId) {
+      familyData.value = []
+      familyFields.value = [createFamilyFields({})]
+      toast.error('ไม่พบข้อมูลครู กรุณาบันทึกข้อมูลส่วนบุคคลก่อน', {
+        position: 'bottom-right',
+      })
+      return
     }
-    await createFamilyMember(payload)
-    showSuccess(`บันทึกสมาชิกครอบครัวคนที่ ${index + 1} สำเร็จ`)
+
+    const response = await getFamilyById(personId)
+
+    familyData.value = (response.data?.family_members || []).map(
+      (member: FamilyMember) => mapFamilyMemberForForm(member),
+    )
+    familyFields.value = familyData.value.length
+      ? familyData.value.map((member) => createFamilyFields(member))
+      : [createFamilyFields({})]
   } catch (error: any) {
-    showError('ไม่สามารถบันทึกข้อมูลได้', {
-      description: error?.response?.data?.message || error?.message,
+    toast.error(`โหลดข้อมูลครอบครัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
+      position: 'bottom-right',
     })
   } finally {
-    savingIndex.value = null
+    loading.value = false
   }
 }
 
-const handleNext = () => {
-  const idFromUrl = route.query.id as string
-  const personId = idFromUrl || teacherStore.personId
-  router.push({ name: ROUTE_NAMES.ADD_TEACHER_EDUCATION, query: { id: personId } })
+function buildFamilyPayload(
+  source: Record<string, any>,
+  values?: Record<string, any>,
+  mode: 'create' | 'update' = 'update',
+): Partial<FamilyMember> & FamilyMemberCreateDTO {
+  const normalizedValues = normalizeFamilyPayload(source, values)
+  const now = new Date().toISOString()
+  const id = String(normalizedValues.id || source.id || generateUuid())
+
+  return {
+    ...source,
+    ...values,
+    id,
+    person_id: String(normalizedValues.person_id || ''),
+    relation_type: String(normalizedValues.relation_type || '').trim(),
+    prefix_id: normalizedValues.prefix_id,
+    first_name_th: String(normalizedValues.first_name_th || '').trim(),
+    middle_name_th: normalizeText(normalizedValues.middle_name_th),
+    last_name_th: String(normalizedValues.last_name_th || '').trim(),
+    former_last_name_th: normalizeText(normalizedValues.former_last_name_th),
+    national_id: normalizeText(normalizedValues.national_id),
+    gender: normalizeGender(normalizedValues.gender),
+    is_alive: normalizeAliveStatus(normalizedValues.is_alive),
+    birth_date: normalizeText(normalizedValues.birth_date),
+    phone: normalizeText(normalizedValues.phone),
+    email: normalizeText(normalizedValues.email),
+    marital_status: normalizeText(normalizedValues.marital_status),
+    house_no: normalizeText(normalizedValues.house_no),
+    moo: normalizeText(normalizedValues.moo),
+    building: normalizeText(normalizedValues.building),
+    soi: normalizeText(normalizedValues.soi),
+    road: normalizeText(normalizedValues.road),
+    province_code: normalizeText(normalizedValues.province_code),
+    district_code: normalizeText(normalizedValues.district_code),
+    subdistrict_code: normalizeText(normalizedValues.subdistrict_code),
+    province: normalizeText(normalizedValues.province),
+    district: normalizeText(normalizedValues.district),
+    subdistrict: normalizeText(normalizedValues.subdistrict),
+    postal_code: normalizeText(normalizedValues.postal_code),
+    created_at: mode === 'create' ? now : undefined,
+    updated_at: mode === 'update' ? now : undefined,
+  }
 }
 
-const handleBack = () => {
-  const idFromUrl = route.query.id as string
-  const personId = idFromUrl || teacherStore.personId
-  router.push({ name: ROUTE_NAMES.ADD_TEACHER_ADDRESS, query: { id: personId } })
+async function updateFamilyData(groupIndex: number, values?: Record<string, any>) {
+  const currentMember = familyData.value[groupIndex]
+  const personId = getPersonId()
+
+  loading.value = true
+
+  try {
+    if (!personId) {
+      toast.error('ไม่พบข้อมูลครู กรุณาบันทึกข้อมูลส่วนบุคคลก่อน', {
+        position: 'bottom-right',
+      })
+      return
+    }
+
+    const source = {
+      ...(currentMember || {}),
+      person_id: currentMember?.person_id || personId,
+    }
+
+    if (currentMember?.id) {
+      const payload = buildFamilyPayload(source, values, 'update')
+      await updateFamilyMember(currentMember.id, payload)
+      familyData.value[groupIndex] = mapFamilyMemberForForm({
+        ...currentMember,
+        ...payload,
+      })
+      setFamilyFieldsAt(groupIndex, familyData.value[groupIndex])
+    } else {
+      const payload = buildFamilyPayload(source, values, 'create')
+      await createFamilyMember(payload)
+      await getFamilyData()
+    }
+
+    toast.success('บันทึกข้อมูลครอบครัวสำเร็จ', {
+      position: 'bottom-right',
+    })
+  } catch (error: any) {
+    console.error('Family API Error:', error)
+    console.error('Error Response:', error?.response?.data)
+    toast.error(`อัปเดตข้อมูลครอบครัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
+      position: 'bottom-right',
+    })
+  } finally {
+    loading.value = false
+  }
 }
+
+function updateData(confirmed: boolean) {
+  if (confirmed && pendingGroupIndex.value !== null) {
+    void updateFamilyData(pendingGroupIndex.value, pendingValues.value)
+  }
+  pendingGroupIndex.value = null
+  pendingValues.value = {}
+  confirmModal.value = false
+}
+
+function handleChange(groupIndex: number, values?: Record<string, any>) {
+  syncFamilyAddress(groupIndex, values)
+}
+
+function handleSave(groupIndex: number, values?: Record<string, any>) {
+  syncFamilyAddress(groupIndex, values)
+  pendingGroupIndex.value = groupIndex
+  pendingValues.value = values || {}
+  action.value = familyData.value[groupIndex]?.id ? 'update' : 'create'
+  modalValue.value =
+    [familyData.value[groupIndex]?.first_name_th, familyData.value[groupIndex]?.last_name_th]
+      .filter(Boolean)
+      .join(' ') || familyData.value[groupIndex]?.relation_type || ''
+  confirmModal.value = true
+}
+
+onMounted(() => {
+  getPersonId()
+  void getFamilyData()
+})
 </script>
 
 <template>
-  <div class="mx-6 flex flex-col gap-4 pb-24">
-    <p class="text-sm text-muted-foreground">รูปแบบฟอร์มสอดคล้องกับข้อมูลครอบครัวในหน้าข้อมูลส่วนบุคคล</p>
-    <div v-for="(entry, index) in entries" :key="index" class="relative">
-      <DropDownForm
-        :topic="`สมาชิกครอบครัวคนที่ ${index + 1}`"
-        :values="entry"
-        @change="(payload) => handleEntryUpdate(index, payload.values)"
-        :fields="[
-          {
-            name: 'relation_type', label: 'ความสัมพันธ์', type: 'select', required: true,
-            placeholder: 'เลือกความสัมพันธ์',
-            options: [
-              { label: 'บิดา', value: 'father' },
-              { label: 'มารดา', value: 'mother' },
-              { label: 'คู่สมรส', value: 'spouse' },
-              { label: 'บุตร', value: 'child' },
-              { label: 'อื่นๆ', value: 'other' },
-            ],
-          },
-          {
-            name: 'prefix_id', label: 'คำนำหน้า', type: 'select', placeholder: 'เลือกคำนำหน้า',
-            options: [
-              { label: 'นาย', value: 'นาย' },
-              { label: 'นาง', value: 'นาง' },
-              { label: 'นางสาว', value: 'นางสาว' },
-            ],
-          },
-          { name: 'first_name_th', label: 'ชื่อ', type: 'text', required: true, placeholder: 'กรุณาระบุชื่อ' },
-          { name: 'last_name_th', label: 'นามสกุล', type: 'text', required: true, placeholder: 'กรุณาระบุนามสกุล' },
-          { name: 'middle_name_th', label: 'ชื่อกลาง', type: 'text', placeholder: 'กรุณาระบุชื่อกลาง' },
-          { name: 'former_last_name_th', label: 'นามสกุลเดิม', type: 'text', placeholder: 'กรุณาระบุนามสกุลเดิม' },
-          { name: 'national_id', label: 'เลขบัตรประชาชน', type: 'text', placeholder: 'กรุณาระบุเลขบัตรประชาชน' },
-          {
-            name: 'gender', label: 'เพศ', type: 'select', placeholder: 'เลือกเพศ',
-            options: [{ label: 'ชาย', value: 'male' }, { label: 'หญิง', value: 'female' }],
-          },
-          {
-            name: 'is_alive', label: 'การมีชีวิต', type: 'select', placeholder: 'เลือก',
-            options: [{ label: 'มีชีวิต', value: 'มีชีวิต' }, { label: 'ไม่มีชีวิต', value: 'ไม่มีชีวิต' }],
-          },
-          { name: 'birth_date', label: 'วันเกิด', type: 'date', placeholder: 'วว / ดด / ปปปป' },
-          { name: 'phone', label: 'โทรศัพท์', type: 'text', required: true, placeholder: '0xxxxxxxxx' },
-          { name: 'email', label: 'อีเมล', type: 'email', required: true, placeholder: 'example@email.com' },
-          {
-            name: 'marital_status', label: 'สถานภาพ', type: 'select', placeholder: 'เลือก',
-            options: [
-              { label: 'โสด', value: 'โสด' },
-              { label: 'สมรส', value: 'สมรส' },
-              { label: 'หย่า', value: 'หย่า' },
-              { label: 'หม้าย', value: 'หม้าย' },
-            ],
-          },
-          { name: 'province', label: 'จังหวัด', type: 'text', required: true, placeholder: 'กรุณาระบุจังหวัด' },
-          { name: 'district', label: 'อำเภอ/เขต', type: 'text', required: true, placeholder: 'กรุณาระบุอำเภอ/เขต' },
-          { name: 'subdistrict', label: 'ตำบล/แขวง', type: 'text', required: true, placeholder: 'กรุณาระบุตำบล/แขวง' },
-          { name: 'postal_code', label: 'รหัสไปรษณีย์', type: 'text', required: true, placeholder: 'กรุณาระบุรหัสไปรษณีย์' },
-          { name: 'road', label: 'ถนน', type: 'text', placeholder: 'กรุณาระบุถนน' },
-          { name: 'soi', label: 'ตรอก/ซอย', type: 'text', placeholder: 'กรุณาระบุตรอก/ซอย' },
-          { name: 'building', label: 'หมู่บ้าน/อาคาร', type: 'text', placeholder: 'กรุณาระบุหมู่บ้าน/อาคาร' },
-          { name: 'moo', label: 'หมู่ที่', type: 'text', required: true, placeholder: 'กรุณาระบุหมู่ที่' },
-          { name: 'house_no', label: 'บ้านเลขที่', type: 'text', required: true, placeholder: 'กรุณาระบุบ้านเลขที่' },
-        ]"
-      />
-      <div class="mt-2 flex justify-end gap-2">
-        <Button
-          v-if="entries.length > 1"
-          variant="outline"
-          size="sm"
-          class="text-destructive border-destructive hover:bg-destructive/10"
-          @click="removeEntry(index)"
-        >
-          <Trash2 class="mr-1 h-4 w-4" /> ลบ
-        </Button>
-        <Button
-          size="sm"
-          class="bg-[#16A34A] text-white hover:bg-[#15803D]"
-          :disabled="savingIndex === index"
-          @click="saveEntry(index)"
-        >
-          {{ savingIndex === index ? 'กำลังบันทึก...' : 'บันทึกรายการนี้' }}
-        </Button>
-      </div>
-    </div>
+  <div class="mx-6 flex flex-col gap-4">
+    <p v-if="loading" class="text-sm text-muted-foreground">กำลังโหลดข้อมูล...</p>
 
-    <Button variant="outline" class="w-full border-dashed" @click="addEntry">
-      <Plus class="mr-2 h-4 w-4" /> เพิ่มสมาชิกครอบครัว
-    </Button>
+    <CreateForm
+      :isDropdown="true"
+      :deferCommitOnSave="true"
+      :values="familyData"
+      :canDelete="false"
+      :fields="familyFields"
+      @change="handleChange"
+      @save="handleSave"
+    />
   </div>
 
-  <div class="sticky bottom-0 right-0 z-40 flex w-full justify-end border-t border-gray-200 bg-white p-3">
-    <Button variant="outline" class="mr-2" @click="handleBack">
-      ย้อนกลับ
-    </Button>
-    <Button class="rounded-lg bg-[#16A34A] px-8 py-2 font-semibold text-white shadow-sm hover:bg-[#15803D]" @click="handleNext">
-      ถัดไป
-    </Button>
-  </div>
+  <ConfirmModal
+    v-if="confirmModal"
+    :action="action"
+    :topic="modalTopic"
+    :value="modalValue"
+    @confirm="updateData"
+  />
 </template>

@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 import { ChevronUp, CalendarIcon, X } from 'lucide-vue-next'
 
+import { Checkbox } from '@/components/ui/checkbox'
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -26,7 +27,7 @@ import { ref, computed, watch } from 'vue'
 type FieldItem = {
   name: string
   label?: string
-  type: 'text' | 'date' | 'select' | 'number' | 'email' | 'textarea' | 'file'
+  type: 'text' | 'date' | 'select' | 'number' | 'email' | 'textarea' | 'file' | 'checkbox'
   placeholder?: string
   required?: boolean
   disabled?: boolean
@@ -56,6 +57,15 @@ const schema = computed(() => {
     .forEach((field) => {
       const label = field.label || field.name
       const baseRequiredMessage = `${label} จำเป็นต้องกรอก`
+
+      if (field.type === 'checkbox') {
+        shape[field.name] = field.required
+          ? z.boolean().refine((value) => value === true, {
+              message: `${label} จำเป็นต้องเลือก`,
+            })
+          : z.boolean().optional()
+        return
+      }
 
       const allowEmptyString = <T extends z.ZodTypeAny>(validator: T) =>
         validator.optional().or(z.literal(''))
@@ -99,6 +109,12 @@ function buildValuesFromProps() {
   const result: Record<string, any> = {}
   ;(props.fields || []).forEach((field) => {
     const incoming = props.values?.[field.name]
+
+    if (field.type === 'checkbox') {
+      result[field.name] = incoming === true || incoming === 'true'
+      return
+    }
+
     result[field.name] = incoming ?? ''
   })
   return result
@@ -395,6 +411,28 @@ function formatDisplayDate(str: string | undefined): string {
                       </SelectItem>
                     </SelectContent>
                   </Select>
+
+                  <div
+                    v-else-if="fieldItem.type === 'checkbox'"
+                    class="flex min-h-9 items-center gap-3 px-3"
+                  >
+                    <Checkbox
+                      :id="`form-field-${fieldItem.name}`"
+                      :model-value="Boolean(field.value)"
+                      :disabled="fieldItem.disabled"
+                      @update:model-value="
+                        (val: boolean | 'indeterminate') =>
+                          field['onUpdate:modelValue']?.(val === true)
+                      "
+                    />
+                    <label
+                      :for="`form-field-${fieldItem.name}`"
+                      class="cursor-pointer text-sm text-muted-foreground"
+                      :class="{ 'cursor-not-allowed opacity-50': fieldItem.disabled }"
+                    >
+                      {{ fieldItem.placeholder || fieldItem.label || fieldItem.name }}
+                    </label>
+                  </div>
 
                   <!-- textarea -->
                   <Textarea

@@ -162,6 +162,7 @@ export interface TeacherCreateDTO {
   marital_status?: string
   spouse_name?: string
   appointment_type_id?: number
+  line_id?: string
   created_at?: string
   updated_at?: string
 }
@@ -192,9 +193,10 @@ export interface PersonAddressCreateDTO {
 }
 
 export interface FamilyMemberCreateDTO {
+  id?: string
   person_id: string
   relation_type: string
-  prefix_id?: number
+  prefix_id?: number | string
   first_name_th: string
   middle_name_th?: string
   last_name_th: string
@@ -212,10 +214,15 @@ export interface FamilyMemberCreateDTO {
   building?: string
   soi?: string
   road?: string
+  subdistrict_code?: string
   subdistrict?: string
+  district_code?: string
   district?: string
+  province_code?: string
   province?: string
   postal_code?: string
+  created_at?: string
+  updated_at?: string
 }
 
 export interface EducationRecordCreateDTO {

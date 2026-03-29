@@ -12,6 +12,7 @@ import { ref, readonly } from 'vue'
 import type { DatasetListResponse, DatasetRowResponse, DatasetQueryParams } from '@/types/dataset'
 import type {
   PersonData,
+  FamilyMember,
   TeacherCreateDTO,
   TeacherUpdateDTO,
   PersonAddressCreateDTO,
@@ -24,8 +25,8 @@ import type { PersonAddress } from '@/types/address'
 // TODO: Replace with the correct dataset IDs once configured in the DMS backend
 const ADDRESS_DATASET_ID = 'data_manage'
 const ADDRESS_DATASET_VERSION = 'v2.0.1'
-const FAMILY_DATASET_ID = DATASET_ID
-const FAMILY_DATASET_VERSION = 'v3.0.0'
+const FAMILY_DATASET_ID = 'data_manage'
+const FAMILY_DATASET_VERSION = 'v4.0.0'
 const EDUCATION_DATASET_ID = DATASET_ID
 const EDUCATION_DATASET_VERSION = 'v4.0.0'
 const LICENSE_DATASET_ID = DATASET_ID
@@ -61,6 +62,20 @@ export async function getAddressById(
     DATASET_VERSION,
     teacherId,
     'personal_address',
+  )
+}
+
+/**
+ * Get family data for a single teacher by ID
+ */
+export async function getFamilyById(
+  teacherId: string,
+): Promise<DatasetRowResponse<{ family_members?: FamilyMember[] }>> {
+  return getDatasetRowByKey<{ family_members?: FamilyMember[] }>(
+    DATASET_ID,
+    DATASET_VERSION,
+    teacherId,
+    'personal_family',
   )
 }
 
@@ -116,6 +131,21 @@ export async function createFamilyMember(
   data: FamilyMemberCreateDTO,
 ): Promise<DatasetRowResponse<any>> {
   return createDatasetRow(FAMILY_DATASET_ID, FAMILY_DATASET_VERSION, data)
+}
+
+/**
+ * Update a family member by row ID
+ */
+export async function updateFamilyMember(
+  familyMemberId: string,
+  data: Partial<FamilyMember>,
+): Promise<DatasetRowResponse<FamilyMember>> {
+  return updateDatasetRow<FamilyMember>(
+    FAMILY_DATASET_ID,
+    FAMILY_DATASET_VERSION,
+    familyMemberId,
+    data,
+  )
 }
 
 /**
