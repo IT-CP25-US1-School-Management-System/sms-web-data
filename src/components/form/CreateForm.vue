@@ -32,7 +32,16 @@ import { computed, ref, watch } from 'vue'
 type FieldItem = {
   name: string
   label?: string
-  type: 'text' | 'date' | 'date-range' | 'select' | 'number' | 'email' | 'textarea' | 'file'
+  type:
+    | 'text'
+    | 'date'
+    | 'date-range'
+    | 'select'
+    | 'combobox'
+    | 'number'
+    | 'email'
+    | 'textarea'
+    | 'file'
   placeholder?: string
   required?: boolean
   disabled?: boolean
@@ -175,6 +184,7 @@ function buildSchemas() {
 const emit = defineEmits<{
   (e: 'save', index: number, values: Record<string, any>): void
   (e: 'delete', index: number, id?: string): void
+  (e: 'change', index: number, values: Record<string, any>): void
 }>()
 
 // localEntries: FieldSection[][] — แต่ละ entry คือ 1 การ์ด ที่มีหลาย section
@@ -271,8 +281,8 @@ function syncFileMapFromValues() {
 watch(
   [() => props.fields, () => props.values],
   ([fields, values]) => {
-    // 1) หากยังไม่มี template ให้ clone จาก props.fields (ครั้งแรกที่ mount)
-    if (fields && localEntries.value.length === 0) {
+    // 1) sync field templates from parent every time so dynamic options/disabled states stay fresh
+    if (fields?.length) {
       localEntries.value = JSON.parse(JSON.stringify(fields))
     }
 
@@ -533,15 +543,43 @@ function updateEntryValue(entryIndex: number, fieldName: string, value: any) {
   while (localValues.value.length <= entryIndex) localValues.value.push({})
   while (entryTouchedStates.value.length <= entryIndex) entryTouchedStates.value.push(false)
   const current = localValues.value[entryIndex] || {}
-  localValues.value[entryIndex] = {
+  const nextValues = {
     ...current,
     [fieldName]: value,
   }
+  localValues.value[entryIndex] = nextValues
   entryTouchedStates.value[entryIndex] = true
+  emit('change', entryIndex, { ...nextValues })
 }
 
 function getAllFields(entryIndex: number): FieldItem[] {
   return (localEntries.value[entryIndex] || []).flatMap((section) => section.content || [])
+}
+
+const comboboxOpen = ref<Record<string, boolean>>({})
+const comboboxQuery = ref<Record<string, string>>({})
+
+function getComboboxKey(entryIndex: number, fieldName: string) {
+  return `${entryIndex}-${fieldName}`
+}
+
+function getComboboxOptions(entryIndex: number, field: FieldItem) {
+  const key = getComboboxKey(entryIndex, field.name)
+  const query = (comboboxQuery.value[key] || '').trim().toLowerCase()
+  const options = field.options || []
+  if (!query) return options
+
+  return options.filter((opt) => {
+    const label = String(opt.label).toLowerCase()
+    const value = String(opt.value).toLowerCase()
+    return label.includes(query) || value.includes(query)
+  })
+}
+
+function getOptionLabel(field: FieldItem, value: unknown) {
+  if (!field.options?.length || value === undefined || value === null) return ''
+  const match = field.options.find((opt) => String(opt.value) === String(value))
+  return match?.label || ''
 }
 
 function normalizeComparableValue(value: any): any {
@@ -1082,6 +1120,69 @@ function formatDisplayDateRange(str: string | undefined): string {
                                 </SelectItem>
                               </SelectContent>
                             </Select>
+
+                            <Popover
+                              v-else-if="fieldItem.type === 'combobox'"
+                              v-model:open="
+                                comboboxOpen[getComboboxKey(entryIndex, fieldItem.name)]
+                              "
+                            >
+                              <PopoverTrigger as-child>
+                                <Button
+                                  :id="`form-field-${fieldItem.name}`"
+                                  variant="outline"
+                                  :disabled="fieldItem.disabled"
+                                  :class="[
+                                    'w-full justify-between text-left font-normal',
+                                    !veeField.value && 'text-muted-foreground',
+                                    fieldItem.disabled && 'opacity-50',
+                                  ]"
+                                >
+                                  <span class="truncate">
+                                    {{
+                                      getOptionLabel(fieldItem, veeField.value) ||
+                                      fieldItem.placeholder ||
+                                      'ค้นหา/เลือก'
+                                    }}
+                                  </span>
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent class="w-65 p-0" align="start">
+                                <div class="p-2">
+                                  <Input
+                                    :placeholder="fieldItem.placeholder || 'พิมพ์เพื่อค้นหา...'"
+                                    v-model="
+                                      comboboxQuery[getComboboxKey(entryIndex, fieldItem.name)]
+                                    "
+                                    autocomplete="off"
+                                  />
+                                </div>
+                                <div class="max-h-60 overflow-y-auto py-1">
+                                  <button
+                                    v-for="opt in getComboboxOptions(entryIndex, fieldItem)"
+                                    :key="opt.value"
+                                    type="button"
+                                    class="hover:bg-muted flex w-full items-center justify-between px-3 py-2 text-sm"
+                                    @click="
+                                      () => {
+                                        veeField['onUpdate:modelValue']?.(opt.value)
+                                        updateEntryValue(entryIndex, fieldItem.name, opt.value)
+                                        comboboxOpen[getComboboxKey(entryIndex, fieldItem.name)] = false
+                                        comboboxQuery[getComboboxKey(entryIndex, fieldItem.name)] = ''
+                                      }
+                                    "
+                                  >
+                                    <span class="truncate">{{ opt.label }}</span>
+                                  </button>
+                                  <p
+                                    v-if="!getComboboxOptions(entryIndex, fieldItem).length"
+                                    class="text-muted-foreground px-3 py-2 text-sm"
+                                  >
+                                    ไม่พบข้อมูล
+                                  </p>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
 
                             <!-- textarea -->
                             <Textarea
