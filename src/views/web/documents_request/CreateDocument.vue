@@ -31,6 +31,8 @@ import type { CreateFileDocumentParams, FileDocument } from '@/types/document'
 import type { DocumentRequest ,DocumentLink ,RequestEducationRecords ,RequestGeneral ,RequestHistory } from '@/types/document_request'
 import { getFileDocumentRows } from '@/stores/document'
 import { FILE_KEY_TEMPLATES } from '@/lib/constants'
+import {  DOCUMENT_EDIT } from '@/lib/constants'
+
 /* ──────────────────── ประเภทคำร้อง ──────────────────── */
 const requestTypeOptions = [
   { label: 'คำร้องขอเอกสาร', value: '1' },
@@ -386,8 +388,8 @@ function buildDocumentDetailPayload(values: Record<string, any>) {
 }
 
 async function createDocumentType() {
-  const datasetId = 'document_create'
-  const version = 'v1.0.0'
+  const datasetId =  DOCUMENT_EDIT.DATASET_ID //'document_create'
+  const version = DOCUMENT_EDIT.DATASET_VERSION_DOCUMENT_REQUEST //'v1.0.0'
 
   documentRequest.value.id = generateUUID()
   documentRequest.value.person_id = authStore.user?.id || ''
@@ -506,8 +508,8 @@ async function handleDownloadTemplate(fileUrl: string, fileName: string) {
   }
 }
 async function storeFile(documentIds: string[]) {
-  const datasetId = 'document_create'
-  const version = 'v1.1.0'
+  const datasetId =  DOCUMENT_EDIT.DATASET_ID //'document_create'
+  const version = DOCUMENT_EDIT.DATASET_VERSION_DOCUMENT_LINK //'v1.1.0'
 
   try {
     for (const documentId of documentIds) {
@@ -534,7 +536,7 @@ async function storeFile(documentIds: string[]) {
 
 async function createDocumentDetail(values: Record<string, any>) {
   const data = buildDocumentDetailPayload(values)
-  const datasetId = 'document_create'
+  const datasetId =  DOCUMENT_EDIT.DATASET_ID //'document_create'
   let version: 'v1.2.0' | 'v1.2.1' | 'v1.2.2' | null = null
 
   switch (requestType.value) {

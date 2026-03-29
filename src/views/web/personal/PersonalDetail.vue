@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import DropDownForm from '@/components/form/DropDownForm.vue'
 import { Button } from '@/components/ui/button'
-import { DATASET_GET } from '@/lib/constants'
 import { getDatasetRows ,updateDatasetRow } from '@/stores/dataset'
 import { onMounted, ref ,computed } from 'vue'
 import { toast } from 'vue-sonner'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import type { PersonData } from '@/types/teacher'
 import {calAge ,formatDateInput} from '@/lib/helpers.ts'
+import { DATASET_EDIT, DATASET_GET } from '@/lib/constants'
+
 const loading = ref(false)
 const personalData = ref<Record<string, any>>({})
 const personalDataUpdate = ref<PersonData>({
@@ -41,6 +42,7 @@ async function getPersonalDetailData() {
       per_page: 50,
     })
     personalData.value = response.data[0] || {}
+    console.log('Personal Detail API Response:', response.data[0])
     personalData.value.birth_date = formatDateInput(personalData.value.birth_date)
     personalDataUpdate.value = {...personalData.value} as PersonData
     personalData.value.prefix_id = response.data[0]?.prefixes?.prefixes_name_th || ''
@@ -57,8 +59,8 @@ async function getPersonalDetailData() {
 
 async function updateDataPersonalDetail() {
   loading.value = true
-  const datasetId = 'data_update_view'
-  const version = 'v1.0.0'
+  const datasetId = DATASET_EDIT.DATASET_ID
+  const version = DATASET_EDIT.DATASET_VERSION_PERSONAL_DETAIL //'v1.0.0'
 
   try {
     const response = await updateDatasetRow(
@@ -97,7 +99,7 @@ function updateData(action:boolean) {
     const now = new Date().toISOString()
     personalDataUpdate.value = {
     ...personalDataUpdate.value,
-    department_id: +personalData.value.department_id?.toString() || 0,
+    department_id: +personalData.value.department_id?.toString() || null,
     updated_at: now,
   }
    updateDataPersonalDetail()
@@ -146,7 +148,7 @@ const isSaveDisabled = computed(() => loading.value|| !hasAnyChanges.value )
   <div class="flex flex-col gap-4 mx-6">
     <!-- ข้อมูลทั่วไป -->
     <DropDownForm
-      topic="ข้อมูลทั่วไป  แก้ไม่ได้  ยกเว้นช่องทางการติดต่อ update ไดเ"
+      topic="ข้อมูลทั่วไป"
       :values="personalData"
       ref="generalForm"
       @save="(data) => handleSave(data, 'generalForm')"

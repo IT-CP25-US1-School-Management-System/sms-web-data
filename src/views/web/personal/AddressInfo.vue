@@ -4,7 +4,7 @@ import NormalForm, {
   type NormalFormChangePayload,
   type NormalFormOption,
 } from '@/components/form/NormalForm.vue'
-import { DATASET_GET } from '@/lib/constants'
+import { DATASET_GET ,DATASET_EDIT } from '@/lib/constants'
 import { Button } from '@/components/ui/button'
 import { getDatasetRows , updateDatasetRow } from '@/stores/dataset'
 import ConfirmModal from '@/components/ConfirmModal.vue'
@@ -326,8 +326,8 @@ async function getAddressData() {
 
 async function updateAddressData() {
   loading.value = true
-  const datasetId = 'data_update_view'
-  const version = 'v1.1.0'
+  const datasetId = DATASET_EDIT.DATASET_ID
+  const version = DATASET_EDIT.DATASET_VERSION_ADDRESS
 
   try {
     const response = await updateDatasetRow(

@@ -37,7 +37,7 @@ const topic = computed(() => {
         <DialogHeader>
           <DialogTitle>{{ topic }} {{ props.topic }}</DialogTitle>
           <DialogDescription>
-            ท่านกำลังจะ {{ topic }} ข้อมูล {{ props.value ? `ของ ${props.value}` : '' }} กรุณายืนยันการดำเนินการ
+            ท่านกำลังจะ{{ topic }} ข้อมูล{{ props.value ? `ของ ${props.value}` : '' }} กรุณายืนยันการดำเนินการ
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>

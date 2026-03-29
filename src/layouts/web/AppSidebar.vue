@@ -230,13 +230,6 @@ const menuConfig: {
   ],
   settings: [
     {
-      id: 'settings',
-      label: 'ตั้งค่าระบบ',
-      icon: Settings,
-      routeName: ROUTE_NAMES.SETTINGS,
-      children: null,
-    },
-    {
       id: 'profile',
       label: 'โปรไฟล์',
       icon: User,
@@ -460,10 +453,6 @@ const handleLogout = async () => {
                 <DropdownMenuItem @click="router.push({ name: ROUTE_NAMES.PROFILE })">
                   <User class="mr-2 h-4 w-4" />
                   โปรไฟล์
-                </DropdownMenuItem>
-                <DropdownMenuItem @click="router.push({ name: ROUTE_NAMES.SETTINGS })">
-                  <Settings class="mr-2 h-4 w-4" />
-                  ตั้งค่า
                 </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />

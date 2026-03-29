@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import CreateForm from '@/components/form/CreateForm.vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
-import { DATASET_GET } from '@/lib/constants'
 import { getDatasetRows, updateDatasetRow } from '@/stores/dataset'
 import type { FamilyMember } from '@/types/teacher'
 import { onMounted, ref } from 'vue'
 import { toast } from 'vue-sonner'
-
+import { DATASET_GET, DATASET_EDIT } from '@/lib/constants'
 const loading = ref(false)
 const familyData = ref<Record<string, any>[]>([])
 
@@ -70,7 +69,7 @@ async function updateFamilyData(groupIndex: number, values?: Record<string, any>
       updated_at: new Date().toISOString(),
     }
 
-    const response = await updateDatasetRow('data_update_view', 'v1.2.0', currentMember.id, payload)
+    const response = await updateDatasetRow(DATASET_EDIT.DATASET_ID, DATASET_EDIT.DATASET_VERSION_FAMILY, currentMember.id, payload)
     console.log('Family Update API Response:', response)
     familyData.value[groupIndex] = mapFamilyMemberForForm({
       ...currentMember,

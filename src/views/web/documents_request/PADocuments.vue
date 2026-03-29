@@ -14,6 +14,7 @@ import { createFileDocument } from '@/stores/document'
 import type { CreateFileDocumentParams, FileDocument } from '@/types/document'
 import type { DocumentLink, DocumentRequest } from '@/types/document_request'
 import { Spinner } from '@/components/ui/spinner'
+import {  DOCUMENT_EDIT } from '@/lib/constants'
 const fileMap = ref<Record<string, File[]>>({})
 const fileInputRefs = ref<Record<string, HTMLInputElement | null>>({})
 const formRef = ref<any>(null)
@@ -149,8 +150,8 @@ function resetPAForm() {
 
 
 async function createDocumentType() {
-  const datasetId = 'document_create'
-  const version = 'v1.0.0'
+  const datasetId = DOCUMENT_EDIT.DATASET_ID //'document_create'
+  const version = DOCUMENT_EDIT.DATASET_VERSION_DOCUMENT_REQUEST //'v1.0.0'
 
   documentRequest.value.id = generateUUID()
   documentRequest.value.person_id = authStore.user?.id || ''
@@ -205,8 +206,8 @@ async function uploadFile() {
 }
 
 async function storeFile(uploadedFiles: UploadedSectionFile[]) {
-  const datasetId = 'document_create'
-  const version = 'v1.1.0'
+  const datasetId = DOCUMENT_EDIT.DATASET_ID //'document_create'
+  const version = DOCUMENT_EDIT.DATASET_VERSION_DOCUMENT_LINK //'v1.1.0'
 
   try {
     for (const uploadedFile of uploadedFiles) {
