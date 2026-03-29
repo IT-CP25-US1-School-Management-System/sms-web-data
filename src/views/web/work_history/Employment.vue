@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import DropDownForm from '@/components/form/DropDownForm.vue'
 import { Button } from '@/components/ui/button'
+import { DATASET_GET } from '@/lib/constants'
 
 import { onMounted, ref } from 'vue'
 import { toast } from 'vue-sonner'
@@ -11,8 +12,7 @@ const employmentData = ref<Record<string, any>[]>([])
 async function getEmploymentData() {
   loading.value = true
   try {
-
-    const response = await getDatasetRows( {
+    const response = await getDatasetRows(DATASET_GET.DATASET_ID, DATASET_GET.DATASET_VERSION, {
       view: 'employment_get',
       page: 1,
       per_page: 50,
@@ -55,14 +55,14 @@ onMounted(() => {
           type: 'text',
           required: true,
           disabled: true,
-          placeholder: '',
+          placeholder: '-',
         },
         {
           name: 'work_status',
           label: 'สถานะการทำงาน',
           type: 'text',
           required: true,
-          placeholder: '',
+          placeholder: '-',
           disabled: true,
 
         },
@@ -71,14 +71,14 @@ onMounted(() => {
           label: 'ลักษณะการจ้าง',
           type: 'text',
           required: true,
-          placeholder: '',
+          placeholder: '-',
           disabled: true,
         },
         {
           name: 'latest-transfer-type',
           label: 'ประเภทการเคลื่อนไหวล่าสุด',
           type: 'text',
-          placeholder: '',
+          placeholder: '-',
           disabled: true,
 
         },
@@ -94,7 +94,7 @@ onMounted(() => {
           label: 'เงินค่าจ้าง',
           type: 'number',
           required: true,
-          placeholder: '',
+          placeholder: '-',
           disabled: true,
         },
         {
@@ -102,7 +102,7 @@ onMounted(() => {
           label: 'เงินสมทบกองทุนประกันสังคม',
           type: 'number',
           required: true,
-          placeholder: '',
+          placeholder: '-',
           disabled: true,
 
         },
@@ -118,7 +118,7 @@ onMounted(() => {
           label: 'เลขที่คำสั่ง / สัญญาจ้าง',
           type: 'text',
           required: true,
-          placeholder: '',
+          placeholder: '-',
           disabled: true,
 
         },
@@ -127,7 +127,7 @@ onMounted(() => {
           label: 'จำนวนครั้งที่ทำสัญญา',
           type: 'text',
           required: true,
-          placeholder: '',
+          placeholder: '-',
           disabled: true,
         },
       ]"
@@ -142,7 +142,7 @@ onMounted(() => {
           label: 'ว/ด/ป เริ่มสัญญาครั้งแรก',
           type: 'text',
           required: true,
-          placeholder: '',
+          placeholder: '-',
           disabled: true,
         },
         {
@@ -150,7 +150,7 @@ onMounted(() => {
           label: 'จ้างมาแล้วกี่ปี (อายุงานรวม)',
           type: 'text',
           required: true,
-          placeholder: '',
+          placeholder: '-',
           disabled: true,
 
         },
@@ -159,7 +159,7 @@ onMounted(() => {
           label: 'วันเดือนปีที่เริ่มสัญญาจ้าง (สัญญาปัจจุบัน)',
           type: 'text',
           required: true,
-          placeholder: '',
+          placeholder: '-',
           disabled: true,
 
         },
@@ -168,7 +168,7 @@ onMounted(() => {
           label: 'วันเดือนปีสิ้นสุดสัญญาจ้าง',
           type: 'text',
           required: true,
-          placeholder: '',
+          placeholder: '-',
           disabled: true,
         },
       ]"
@@ -183,7 +183,7 @@ onMounted(() => {
           label: 'ประเภทเงินงบประมาณ',
           type: 'text',
           required: true,
-          placeholder: '',
+          placeholder: '-',
           disabled: true,
         },
         {
@@ -191,7 +191,7 @@ onMounted(() => {
           label: 'ประเภทเงินรายได้สถานศึกษา',
           type: 'text',
           required: true,
-          placeholder: '',
+          placeholder: '-',
           disabled: true,
 
         },
@@ -199,14 +199,4 @@ onMounted(() => {
     />
   </div>
 
-  <!-- ปุ่มบันทึก -->
-    <div
-      class="sticky bottom-0 right-0 z-40 flex justify-end border-t border-gray-200 bg-white p-3 w-full"
-    >
-      <Button
-        class="bg-[#16A34A] hover:bg-[#15803D] text-white px-8 py-2 rounded-lg font-semibold shadow-sm"
-      >
-        บันทึก
-      </Button>
-    </div>
 </template>

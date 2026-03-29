@@ -4,7 +4,6 @@ export const API_BASE_URL = env.API_BASE_URL
 
 export const ROUTE_NAMES = {
   LOGIN: 'Login',
-  SETTINGS: 'Settings',
   HOME: 'Home',
   PROFILE: 'Profile',
   PERSONAL: 'Personal',
@@ -52,6 +51,67 @@ export const DATASET_SENSITIVITY = {
   INTERNAL: 'internal',
   CONFIDENTIAL: 'confidential',
   RESTRICTED: 'restricted',
+} as const
+
+export const DATASET_GET = {
+  DATASET_ID: 'data_get_view',
+  DATASET_VERSION: 'v1.0.6',
+  DATASET_VERSION_LICENSE: 'v2.0.0',
+  DATASET_VERSION_ACADEMIC_RANK: 'v2.1.0',
+  DATASET_VERSION_CONTRACT_POSITION: 'v2.2.0',
+  DATASET_VERSION_ROYAL_DECORATIONS: 'v2.3.0',
+  DATASET_VERSION_INNOVATIONS: 'v2.4.0',
+  DATASET_VERSION_TRAINING: 'v2.5.0',
+} as const
+
+
+export const DATASET_EDIT = {
+  DATASET_ID: 'data_update_view',
+  DATASET_VERSION_PERSONAL_DETAIL: 'v1.0.0',
+  DATASET_VERSION_LICENSE: 'v1.3.2',
+  DATASET_VERSION_FAMILY: 'v1.2.0',
+  DATASET_VERSION_ADDRESS:'v1.1.0',
+  DATASET_VERSION_POSITION_HISTORY: 'v1.4.0',
+  DATASET_VERSION_ACADEMIC_RANK: 'v1.5.0',
+  DATASET_VERSION_CONTRACT_POSITION: 'v1.6.0',
+  DATASET_VERSION_ROYAL_DECORATIONS: 'v1.7.0',
+  DATASET_VERSION_INNOVATIONS: 'v1.8.0',
+  DATASET_VERSION_TRAINING: 'v1.9.0',
+} as const
+
+export const DATASET_DELETE = {
+  DATASET_ID: 'data_delete_view',
+  DATASET_VERSION_LICENSE: 'v1.3.1',
+  DATASET_VERSION_ACADEMIC_RANK: 'v1.4.0',
+  DATASET_VERSION_CONTRACT_POSITION: 'v1.5.0',
+  DATASET_VERSION_ROYAL_DECORATIONS: 'v1.6.0',
+  DATASET_VERSION_INNOVATIONS: 'v1.7.0',
+  DATASET_VERSION_TRAINING: 'v1.8.0',
+} as const
+
+
+// export const DOCUMENT_GET = {
+//   DATASET_ID: 'document_get',
+// } as const
+
+export const DOCUMENT_EDIT = {
+  DATASET_ID: 'document_create',
+  DATASET_VERSION_DOCUMENT_LINK: 'v1.1.0',
+  DATASET_VERSION_DOCUMENT_REQUEST: 'v1.0.0',
+} as const
+
+export const DOCUMENT_DELETE = {
+  DATASET_ID: 'document_delete',
+  DATASET_VERSION: 'v1.0.2',
+
+} as const
+
+export const  FILE_KEY_TEMPLATES = {
+  DOCUMENT_TYPE_2: '3a68b6bf-4631-4835-a77f-eff8da31a796',
+  DOCUMENT_TYPE_3: '074053f7-0e7a-4870-9091-84f0cd945aed',
+  DOCUMENT_TYPE_4_1: 'cc01791c-658e-44ed-aa4a-ccb7be9418fe',
+  DOCUMENT_TYPE_4_2: '99261424-7b09-48e9-820d-ffcb6115729c',
+
 } as const
 
 export type DatasetSensitivity = (typeof DATASET_SENSITIVITY)[keyof typeof DATASET_SENSITIVITY]

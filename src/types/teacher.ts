@@ -34,7 +34,7 @@ export interface PersonData {
   
   national_id?: string // เลขบัตรประชาชน
   passport_id?: string // เลขpassport
-  department_id?: number
+  department_id?: number | null // กลุ่มสาระ (มีเมื่อเป็นครูอัตราจ้าง)
 
   gender?: Gender
   religion?: string // ศาสนา

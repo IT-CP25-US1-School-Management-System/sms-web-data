@@ -1,21 +1,41 @@
 <script setup lang="ts">
-import NormalForm, { type NormalFormField } from '@/components/form/NormalForm.vue'
+import NormalForm, { type NormalFormChangePayload, type NormalFormField } from '@/components/form/NormalForm.vue'
+import ConfirmModal from '@/components/ConfirmModal.vue'
 import { Button } from '@/components/ui/button'
+import { DATASET_EDIT, DATASET_GET } from '@/lib/constants'
+import { ArrowUpFromLine } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { toast } from 'vue-sonner'
-import { getDatasetRows } from '@/stores/dataset'
+import { getDatasetRows, updateDatasetRow } from '@/stores/dataset'
+import { exportData, getUrlFile } from '@/stores/reporting'
+import type { ExportJobRequest, GetExportJobResponse } from '@/types/reporting'
+type PositionRow = Record<string, any> & {
+  id?: string
+  person_id?: string
+  created_at?: string
+  updated_at?: string | null
+}
 
-type PositionRow = Record<string, any>
+type NormalFormInstance = InstanceType<typeof NormalForm>
 
-const positionForms = ref<any[]>([])
+type PositionFormState = {
+  id: string
+  source?: PositionRow
+  initialValues: Record<string, any>
+  currentValues: Record<string, any>
+  formRef: NormalFormInstance | null
+  hasChanges: boolean
+}
+
 const loading = ref(false)
-const positionData = ref<PositionRow[]>([])
+const positionForms = ref<PositionFormState[]>([])
+const pendingPayloads = new Map<string, Record<string, any>>()
+const fileUrl = ref('')
 
-const hasAnyChanges = computed(() =>
-  positionForms.value.some((form) => Boolean(form?.isDirty)),
-)
-const isSaveDisabled = computed(() => loading.value || !hasAnyChanges.value)
-
+const action = ref('update')
+const modalTopic = ref('ข้อมูลตำแหน่ง')
+const modalValue = ref('')
+const confirmModal = ref(false)
 const positionFields: NormalFormField[] = [
   {
     name: 'executive_group',
@@ -28,7 +48,7 @@ const positionFields: NormalFormField[] = [
       { label: 'ผู้บริหาร', value: 'ผู้บริหาร' },
       { label: 'กลุ่มบริหารวิชาการ', value: 'กลุ่มบริหารวิชาการ' },
       { label: 'กลุ่มบริหารงานบุคคล', value: 'กลุ่มบริหารงานบุคคล' },
-      { label: 'กลุ่มบริหารงบประมาณและธุรการ', value: 'กลุ่มบริหารงบประมาณและธุการ' },
+      { label: 'กลุ่มบริหารงบประมาณและธุรการ', value: 'กลุ่มบริหารงบประมาณและธุรการ' },
       { label: 'กลุ่มบริหารทั่วไป', value: 'กลุ่มบริหารทั่วไป' },
       { label: 'สำนักผู้อำนวยการ', value: 'สำนักผู้อำนวยการ' },
     ],
@@ -69,75 +89,299 @@ const positionFields: NormalFormField[] = [
   { name: 'work_age_at_school', label: 'อายุงาน ณ โรงเรียนคณะราษฎร์ฯ', type: 'text', disabled: true, placeholder: '' },
 ]
 
+function cloneFormValues(values: Record<string, any> = {}) {
+  return JSON.parse(JSON.stringify(values))
+}
+
+function createPositionFormState(source?: PositionRow, index = 0): PositionFormState {
+  const initialValues = cloneFormValues(source || {})
+  const generatedId =
+    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : `position-${Date.now()}-${index}`
+
+  return {
+    id: source?.id || generatedId,
+    source,
+    initialValues,
+    currentValues: cloneFormValues(initialValues),
+    formRef: null,
+    hasChanges: false,
+  }
+}
+
 async function getPositionData() {
   loading.value = true
   try {
-    const response = await getDatasetRows({ view: 'position_get', page: 1, per_page: 50 })
-    positionData.value = response.data?.[0]?.governments || []
-    toast.success(`โหลดข้อมูลตำแหน่งสำเร็จ (${response.total_rows} รายการ)`, { position: 'bottom-right' })
+    const response = await getDatasetRows(DATASET_GET.DATASET_ID, DATASET_GET.DATASET_VERSION, {
+      view: 'position_get',
+      page: 1,
+      per_page: 50,
+    })
+
+    const records = response.data?.[0]?.governments || []
+    console.log('Position API Response:', records)
+    positionForms.value = (records.length ? records : [undefined]).map((record: PositionRow | undefined, index: number) =>
+      createPositionFormState(record, index),
+    )
+    console.log('Position API Response:', positionForms.value)
+
   } catch (error: any) {
     console.error('Position API Error:', error)
-    toast.error(`โหลดข้อมูลตำแหน่งไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, { position: 'bottom-right' })
+    toast.error(`โหลดข้อมูลตำแหน่งไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
+      position: 'bottom-right',
+    })
+    positionForms.value = [createPositionFormState(undefined, 0)]
   } finally {
     loading.value = false
   }
 }
 
+function setPositionFormRef(formId: string, instance: NormalFormInstance | null) {
+  const target = positionForms.value.find((form) => form.id === formId)
+  if (target) {
+    target.formRef = instance
+  }
+}
+
+function handleFormChange(formId: string, payload: NormalFormChangePayload) {
+  const target = positionForms.value.find((form) => form.id === formId)
+  if (!target) return
+
+  target.currentValues = cloneFormValues(payload.values)
+  target.hasChanges =
+    JSON.stringify(target.currentValues) !== JSON.stringify(target.initialValues)
+}
+
+function buildPositionUpdate(source: PositionRow | undefined, payload: Record<string, any>): PositionRow {
+  return {
+    ...source,
+    ...payload,
+    id: source?.id || payload.id || '',
+    person_id: source?.person_id || payload.person_id || '',
+    created_at: source?.created_at || new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }
+}
+
+function handleFormSave(formId: string, values: Record<string, any>) {
+  const target = positionForms.value.find((form) => form.id === formId)
+  if (!target) return
+
+  pendingPayloads.set(formId, buildPositionUpdate(target.source, values))
+}
+
+const hasAnyChanges = computed(() =>
+  positionForms.value.some((form) => form.hasChanges),
+)
+
+const hasAnyInvalidRequired = computed(() =>
+  positionForms.value.some((form) => Boolean(form.formRef?.hasMissingRequiredFields)),
+)
+
+const isSaveDisabled = computed(
+  () => loading.value || !hasAnyChanges.value || hasAnyInvalidRequired.value,
+)
+
+async function updatePositionData() {
+  loading.value = true
+  try {
+    for (const form of positionForms.value.filter((entry) => entry.hasChanges)) {
+      const payload = pendingPayloads.get(form.id)
+      if (!payload?.id) continue
+
+      await updateDatasetRow(
+        DATASET_EDIT.DATASET_ID,
+        DATASET_EDIT.DATASET_VERSION_LICENSE,
+        payload.id,
+        payload,
+        'position_update',
+      )
+    }
+
+    toast.success('บันทึกข้อมูลตำแหน่งสำเร็จ', { position: 'bottom-right' })
+    await getPositionData()
+  } catch (error: any) {
+    console.error('Position update error:', error)
+    toast.error(`บันทึกข้อมูลตำแหน่งไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
+      position: 'bottom-right',
+    })
+  } finally {
+    loading.value = false
+  }
+}
+
+
+
+function updateData(confirmed: boolean) {
+  if (confirmed) {
+    updatePositionData()
+  }
+  confirmModal.value = false
+}
+
+async function onSaveAll() {
+  pendingPayloads.clear()
+
+  const validationResults: boolean[] = []
+
+  for (const form of positionForms.value) {
+    if (form.formRef?.submitForm) {
+      const valid = await form.formRef.submitForm()
+      validationResults.push(valid)
+    }
+  }
+
+  if (validationResults.some((valid) => valid === false)) {
+    confirmModal.value = false
+    return
+  }
+
+  if (!pendingPayloads.size) return
+
+  modalValue.value = `จำนวน ${pendingPayloads.size} รายการ`
+  confirmModal.value = true
+}
+
+async function downloadTemplateFile(fileUrl: string, fileName: string) {
+  const response = await fetch(fileUrl)
+  if (!response.ok) {
+    throw new Error('ดาวน์โหลดไฟล์ไม่สำเร็จ')
+  }
+
+  const blob = await response.blob()
+  const blobUrl = window.URL.createObjectURL(blob)
+  const link = document.createElement('a')
+
+  link.href = blobUrl
+  link.download = fileName
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  window.URL.revokeObjectURL(blobUrl)
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms))
+}
+
+async function pollExportJob(jobId: string): Promise<GetExportJobResponse> {
+  const maxAttempts = 30
+  const intervalMs = 2000
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const response = await getUrlFile(jobId)
+    const status = response.status?.toLowerCase()
+
+    if ((status === 'success' || status === 'completed') && response.destination_uri) {
+      return response
+    }
+
+    if (status === 'failed' || status === 'error') {
+      throw new Error(response.error_message || 'Export failed')
+    }
+
+    await sleep(intervalMs)
+  }
+
+  throw new Error('Timed out waiting for export file')
+}
+
+function getDownloadFileName(downloadUrl: string) {
+  try {
+    const url = new URL(downloadUrl)
+    const fileName = url.pathname.split('/').pop()
+    if (fileName) return decodeURIComponent(fileName)
+  } catch {
+    const fileName = downloadUrl.split('/').pop()
+    if (fileName) return decodeURIComponent(fileName)
+  }
+
+  return 'position_export.csv'
+}
+
+async function handleDownloadTemplate() {
+  try {
+    loading.value = true
+    fileUrl.value = ''
+
+    const payload: ExportJobRequest = {
+      dataset_id: DATASET_GET.DATASET_ID,
+      version: DATASET_GET.DATASET_VERSION,
+      view: 'position_get',
+      format: 'csv',
+    }
+
+    const exportResponse = await exportData(payload)
+
+    if (!exportResponse.job_id) {
+      throw new Error('Missing export job id')
+    }
+
+    const exportResult = await pollExportJob(exportResponse.job_id)
+    fileUrl.value = exportResult.destination_uri || ''
+
+    if (!fileUrl.value) {
+      throw new Error('Export file URL not found')
+    }
+
+    await downloadTemplateFile(fileUrl.value, getDownloadFileName(fileUrl.value))
+  } catch (error: any) {
+    toast.error('Export data failed: ' + (error?.message || 'Unknown error'), {
+      position: 'bottom-right',
+    })
+  } finally {
+    loading.value = false
+  }
+}
+
+
 onMounted(() => {
   getPositionData()
 })
-
-function setPositionFormRef(index: number, instance: any | null) {
-  if (instance === null) {
-    positionForms.value[index] = null
-    return
-  }
-  positionForms.value[index] = instance
-}
-
-function getRefSetter(index: number) {
-  return (instance: any | null) => setPositionFormRef(index, instance)
-}
-
-async function onSave() {
-  if (!hasAnyChanges.value) return
-
-  for (const inst of positionForms.value) {
-    if (!inst) continue
-    if (typeof inst.submitForm === 'function') {
-      const ok = await inst.submitForm()
-      if (!ok) {
-        toast.error('กรุณากรอกข้อมูลให้ครบถ้วนก่อนบันทึก', { position: 'bottom-right' })
-        return
-      }
-    }
-  }
-  toast.success('บันทึกข้อมูลเรียบร้อย (mock)', { position: 'bottom-right' })
-}
-
-function handleSave(data: Record<string, any>) {
-  console.log('Saved position item', data)
-}
-
 </script>
 
 <template>
   <div class="flex flex-col">
-    <div class="flex-1 overflow-y-auto px-4 sm:px-6 space-y-4">
-      <div v-for="(item, index) in (positionData.length ? positionData : [{}])" :key="item.id || index">
+    <div class="sticky right-0 bottom-0 z-40 flex w-full justify-end bg-white p-3">
+      <Button
+         @click="handleDownloadTemplate()"
+        class="cursor-pointer rounded-lg bg-[#1675dc] px-8 py-2 font-semibold text-white shadow-sm hover:bg-[#1567be]"
+      >
+        <ArrowUpFromLine />
+        Export Data
+      </Button>
+    </div>
+
+    <div class="flex-1 space-y-4 overflow-y-auto px-4 sm:px-6">
+      <div v-for="(form, index) in positionForms" :key="form.id">
         <NormalForm
-          :ref="getRefSetter(index)"
-          :values="item"
-          @save="handleSave"
+          :topic="`ข้อมูลตำแหน่ง #${index + 1}`"
+          :ref="(instance) => setPositionFormRef(form.id, instance as NormalFormInstance | null)"
+          :values="form.initialValues"
           :fields="positionFields"
+          @change="(payload) => handleFormChange(form.id, payload)"
+          @save="(values) => handleFormSave(form.id, values)"
         />
       </div>
     </div>
 
-    <div class="cursor-pointer sticky bottom-0 right-0 z-40 flex justify-end border-t border-gray-200 bg-white p-3 w-full">
-      <Button :disabled="isSaveDisabled" @click="onSave" class="bg-[#16A34A] hover:bg-[#15803D] text-white px-8 py-2 rounded-lg font-semibold shadow-sm">
+    <div class="sticky right-0 bottom-0 z-40 flex w-full justify-end border-t border-gray-200 bg-white p-3">
+      <Button
+        :disabled="isSaveDisabled"
+        @click="onSaveAll"
+        class="rounded-lg bg-[#16A34A] px-8 py-2 font-semibold text-white shadow-sm hover:bg-[#15803D]"
+      >
         บันทึก
       </Button>
     </div>
+
+    <ConfirmModal
+      v-if="confirmModal"
+      :action="action"
+      :topic="modalTopic"
+      :value="modalValue"
+      @confirm="updateData"
+    />
   </div>
 </template>

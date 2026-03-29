@@ -32,7 +32,6 @@ const route = useRoute();
 
 const breadcrumbConfig = {
   Home: { label: "หน้าหลัก", icon: Home },
-  Settings: { label: "ตั้งค่าระบบ", icon: Settings },
   Profile: { label: "โปรไฟล์", icon: User },
   Personal: { label: "ข้อมูลบุคคล", icon: User },
   WorkHistory: { label: "ประวัติการทำงาน", icon: FileClock },
@@ -66,14 +65,7 @@ const currentBreadcrumbs = computed(() => {
     return breadcrumbs;
   }
 
-  if (routeName === ROUTE_NAMES.SETTINGS) {
-    breadcrumbs.push({
-      label: breadcrumbConfig.Settings.label,
-      icon: breadcrumbConfig.Settings.icon,
-      to: { name: ROUTE_NAMES.SETTINGS },
-      isLast: true,
-    });
-  } else if (routeName === ROUTE_NAMES.PROFILE) {
+ if (routeName === ROUTE_NAMES.PROFILE) {
     breadcrumbs.push({
       label: breadcrumbConfig.Profile.label,
       icon: breadcrumbConfig.Profile.icon,

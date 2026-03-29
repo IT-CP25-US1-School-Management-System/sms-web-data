@@ -4,6 +4,7 @@ import NormalForm, {
   type NormalFormChangePayload,
   type NormalFormOption,
 } from '@/components/form/NormalForm.vue'
+import { DATASET_GET ,DATASET_EDIT } from '@/lib/constants'
 import { Button } from '@/components/ui/button'
 import { getDatasetRows , updateDatasetRow } from '@/stores/dataset'
 import ConfirmModal from '@/components/ConfirmModal.vue'
@@ -300,11 +301,15 @@ function syncCascade(form: AddressFormState, values: Record<string, any>, isInit
 async function getAddressData() {
   loading.value = true
   try {
-    const response = await getDatasetRows<AddressDatasetRow>({
-      view: 'address_get',
-      page: 1,
-      per_page: 50,
-    })
+    const response = await getDatasetRows<AddressDatasetRow>(
+      DATASET_GET.DATASET_ID,
+      DATASET_GET.DATASET_VERSION,
+      {
+        view: 'address_get',
+        page: 1,
+        per_page: 50,
+      },
+    )
     
     const records = response.data?.[0]?.person_addresses || []
     addressForms.value = (records.length ? records : [undefined]).map((address, index) =>
@@ -321,8 +326,8 @@ async function getAddressData() {
 
 async function updateAddressData() {
   loading.value = true
-  const datasetId = 'data_update_view'
-  const version = 'v1.1.0'
+  const datasetId = DATASET_EDIT.DATASET_ID
+  const version = DATASET_EDIT.DATASET_VERSION_ADDRESS
 
   try {
     const response = await updateDatasetRow(

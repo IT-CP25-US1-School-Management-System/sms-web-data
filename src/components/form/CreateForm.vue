@@ -7,10 +7,9 @@ import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Spinner } from '@/components/ui/spinner'
 import { RangeCalendar } from '@/components/ui/range-calendar'
 
-import { ChevronUp, CirclePlus, CalendarIcon, Trash2, X } from 'lucide-vue-next'
+import { ChevronUp, CirclePlus, CalendarIcon, Trash2, X  , ArrowDownToLine} from 'lucide-vue-next'
 
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
@@ -23,6 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { Spinner } from '@/components/ui/spinner'
 import { type DateValue, CalendarDate } from '@internationalized/date'
 import type { DateRange } from 'reka-ui'
 import { computed, ref, watch } from 'vue'
@@ -32,7 +32,16 @@ import { computed, ref, watch } from 'vue'
 type FieldItem = {
   name: string
   label?: string
-  type: 'text' | 'date' | 'date-range' | 'select' | 'number' | 'email' | 'textarea' | 'file'
+  type:
+    | 'text'
+    | 'date'
+    | 'date-range'
+    | 'select'
+    | 'combobox'
+    | 'number'
+    | 'email'
+    | 'textarea'
+    | 'file'
   placeholder?: string
   required?: boolean
   disabled?: boolean
@@ -48,11 +57,24 @@ type FieldSection = {
   subFields?: FieldItem[] // nested dynamic form within section
 }
 
+type ExistingFileItem = {
+  name: string
+  size: number
+  type?: string
+  resource_id?: string
+  url?: string
+  existing?: boolean
+}
+
+type UploadedFileItem = File | ExistingFileItem
+
 const props = defineProps<{
   isDropdown?: boolean
   readonly?: boolean
   canDelete?: boolean
   deferCommitOnSave?: boolean
+  deferDeleteOnConfirm?: boolean
+  busyEntries?: Record<number, 'save' | 'delete'>
   fields?: FieldSection[][]
   values?: Record<string, any>[]
 }>()
@@ -162,6 +184,7 @@ function buildSchemas() {
 const emit = defineEmits<{
   (e: 'save', index: number, values: Record<string, any>): void
   (e: 'delete', index: number, id?: string): void
+  (e: 'change', index: number, values: Record<string, any>): void
 }>()
 
 // localEntries: FieldSection[][] — แต่ละ entry คือ 1 การ์ด ที่มีหลาย section
@@ -181,8 +204,8 @@ function setFormRef(index: number, el: any) {
 }
 
 // File upload state (declared early because the watch below runs immediately):
-// one record per entry: fileMap[entryIndex][fieldName] = File[]
-const fileMap = ref<Array<Record<string, File[]>>>([])
+// one record per entry: fileMap[entryIndex][fieldName] = selected files or existing files from API
+const fileMap = ref<Array<Record<string, UploadedFileItem[]>>>([])
 const fileInputRefs = ref<Array<Record<string, HTMLInputElement | null>>>([])
 // Per-entry file size errors: fileSizeErrors[entryIndex][fieldName] = string | undefined
 const fileSizeErrors = ref<Array<Record<string, string | undefined>>>([])
@@ -219,6 +242,36 @@ function getFileAcceptErrorMessage(accept?: string) {
   return `รองรับเฉพาะไฟล์ ${rules.join(', ')}`
 }
 
+function normalizeInitialFiles(value: unknown): UploadedFileItem[] {
+  if (!value) return []
+  if (Array.isArray(value)) {
+    return value.filter(
+      (item): item is UploadedFileItem =>
+        Boolean(item) && typeof item === 'object' && 'name' in item && 'size' in item,
+    )
+  }
+  if (typeof value === 'object' && 'name' in value && 'size' in value) {
+    return [value as UploadedFileItem]
+  }
+  return []
+}
+
+function syncFileMapFromValues() {
+  fileMap.value = localEntries.value.map((entry, entryIndex) => {
+    const currentMap = fileMap.value[entryIndex] || {}
+    const nextMap: Record<string, UploadedFileItem[]> = {}
+
+    entry
+      .flatMap((section) => section.content || [])
+      .filter((field) => field.type === 'file')
+      .forEach((field) => {
+        nextMap[field.name] = normalizeInitialFiles(localValues.value[entryIndex]?.[field.name])
+      })
+
+    return { ...currentMap, ...nextMap }
+  })
+}
+
 // Sync localEntries & localValues with props.fields/values
 // ซิงก์ค่า `props.fields` และ `props.values` เข้ากับ state ภายใน (localEntries/localValues)
 // เป้าหมาย:
@@ -228,8 +281,8 @@ function getFileAcceptErrorMessage(accept?: string) {
 watch(
   [() => props.fields, () => props.values],
   ([fields, values]) => {
-    // 1) หากยังไม่มี template ให้ clone จาก props.fields (ครั้งแรกที่ mount)
-    if (fields && localEntries.value.length === 0) {
+    // 1) sync field templates from parent every time so dynamic options/disabled states stay fresh
+    if (fields?.length) {
       localEntries.value = JSON.parse(JSON.stringify(fields))
     }
 
@@ -284,6 +337,7 @@ watch(
     while (fileSizeErrors.value.length > entriesCount) fileSizeErrors.value.pop()
     while (fileTypeErrors.value.length < entriesCount) fileTypeErrors.value.push({})
     while (fileTypeErrors.value.length > entriesCount) fileTypeErrors.value.pop()
+    syncFileMapFromValues()
 
     // 4) สร้าง/อัปเดต Zod schema สำหรับแต่ละ entry
     buildSchemas()
@@ -293,7 +347,7 @@ watch(
 
 watch(
   () => props.values,
-  (newValues) => {
+  () => {
   },
 )
 function addEntry() {
@@ -318,7 +372,12 @@ function addEntry() {
 }
 
 function deleteEntry(entryIndex: number) {
+  if (props.busyEntries?.[entryIndex]) return
   const entryId = localValues.value[entryIndex]?.id || initialEntryValues.value[entryIndex]?.id
+  if (props.deferDeleteOnConfirm) {
+    emit('delete', entryIndex, entryId)
+    return
+  }
   localEntries.value.splice(entryIndex, 1)
   localValues.value.splice(entryIndex, 1)
   initialEntryValues.value.splice(entryIndex, 1)
@@ -336,6 +395,7 @@ function deleteEntry(entryIndex: number) {
 }
 
 async function saveEntry(entryIndex: number) {
+  if (props.busyEntries?.[entryIndex]) return
   if (savingEntries.value[entryIndex]) return
   savingEntries.value[entryIndex] = true
 
@@ -430,7 +490,7 @@ function onSubmitEntry(entryIndex: number, values: Record<string, any>) {
   const entryTemplate = localEntries.value[entryIndex] || []
   const allFields: FieldItem[] = entryTemplate.flatMap((sec) => sec.content || [])
   for (const k of Object.keys(filesForEntry)) {
-    const arr: File[] = filesForEntry[k] || []
+    const arr: UploadedFileItem[] = filesForEntry[k] || []
     const def = allFields.find((f) => f.name === k)
     if (def && def.multiple) normalizedFiles[k] = arr
     else normalizedFiles[k] = arr[0] ?? undefined
@@ -469,7 +529,7 @@ function ensureFileStructuresForIndex(entryIndex: number) {
   while (fileTypeErrors.value.length <= entryIndex) fileTypeErrors.value.push({})
 }
 
-function getFiles(entryIndex: number, fieldName: string): File[] {
+function getFiles(entryIndex: number, fieldName: string): UploadedFileItem[] {
   return (fileMap.value[entryIndex] && fileMap.value[entryIndex][fieldName]) || []
 }
 
@@ -483,15 +543,43 @@ function updateEntryValue(entryIndex: number, fieldName: string, value: any) {
   while (localValues.value.length <= entryIndex) localValues.value.push({})
   while (entryTouchedStates.value.length <= entryIndex) entryTouchedStates.value.push(false)
   const current = localValues.value[entryIndex] || {}
-  localValues.value[entryIndex] = {
+  const nextValues = {
     ...current,
     [fieldName]: value,
   }
+  localValues.value[entryIndex] = nextValues
   entryTouchedStates.value[entryIndex] = true
+  emit('change', entryIndex, { ...nextValues })
 }
 
 function getAllFields(entryIndex: number): FieldItem[] {
   return (localEntries.value[entryIndex] || []).flatMap((section) => section.content || [])
+}
+
+const comboboxOpen = ref<Record<string, boolean>>({})
+const comboboxQuery = ref<Record<string, string>>({})
+
+function getComboboxKey(entryIndex: number, fieldName: string) {
+  return `${entryIndex}-${fieldName}`
+}
+
+function getComboboxOptions(entryIndex: number, field: FieldItem) {
+  const key = getComboboxKey(entryIndex, field.name)
+  const query = (comboboxQuery.value[key] || '').trim().toLowerCase()
+  const options = field.options || []
+  if (!query) return options
+
+  return options.filter((opt) => {
+    const label = String(opt.label).toLowerCase()
+    const value = String(opt.value).toLowerCase()
+    return label.includes(query) || value.includes(query)
+  })
+}
+
+function getOptionLabel(field: FieldItem, value: unknown) {
+  if (!field.options?.length || value === undefined || value === null) return ''
+  const match = field.options.find((opt) => String(opt.value) === String(value))
+  return match?.label || ''
 }
 
 function normalizeComparableValue(value: any): any {
@@ -551,6 +639,7 @@ function hasEntryMissingRequired(entryIndex: number) {
 const disabledSaveByEntry = computed(() =>
   localEntries.value.map(
     (_, entryIndex) =>
+      Boolean(props.busyEntries?.[entryIndex]) ||
       Boolean(savingEntries.value[entryIndex]) ||
       (!entryTouchedStates.value[entryIndex] && !hasEntryChanges(entryIndex)) ||
       hasEntryMissingRequired(entryIndex),
@@ -574,7 +663,7 @@ function addFiles(entryIndex: number, fieldItem: FieldItem, files: File[]) {
   const acceptedBySize = acceptedByType.filter((f) => f.size <= MAX_FILE_SIZE)
   const rejectedBySize = acceptedByType.filter((f) => f.size > MAX_FILE_SIZE)
 
-  const map = fileMap.value[entryIndex] as Record<string, File[]>
+  const map = fileMap.value[entryIndex] as Record<string, UploadedFileItem[]>
   let arr = map[fieldItem.name]
   if (!arr) {
     arr = []
@@ -625,6 +714,32 @@ function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function hasDownloadUrl(
+  file: UploadedFileItem,
+): file is ExistingFileItem & { url: string } {
+  return typeof file === 'object' && 'url' in file && typeof file.url === 'string' && Boolean(file.url)
+}
+
+async function downloadFile(file: UploadedFileItem) {
+  if (!hasDownloadUrl(file)) return
+
+  const response = await fetch(file.url)
+  if (!response.ok) {
+    throw new Error('ดาวน์โหลดไฟล์ไม่สำเร็จ')
+  }
+
+  const blob = await response.blob()
+  const blobUrl = window.URL.createObjectURL(blob)
+  const link = document.createElement('a')
+
+  link.href = blobUrl
+  link.download = file.name
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  window.URL.revokeObjectURL(blobUrl)
 }
 
 // Sub-form state: key = `${entryIndex}-${sectionIndex}`, value = array of sub-entries
@@ -1006,6 +1121,69 @@ function formatDisplayDateRange(str: string | undefined): string {
                               </SelectContent>
                             </Select>
 
+                            <Popover
+                              v-else-if="fieldItem.type === 'combobox'"
+                              v-model:open="
+                                comboboxOpen[getComboboxKey(entryIndex, fieldItem.name)]
+                              "
+                            >
+                              <PopoverTrigger as-child>
+                                <Button
+                                  :id="`form-field-${fieldItem.name}`"
+                                  variant="outline"
+                                  :disabled="fieldItem.disabled"
+                                  :class="[
+                                    'w-full justify-between text-left font-normal',
+                                    !veeField.value && 'text-muted-foreground',
+                                    fieldItem.disabled && 'opacity-50',
+                                  ]"
+                                >
+                                  <span class="truncate">
+                                    {{
+                                      getOptionLabel(fieldItem, veeField.value) ||
+                                      fieldItem.placeholder ||
+                                      'ค้นหา/เลือก'
+                                    }}
+                                  </span>
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent class="w-65 p-0" align="start">
+                                <div class="p-2">
+                                  <Input
+                                    :placeholder="fieldItem.placeholder || 'พิมพ์เพื่อค้นหา...'"
+                                    v-model="
+                                      comboboxQuery[getComboboxKey(entryIndex, fieldItem.name)]
+                                    "
+                                    autocomplete="off"
+                                  />
+                                </div>
+                                <div class="max-h-60 overflow-y-auto py-1">
+                                  <button
+                                    v-for="opt in getComboboxOptions(entryIndex, fieldItem)"
+                                    :key="opt.value"
+                                    type="button"
+                                    class="hover:bg-muted flex w-full items-center justify-between px-3 py-2 text-sm"
+                                    @click="
+                                      () => {
+                                        veeField['onUpdate:modelValue']?.(opt.value)
+                                        updateEntryValue(entryIndex, fieldItem.name, opt.value)
+                                        comboboxOpen[getComboboxKey(entryIndex, fieldItem.name)] = false
+                                        comboboxQuery[getComboboxKey(entryIndex, fieldItem.name)] = ''
+                                      }
+                                    "
+                                  >
+                                    <span class="truncate">{{ opt.label }}</span>
+                                  </button>
+                                  <p
+                                    v-if="!getComboboxOptions(entryIndex, fieldItem).length"
+                                    class="text-muted-foreground px-3 py-2 text-sm"
+                                  >
+                                    ไม่พบข้อมูล
+                                  </p>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+
                             <!-- textarea -->
                             <Textarea
                               v-else-if="fieldItem.type === 'textarea'"
@@ -1120,8 +1298,16 @@ function formatDisplayDateRange(str: string | undefined): string {
                                 >
                                   <span class="text-black truncate">{{ file.name }}</span>
                                   <span class="text-muted-foreground shrink-0 text-xs">
-                                    {{ formatFileSize(file.size) }}
+                                    {{ formatFileSize(file.size) }} 
                                   </span>
+                                  <button
+                                    v-if="hasDownloadUrl(file)"
+                                    type="button"
+                                    class="cursor-pointer rounded border-2 border-gray-100 bg-white p-1 transition-colors hover:bg-gray-50"
+                                    @click.stop="downloadFile(file)"
+                                  >
+                                    <ArrowDownToLine class="h-4 w-4" />
+                                  </button>
                                   <button
                                     v-if="!fieldItem.disabled"
                                     type="button"
@@ -1326,6 +1512,7 @@ function formatDisplayDateRange(str: string | undefined): string {
                 type="button"
                 variant="destructive"
                 class="rounded-lg px-6 py-2 font-semibold shadow-sm cursor-pointer"
+                :disabled="Boolean(props.busyEntries?.[entryIndex])"
                 @click="deleteEntry(entryIndex)"
               >
                 <Trash2 class="mr-1 h-4 w-4" />
@@ -1337,6 +1524,7 @@ function formatDisplayDateRange(str: string | undefined): string {
                 :disabled="disabledSaveByEntry[entryIndex]"
                 @click="saveEntry(entryIndex)"
               >
+                <Spinner v-if="props.busyEntries?.[entryIndex] === 'save'" class="mr-2 h-4 w-4" />
                 บันทึก
               </Button>
             </CardFooter>

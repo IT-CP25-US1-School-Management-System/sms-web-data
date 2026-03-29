@@ -30,6 +30,9 @@ import { createFileDocument } from '@/stores/document'
 import type { CreateFileDocumentParams, FileDocument } from '@/types/document'
 import type { DocumentRequest ,DocumentLink ,RequestEducationRecords ,RequestGeneral ,RequestHistory } from '@/types/document_request'
 import { getFileDocumentRows } from '@/stores/document'
+import { FILE_KEY_TEMPLATES } from '@/lib/constants'
+import {  DOCUMENT_EDIT } from '@/lib/constants'
+
 /* ──────────────────── ประเภทคำร้อง ──────────────────── */
 const requestTypeOptions = [
   { label: 'คำร้องขอเอกสาร', value: '1' },
@@ -385,8 +388,8 @@ function buildDocumentDetailPayload(values: Record<string, any>) {
 }
 
 async function createDocumentType() {
-  const datasetId = 'document_create'
-  const version = 'v1.0.0'
+  const datasetId =  DOCUMENT_EDIT.DATASET_ID //'document_create'
+  const version = DOCUMENT_EDIT.DATASET_VERSION_DOCUMENT_REQUEST //'v1.0.0'
 
   documentRequest.value.id = generateUUID()
   documentRequest.value.person_id = authStore.user?.id || ''
@@ -442,7 +445,7 @@ async function uploadFile() {
 async function getFileTemplateType2() {
   
   try {
-    const response = await getFileDocumentRows('3a68b6bf-4631-4835-a77f-eff8da31a796')
+    const response = await getFileDocumentRows(FILE_KEY_TEMPLATES.DOCUMENT_TYPE_2)
     console.log('getFileTemplateType2:', response.data)
     urlDownload2.value = response.data?.url || ''
     downloadFileName2.value = response.data?.original_filename || 'template-type-2'
@@ -455,7 +458,7 @@ async function getFileTemplateType2() {
 async function getFileTemplateType3() {
   
   try {
-    const response = await getFileDocumentRows('074053f7-0e7a-4870-9091-84f0cd945aed')
+    const response = await getFileDocumentRows(FILE_KEY_TEMPLATES.DOCUMENT_TYPE_3)
     console.log('getFileTemplateType3:', response.data)
     urlDownload3.value = response.data?.url || ''
     downloadFileName3.value = response.data?.original_filename || 'template-type-3'
@@ -467,7 +470,7 @@ async function getFileTemplateType3() {
 async function getFileTemplateType4_1() {
   
   try {
-    const response = await getFileDocumentRows('cc01791c-658e-44ed-aa4a-ccb7be9418fe')
+    const response = await getFileDocumentRows(FILE_KEY_TEMPLATES.DOCUMENT_TYPE_4_1)
     console.log('getFileTemplateType4_1:', response.data)
     urlDownload4_1.value = response.data?.url || ''
     downloadFileName4_1.value = response.data?.original_filename || 'template-type-4-1'
@@ -479,7 +482,7 @@ async function getFileTemplateType4_1() {
 async function getFileTemplateType4_2() {
   
   try {
-    const response = await getFileDocumentRows('99261424-7b09-48e9-820d-ffcb6115729c')
+    const response = await getFileDocumentRows(FILE_KEY_TEMPLATES.DOCUMENT_TYPE_4_2)
     console.log('getFileTemplateType4_2:', response.data)
     urlDownload4_2.value = response.data?.url || ''
     downloadFileName4_2.value = response.data?.original_filename || 'template-type-4-2'
@@ -505,8 +508,8 @@ async function handleDownloadTemplate(fileUrl: string, fileName: string) {
   }
 }
 async function storeFile(documentIds: string[]) {
-  const datasetId = 'document_create'
-  const version = 'v1.1.0'
+  const datasetId =  DOCUMENT_EDIT.DATASET_ID //'document_create'
+  const version = DOCUMENT_EDIT.DATASET_VERSION_DOCUMENT_LINK //'v1.1.0'
 
   try {
     for (const documentId of documentIds) {
@@ -533,7 +536,7 @@ async function storeFile(documentIds: string[]) {
 
 async function createDocumentDetail(values: Record<string, any>) {
   const data = buildDocumentDetailPayload(values)
-  const datasetId = 'document_create'
+  const datasetId =  DOCUMENT_EDIT.DATASET_ID //'document_create'
   let version: 'v1.2.0' | 'v1.2.1' | 'v1.2.2' | null = null
 
   switch (requestType.value) {

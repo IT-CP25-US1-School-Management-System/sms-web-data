@@ -42,3 +42,13 @@ export async function createFileDocument<T = FileDocument>(
 
 
 
+export async function deleteFileDocument<T = FileDocument>(
+  key: string,
+): Promise<FileDocumentResponse<T>> {
+  const response = await documentApiInstance.delete<FileDocumentResponse<T>>(
+    `/v1/documents/resource/${key}`
+  )
+  return response.data
+}
+   
+
