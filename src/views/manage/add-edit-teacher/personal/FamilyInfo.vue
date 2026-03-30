@@ -506,7 +506,10 @@ function buildFamilyPayload(
     district: normalizeText(normalizedValues.district),
     subdistrict: normalizeText(normalizedValues.subdistrict),
     postal_code: normalizeText(normalizedValues.postal_code),
-    created_at: mode === 'create' ? now : undefined,
+    created_at:
+      mode === 'create'
+        ? now
+        : normalizeText(normalizedValues.created_at) || normalizeText(source.created_at) || now,
     updated_at: mode === 'update' ? now : undefined,
   }
 }

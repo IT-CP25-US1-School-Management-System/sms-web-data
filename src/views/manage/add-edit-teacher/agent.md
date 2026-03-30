@@ -178,3 +178,7 @@
   - `RoyalDecorations.vue` uses `decorations.person_id`
 - Save flows on the editable pages now also fall back to the selected manage `personId` when building payloads, so admin edits stay attached to the chosen teacher instead of the logged-in user context.
 - `AcademicRankHistory.vue` now writes academic rows through `data_manage / v7.0.0` and writes/deletes its `document_links` through `data_manage / v0.0.0`.
+
+## March 30, 2026 - FamilyInfo update keeps created_at
+
+- `src/views/manage/add-edit-teacher/personal/FamilyInfo.vue` now preserves and resends the existing `created_at` value when updating a family member row.

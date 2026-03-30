@@ -1170,3 +1170,7 @@ Add a new teacher with minimal data:
 - Editable work-history pages now also fall back to the selected manage `personId` when building payloads, so updates stay scoped to the teacher being edited by the admin.
 - Admin placeholders were updated, including the `license_no` field and the loading-state messaging on the page.
 - `AcademicRankHistory.vue` now uses `data_manage / v7.0.0` for academic create/update/delete and `data_manage / v0.0.0` for its `document_links`.
+
+### Add Teacher - FamilyInfo update now preserves created_at
+
+- `src/views/manage/add-edit-teacher/personal/FamilyInfo.vue` now resends the existing `created_at` when updating a family member row so backend-required metadata is not dropped during edit.
