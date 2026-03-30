@@ -1,11 +1,22 @@
 <script setup lang="ts">
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import CreateForm from '@/components/form/CreateForm.vue'
-import { DATASET_DELETE, DATASET_EDIT, DATASET_GET, DOCUMENT_DELETE, DOCUMENT_EDIT } from '@/lib/constants'
+import {
+  DATASET_DELETE,
+  DATASET_EDIT,
+  DATASET_GET,
+  DOCUMENT_DELETE,
+  DOCUMENT_EDIT,
+} from '@/lib/constants'
 import { formatDateInput, generateUUID } from '@/lib/helpers'
 import { useAuthStore } from '@/stores/auth'
 import { createFileDocument, deleteFileDocument, getFileDocumentRows } from '@/stores/document'
-import { createDatasetRow, deleteDatasetRow, getDatasetRows, updateDatasetRow } from '@/stores/dataset'
+import {
+  createDatasetRow,
+  deleteDatasetRow,
+  getDatasetRows,
+  updateDatasetRow,
+} from '@/stores/dataset'
 import type { CreateFileDocumentParams, FileDocument } from '@/types/document'
 import type { DocumentLink } from '@/types/document_request'
 import { onMounted, ref } from 'vue'
@@ -191,7 +202,9 @@ const trainingFields: CreateFormSection[][] = [
 ]
 
 function getCurrentUserName() {
-  return authStore.user?.name || authStore.user?.given_name || authStore.user?.email || 'current-user'
+  return (
+    authStore.user?.name || authStore.user?.given_name || authStore.user?.email || 'current-user'
+  )
 }
 
 function normalizeTrainingFiles(value: unknown): TrainingFileItem[] {
@@ -231,7 +244,11 @@ function formatTrainingRecord(record: TrainingRow) {
   }
 }
 
-function buildTrainingPayload(values: TrainingFormValue, currentRecord?: TrainingRow, personId?: string) {
+function buildTrainingPayload(
+  values: TrainingFormValue,
+  currentRecord?: TrainingRow,
+  personId?: string,
+) {
   const payload = { ...values }
   for (const fileField of TRAINING_FILE_FIELDS) delete payload[fileField]
 
@@ -263,7 +280,9 @@ function extractTrainingResponse(data: unknown) {
 
   const source = Array.isArray(data[0]) ? data[0] : data
   const records = (source as TrainingRow[]) || []
-  const allDocumentLinks = records.flatMap((record) => (record.document_links || []) as DocumentLinkRow[])
+  const allDocumentLinks = records.flatMap(
+    (record) => (record.document_links || []) as DocumentLinkRow[],
+  )
 
   return {
     records,
@@ -278,7 +297,10 @@ function extractTrainingResponse(data: unknown) {
   }
 }
 
-function createExistingTrainingFile(file: FileDocument, link?: DocumentLinkRow): ExistingTrainingFile {
+function createExistingTrainingFile(
+  file: FileDocument,
+  link?: DocumentLinkRow,
+): ExistingTrainingFile {
   return {
     name: file.original_filename,
     size: file.size,
@@ -296,7 +318,10 @@ async function getTrainingFiles(
   fileField: (typeof TRAINING_FILE_FIELDS)[number],
 ) {
   const matchedLinks = documentLinks.filter(
-    (link) => link.entity_id === record.id && Boolean(link.document_key) && matchesTrainingFileField(link, fileField),
+    (link) =>
+      link.entity_id === record.id &&
+      Boolean(link.document_key) &&
+      matchesTrainingFileField(link, fileField),
   )
 
   if (!matchedLinks.length) return []
@@ -314,11 +339,15 @@ async function getTrainingFiles(
 async function getTrainingData() {
   loading.value = true
   try {
-    const response = await getDatasetRows<TrainingRow>(DATASET_GET.DATASET_ID, DATASET_GET.DATASET_VERSION, {
-      view: TRAINING_GET_VIEW,
-      page: 1,
-      per_page: 50,
-    })
+    const response = await getDatasetRows<TrainingRow>(
+      DATASET_GET.DATASET_ID,
+      DATASET_GET.DATASET_VERSION,
+      {
+        view: TRAINING_GET_VIEW,
+        page: 1,
+        per_page: 50,
+      },
+    )
 
     const { records, allDocumentLinks } = extractTrainingResponse(response.data)
 
@@ -334,17 +363,28 @@ async function getTrainingData() {
     trainingData.value = await Promise.all(
       records.map(async (record) => ({
         ...formatTrainingRecord(record),
-        'photo-file': await getTrainingFiles(record, documentLinksByTraining.value[record.id || ''] || [], 'photo-file'),
-        'certificate-file': await getTrainingFiles(record, documentLinksByTraining.value[record.id || ''] || [], 'certificate-file'),
+        'photo-file': await getTrainingFiles(
+          record,
+          documentLinksByTraining.value[record.id || ''] || [],
+          'photo-file',
+        ),
+        'certificate-file': await getTrainingFiles(
+          record,
+          documentLinksByTraining.value[record.id || ''] || [],
+          'certificate-file',
+        ),
       })),
     )
 
     formRenderKey.value += 1
   } catch (error: any) {
     console.error('Training API Error:', error)
-    toast.error(`โหลดข้อมูลผลงานการอบรมไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
-      position: 'bottom-right',
-    })
+    toast.error(
+      `โหลดข้อมูลผลงานการอบรมไม่สำเร็จ: ${error?.response?.data?.message || error.message}`,
+      {
+        position: 'bottom-right',
+      },
+    )
     trainingData.value = []
     documentLinksByTraining.value = {}
     formRenderKey.value += 1
@@ -457,25 +497,32 @@ async function persistTraining(index: number, values: TrainingFormValue) {
   const currentRecord = trainingData.value[index]
   const personId = resolveTrainingPersonId(values, currentRecord)
   const payload = buildTrainingPayload(values, currentRecord, personId)
-  const currentLinks = currentRecord?.id ? documentLinksByTraining.value[currentRecord.id] || [] : []
+  const currentLinks = currentRecord?.id
+    ? documentLinksByTraining.value[currentRecord.id] || []
+    : []
 
   const removedLinks = TRAINING_FILE_FIELDS.flatMap((fileField) => {
     const currentFiles = normalizeTrainingFiles(values[fileField])
     const existingFiles = currentFiles.filter(isExistingTrainingFile)
     const keptDocumentKeys = new Set(existingFiles.map((file) => file.resource_id))
-    const currentFieldLinks = currentLinks.filter((link) => matchesTrainingFileField(link, fileField))
+    const currentFieldLinks = currentLinks.filter((link) =>
+      matchesTrainingFileField(link, fileField),
+    )
     return currentFieldLinks.filter((link) => !keptDocumentKeys.has(link.document_key))
   })
 
   const newFilesByField = Object.fromEntries(
     TRAINING_FILE_FIELDS.map((fileField) => [
       fileField,
-      normalizeTrainingFiles(values[fileField]).filter((file): file is File => file instanceof File),
+      normalizeTrainingFiles(values[fileField]).filter(
+        (file): file is File => file instanceof File,
+      ),
     ]),
   ) as Record<(typeof TRAINING_FILE_FIELDS)[number], File[]>
 
   const hasFileChanges =
-    removedLinks.length > 0 || TRAINING_FILE_FIELDS.some((fileField) => newFilesByField[fileField].length > 0)
+    removedLinks.length > 0 ||
+    TRAINING_FILE_FIELDS.some((fileField) => newFilesByField[fileField].length > 0)
 
   let createdRecordId = ''
   let uploadedDocumentKeys: string[] = []
@@ -517,7 +564,11 @@ async function persistTraining(index: number, values: TrainingFormValue) {
       uploadedDocumentKeys.push(...uploadedKeys)
 
       if (uploadedKeys.length) {
-        const links = await storeTrainingFiles(uploadedKeys, { ...currentRecord, ...payload, id: currentRecord.id }, fileField)
+        const links = await storeTrainingFiles(
+          uploadedKeys,
+          { ...currentRecord, ...payload, id: currentRecord.id },
+          fileField,
+        )
         createdDocumentLinks.push(...links)
       }
     }
@@ -557,9 +608,12 @@ async function persistTraining(index: number, values: TrainingFormValue) {
     }
 
     console.error('Training Save Error:', error)
-    toast.error(`บันทึกข้อมูลผลงานการอบรมไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
-      position: 'bottom-right',
-    })
+    toast.error(
+      `บันทึกข้อมูลผลงานการอบรมไม่สำเร็จ: ${error?.response?.data?.message || error.message}`,
+      {
+        position: 'bottom-right',
+      },
+    )
   }
 }
 
@@ -592,9 +646,12 @@ async function deleteTrainingWithFiles(recordId?: string, currentRecord?: Traini
     await getTrainingData()
   } catch (error: any) {
     console.error('Training Delete Error:', error)
-    toast.error(`ลบข้อมูลผลงานการอบรมไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
-      position: 'bottom-right',
-    })
+    toast.error(
+      `ลบข้อมูลผลงานการอบรมไม่สำเร็จ: ${error?.response?.data?.message || error.message}`,
+      {
+        position: 'bottom-right',
+      },
+    )
     await getTrainingData()
   }
 }

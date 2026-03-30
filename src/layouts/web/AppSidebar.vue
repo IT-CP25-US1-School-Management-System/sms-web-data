@@ -276,10 +276,10 @@ const isGovernment = computed(() => {
   if (!u) return false
   return Boolean(
     u.is_government ??
-      u.profile?.is_government ??
-      u.attributes?.is_government ??
-      u['isGovernment'] ??
-      false,
+    u.profile?.is_government ??
+    u.attributes?.is_government ??
+    u['isGovernment'] ??
+    false,
   )
 })
 
@@ -301,14 +301,14 @@ const handleLogout = async () => {
 </script>
 
 <template>
-  <Sidebar variant="inset" >
+  <Sidebar variant="inset">
     <SidebarHeader>
       <SidebarMenu>
         <SidebarMenuItem>
           <SidebarMenuButton size="lg" as-child>
-            <div class="flex items-center gap-2 ">
+            <div class="flex items-center gap-2">
               <div
-                class="bg-background  flex aspect-square h-10 items-center justify-center rounded-lg"
+                class="bg-background flex aspect-square h-10 items-center justify-center rounded-lg"
               >
                 <!-- <img src="/" alt="Logo" class="h-9" /> -->
               </div>

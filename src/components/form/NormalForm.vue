@@ -699,7 +699,7 @@ function handleCheckboxGroupUpdate(
                 <div
                   v-for="(file, fileIdx) in getFiles(fieldItem.name)"
                   :key="fileIdx"
-                  class="border-muted bg-muted/40 flex min-h-11  w-fit max-w-xl items-center justify-between gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
+                  class="border-muted bg-muted/40 flex min-h-11 w-fit max-w-xl items-center justify-between gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
                 >
                   <span class="truncate">{{ file.name }}</span>
                   <span class="text-muted-foreground shrink-0 text-xs">
@@ -708,7 +708,7 @@ function handleCheckboxGroupUpdate(
                   <button
                     v-if="!fieldItem.disabled"
                     type="button"
-                    class="hover:text-destructive text-muted-foreground rounded p-0.5 transition-colors cursor-pointer"
+                    class="hover:text-destructive text-muted-foreground cursor-pointer rounded p-0.5 transition-colors"
                     @click.stop="removeFile(fieldItem.name, fileIdx)"
                   >
                     <X class="h-3.5 w-3.5" />

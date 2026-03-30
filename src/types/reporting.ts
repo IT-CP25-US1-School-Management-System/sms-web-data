@@ -55,3 +55,61 @@ export interface ImportJobResult {
   completed_at?: string
   error_message?: string
 }
+
+export interface ReportTemplateColumn {
+  table_name: string
+  column_name: string
+}
+
+export interface ReportTemplatePosition extends ReportTemplateColumn {
+  alias: string
+  x: number
+  y: number
+}
+
+export interface UploadReportTemplateParams {
+  name: string
+  dataset_id: string
+  version: string
+  columns: ReportTemplateColumn[]
+  positions: ReportTemplatePosition[]
+}
+
+export interface UploadReportTemplateResponse {
+  id: string
+}
+
+export type ReportTemplateExportJobStatus = 'pending' | 'succeeded' | 'failed'
+
+export interface ReportingTemplateRecord {
+  id: string
+  name: string
+  template_id: string
+  created_at: string
+}
+
+export interface ReportingTemplateCreateDTO {
+  id: string
+  name: string
+  template_id: string
+  created_at: string
+}
+
+export interface ExportTemplateResponse {
+  job_id: string
+}
+
+export interface ExportTemplateJobData {
+  status: ReportTemplateExportJobStatus
+  url?: string
+  original_filename?: string
+  file_size?: number
+  content_type?: string
+  created_at?: string
+  completed_at?: string
+  error_message?: string
+}
+
+export interface ExportTemplateJobResponse {
+  data: ExportTemplateJobData
+}

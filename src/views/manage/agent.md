@@ -1,18 +1,23 @@
 # Teacher & Student Management System - Agent Documentation
 
 ## Overview
+
 Implementation of teacher and student list management interfaces integrated with DMS (Data Management Service) API. This system provides comprehensive views for managing teacher and student records with filtering, searching, pagination, and full CRUD operations.
 
 ## Implementation Date
+
 March 1, 2026
 
 ## Last Updated
+
 March 11, 2026 - Applied same table CSS layout to ManageStudentView
 
 ## Changelog
 
 ### March 11, 2026
+
 #### ManageStudentView — Same Table Layout as Teacher (`src/views/manage/ManageStudentView.vue`)
+
 - Applied identical layout pattern from ManageTeacherView
 - Outer container: `container mx-auto py-6 space-y-6` → `flex h-full flex-col gap-3 py-3`
 - Header section: added `shrink-0`
@@ -23,12 +28,14 @@ March 11, 2026 - Applied same table CSS layout to ManageStudentView
 - Stats text merged into pagination row with `mr-auto`
 
 #### ManageTeacherView — Figma Row Sizing & Title Spacing (`src/views/manage/ManageTeacherView.vue`)
+
 - Table row cells: `py-3 px-4` → `py-2 px-2` to match Figma spec (padding: 8px, gap: 8px)
 - Table header cells: `py-3 px-4` → `py-2 px-2` (same sizing as data rows)
 - Blue title "รายชื่อคุณครู": separated from table with `mb-3`, uses `rounded-lg` (fully rounded)
 - Table container: `border-t-0 rounded-b-lg` → `border rounded-lg` (standalone rounded border since title is detached)
 
 #### ManageTeacherView — More Table Space (`src/views/manage/ManageTeacherView.vue`)
+
 - Outer container: `space-y-4 py-6` → `gap-3 py-3` (less vertical padding)
 - Header section: `space-y-4` → `shrink-0 space-y-2` (tighter + won't compress)
 - Blue title bar: `p-4 text-lg` → `px-4 py-2 text-base` + `shrink-0`
@@ -36,6 +43,7 @@ March 11, 2026 - Applied same table CSS layout to ManageStudentView
 - Reconnected blue header to table card: `border-t-0 rounded-b-lg`
 
 #### ManageTeacherView Responsive Layout (`src/views/manage/ManageTeacherView.vue`)
+
 - Uses flex layout chain (`h-full` → `min-h-0 flex-1`) to fill available viewport height
 - Header section (tabs, search, add button) uses `shrink-0` so it never compresses
 - Table card uses `min-h-0 flex-1` to take remaining space
@@ -51,10 +59,13 @@ March 11, 2026 - Applied same table CSS layout to ManageStudentView
 - Changed `rounded-b-lg` to `rounded-lg` on the table border container since the blue header is no longer visually attached
 
 #### MainLayout Height Fix (`src/layouts/manage/MainLayout.vue`)
+
 - `SidebarInset` now uses `class="flex h-screen flex-col overflow-hidden"` to constrain to viewport height
 - `<main>` changed from `flex-1 p-6` to `min-h-0 flex-1 overflow-hidden p-6` so child flex layouts can calculate height correctly
 - This allows ManageTeacherView's table to scroll within the viewport without pushing pagination off-screen
+
 #### ManageTeacherView Table Layout Fix (`src/views/manage/ManageTeacherView.vue`)
+
 - Changed outer container from `container mx-auto py-6 space-y-6` to `flex h-full flex-col space-y-4 py-6` so the page fills available height
 - Table card uses `flex min-h-0 flex-1 flex-col` to fill remaining space
 - Table body wrapped in `min-h-0 flex-1 overflow-auto` so only the table rows scroll (not the whole page)
@@ -64,17 +75,22 @@ March 11, 2026 - Applied same table CSS layout to ManageStudentView
 - Pagination no longer requires scrolling down to find — always visible at the bottom
 
 #### Manage Sidebar (`src/layouts/manage/AppSidebar.vue`)
+
 - Removed "หน้าหลัก" (Home) menu item from the main menu section
 - Removed unused `Home` icon import from lucide-vue-next
+
 #### Layout Restructuring
+
 - Moved `src/layouts/AppSidebar.vue` → `src/layouts/manage/AppSidebar.vue`
 - Moved `src/layouts/MainLayout.vue` → `src/layouts/manage/MainLayout.vue`
 - Updated all imports referencing the old layout paths
 
 #### Router Changes (`src/router/index.ts`)
+
 1. **Home route (`/`) — Role-based redirect**
    - If user has `admin` role → redirect to `/manage/teachers` (ROUTE_NAMES.MANAGE_TEACHERS)
    - Otherwise → redirect to `/personal/personal-details` (ROUTE_NAMES.PERSONAL_DETAILS)
+
    ```typescript
    {
      path: '/',
@@ -105,6 +121,7 @@ March 11, 2026 - Applied same table CSS layout to ManageStudentView
      - **Non-admin + adminOnly route** → redirect to `/personal/personal-details`
 
 #### Role Detection
+
 - Uses `useAuthStore().hasRole('admin')` to check if user has the `admin` role
 - Admin role is found in `user_info.roles` array from the auth token response
 - Example roles: `["offline_access", "default-roles-sms-project", "admin", "uma_authorization"]`
@@ -112,22 +129,26 @@ March 11, 2026 - Applied same table CSS layout to ManageStudentView
 ## Files Created/Modified
 
 ### Type Definitions
+
 1. **`src/types/dataset.ts`** - Core DMS API types (Dataset, DatasetVersion, responses)
 2. **`src/types/teacher.ts`** - Teacher/PersonData types with Government and EmploymentContract relations
 3. **`src/types/student.ts`** - Student types with Address and Parent relations
 
 ### API Layer
+
 4. **`src/stores/dataset.ts`** - Generic CRUD functions for DMS dataset operations
 5. **`src/stores/students.ts`** - Student-specific API implementations
 6. **`src/stores/teachers.ts`** - Teacher-specific API implementations
 
 ### Views
+
 7. **`src/views/manage/ManageTeacherView.vue`** - Teacher list interface with API integration
 8. **`src/views/manage/ManageStudentView.vue`** - Student list interface with API integration
 
 ## API Integration
 
 ### DMS API Structure
+
 - **Base URL**: `https://bscit.sit.kmutt.ac.th/capstone25/cp25us1/data/api`
 - **Dataset ID**: `capstone`
 - **Dataset Version**: `v1.0.0`
@@ -136,6 +157,7 @@ March 11, 2026 - Applied same table CSS layout to ManageStudentView
   - `student` - Student data (Student with Address/Parent relations)
 
 ### Endpoint Pattern
+
 ```
 GET /v1/datasets/{dataset_id}/versions/{version}/data?view_name={view}
 ```
@@ -143,6 +165,7 @@ GET /v1/datasets/{dataset_id}/versions/{version}/data?view_name={view}
 ### API Functions
 
 **Generic CRUD (src/stores/dataset.ts)**
+
 ```typescript
 getDatasetRows<T>(datasetId, version, params)
 getDatasetRowByKey<T>(datasetId, version, key, viewName)
@@ -152,8 +175,9 @@ deleteDatasetRow(datasetId, version, key)
 ```
 
 **Students API (src/stores/students.ts)**
+
 ```typescript
-getStudents(params)      // view_name: 'student'
+getStudents(params) // view_name: 'student'
 getStudentById(id)
 createStudent(data)
 updateStudent(id, data)
@@ -161,8 +185,9 @@ deleteStudent(id)
 ```
 
 **Teachers API (src/stores/teachers.ts)**
+
 ```typescript
-getTeachers(params)      // view_name: 'person'
+getTeachers(params) // view_name: 'person'
 getTeacherById(id)
 createTeacher(data)
 updateTeacher(id, data)
@@ -174,11 +199,13 @@ deleteTeacher(id)
 ### ✅ Teacher Management (ManageTeacherView.vue)
 
 #### Tab Navigation
+
 - **ทั้งหมด (All)**: Shows all teachers regardless of type
 - **ข้าราชการ (Government Officials)**: Filters by checking `government` object existence
 - **ครูอัตราจ้าง (Contract Teachers)**: Filters by checking `employment_contract` object existence
 
 **Filter Logic:**
+
 ```typescript
 // Tab filter - uses is_government for API query
 if (activeTab.value === 'government') {
@@ -194,6 +221,7 @@ const getTeacherType = (teacher: PersonData) => {
 ```
 
 #### Search Functionality
+
 - Real-time search by teacher's first name (first_name_th) or last name (last_name_th)
 - 500ms debounce to reduce API calls
 - Search icon positioned on the left side of input field
@@ -201,6 +229,7 @@ const getTeacherType = (teacher: PersonData) => {
 - Resets to page 1 on search
 
 **Filter Structure:**
+
 ```typescript
 // Flat array structure (not nested)
 const filterConditions: any[] = [
@@ -218,25 +247,29 @@ const filterConditions: any[] = [
 ```
 
 #### Add Teacher Button
+
 - Green colored button with plus icon
 - Text: "เพิ่มรายชื่อ" (Add name)
 - Shows "ฟีเจอร์กำลังพัฒนา" toast notification (TODO: implement form dialog)
 
 #### Teacher Data Table
+
 Displays teacher information from DMS API:
 
-| Column | Field | Alignment | Description |
-|--------|-------|-----------|-------------|
-| ชื่อ | first_name_th | Left | Teacher's first name (Thai) |
-| นามสกุล | last_name_th | Left | Teacher's last name (Thai) |
-| ประเภท | government object | Center | Teacher type (checked via `getTeacherType()`) |
-| การดำเนินการ | actions | Center | Action menu dropdown |
+| Column       | Field             | Alignment | Description                                   |
+| ------------ | ----------------- | --------- | --------------------------------------------- |
+| ชื่อ         | first_name_th     | Left      | Teacher's first name (Thai)                   |
+| นามสกุล      | last_name_th      | Left      | Teacher's last name (Thai)                    |
+| ประเภท       | government object | Center    | Teacher type (checked via `getTeacherType()`) |
+| การดำเนินการ | actions           | Center    | Action menu dropdown                          |
 
 **Teacher Type Detection:**
+
 - Has `government` object → "ข้าราชการ" (Government official)
 - No `government` object (has `employment_contract`) → "ครูอัตราจ้าง" (Contract teacher)
 
 **Table Styling:**
+
 - All cells have vertical middle alignment for consistent appearance
 - Name columns (ชื่อ, นามสกุล) are left-aligned for readability
 - Category (ประเภท) and Actions (การดำเนินการ) are center-aligned for better visual hierarchy
@@ -244,13 +277,16 @@ Displays teacher information from DMS API:
 - Empty state: "ไม่พบข้อมูลคุณครู"
 
 #### Action Menu (Horizontal Three-Dot)
+
 Each teacher row has a centered horizontal three-dot menu button (⋯) with dropdown options:
+
 - **แก้ไข (Edit)**: Shows "ฟีเจอร์กำลังพัฒนา" toast (TODO: implement edit dialog)
 - **ลบ (Delete)**: Confirms with native dialog, then calls `deleteTeacher(id)` API
   - Success: Shows success toast and reloads data
   - Error: Shows error toast with error message
 
 #### Pagination System
+
 - Uses `usePagination` composable
 - Shows 15 teachers per page
 - Server-side pagination via DMS API
@@ -261,12 +297,14 @@ Each teacher row has a centered horizontal three-dot menu button (⋯) with drop
 - Pagination state synced with API response (total_rows, total_pages)
 
 #### Blue Header Card
+
 - Blue background (#3B82F6) with white text
 - Title: "รายชื่อคุณครู" (Teacher List)
 
 ### ✅ Student Management (ManageStudentView.vue)
 
 #### Search Functionality
+
 - Real-time search by first name (first_name_th), last name (last_name_th), or student ID (student_id)
 - 500ms debounce to reduce API calls
 - Search icon on the left
@@ -274,6 +312,7 @@ Each teacher row has a centered horizontal three-dot menu button (⋯) with drop
 - Resets to page 1 on search
 
 **Filter Structure:**
+
 ```typescript
 const filterConditions: any[] = [
   {
@@ -288,42 +327,49 @@ const filterConditions: any[] = [
 ```
 
 #### Add Student Button
+
 - Green colored button with plus icon
 - Text: "เพิ่มรายชื่อ" (Add name)
 - Shows "ฟีเจอร์กำลังพัฒนา" toast notification (TODO: implement form dialog)
 
 #### Student Data Table
 
-| Column | Field | Alignment | Description |
-|--------|-------|-----------|-------------|
-| ชื่อ | first_name_th | Left | Student's first name (Thai) |
-| นามสกุล | last_name_th | Left | Student's last name (Thai) |
-| รหัสนักเรียน | student_id | Center | Student ID number |
-| ชั้น | grade_level | Center | Grade level (e.g., "ม.1") |
-| ห้อง | class_section | Center | Class section (e.g., "1") |
-| การดำเนินการ | actions | Center | Action menu dropdown |
+| Column       | Field         | Alignment | Description                 |
+| ------------ | ------------- | --------- | --------------------------- |
+| ชื่อ         | first_name_th | Left      | Student's first name (Thai) |
+| นามสกุล      | last_name_th  | Left      | Student's last name (Thai)  |
+| รหัสนักเรียน | student_id    | Center    | Student ID number           |
+| ชั้น         | grade_level   | Center    | Grade level (e.g., "ม.1")   |
+| ห้อง         | class_section | Center    | Class section (e.g., "1")   |
+| การดำเนินการ | actions       | Center    | Action menu dropdown        |
 
-**Important Note:** 
+**Important Note:**
+
 - ❌ **Do NOT use `sort_by: 'grade_level'`** - Not an allowed projection alias
 - Sorting should be removed or use allowed fields only
 
 #### Action Menu
+
 Each student row has a dropdown menu with:
+
 - **แก้ไข (Edit)**: Shows "ฟีเจอร์กำลังพัฒนา" toast (TODO: implement edit dialog)
 - **ลบ (Delete)**: Confirms with native dialog, then calls `deleteStudent(id)` API
 
 #### Pagination
+
 - 15 students per page
 - Server-side pagination via DMS API
 - Same pagination controls as teacher view
 
 #### Blue Header Card
+
 - Blue background (#3B82F6) with white text
 - Title: "รายชื่อนักเรียน" (Student List)
 
 ## Type System
 
 ### Dataset Types (src/types/dataset.ts)
+
 OpenAPI-compliant types for DMS API operations:
 
 ```typescript
@@ -337,7 +383,7 @@ interface Dataset {
   updated_at?: string
 }
 
-// Version types  
+// Version types
 interface DatasetVersion {
   dataset_id: string
   version: string
@@ -351,7 +397,7 @@ interface DatasetVersion {
 interface DatasetQueryParams {
   page?: number
   per_page?: number
-  filter?: any[]  // Flat array structure
+  filter?: any[] // Flat array structure
   sort_by?: string
   sort_order?: 'asc' | 'desc'
 }
@@ -380,14 +426,14 @@ interface PersonData {
   prefix_id: number
   role_id: string
   is_government: boolean
-  
+
   first_name_th: string
   middle_name_th?: string
   last_name_th: string
   first_name_en?: string
   middle_name_en?: string
   last_name_en?: string
-  
+
   national_id?: string
   passport_id?: string
   gender?: Gender
@@ -401,11 +447,11 @@ interface PersonData {
   appointment_type_id?: number
   marital_status?: string
   spouse_name?: string
-  
+
   // Relations (populated by API)
-  government?: Government  // มีเมื่อเป็นข้าราชการ
-  employment_contract?: EmploymentContract  // มีเมื่อเป็นครูอัตราจ้าง
-  
+  government?: Government // มีเมื่อเป็นข้าราชการ
+  employment_contract?: EmploymentContract // มีเมื่อเป็นครูอัตราจ้าง
+
   created_at: string
   updated_at?: string
 }
@@ -452,17 +498,17 @@ interface EmploymentContract {
 interface Student {
   id: string
   student_id: string
-  grade_level: string  // "ม.1", "ม.2", etc.
+  grade_level: string // "ม.1", "ม.2", etc.
   class_section: string
   academic_track?: string
   student_type?: string
-  
+
   prefixe_id: string
   first_name_th: string
   last_name_th: string
   first_name_en?: string
   last_name_en?: string
-  
+
   date_of_birth?: string
   age_years: number
   birth_province?: string
@@ -475,7 +521,7 @@ interface Student {
   nationality?: string
   phone_number?: string
   marital_status?: string
-  
+
   address_id: string
   created_at: string
   updated_at: string
@@ -522,6 +568,7 @@ interface Parent {
 ## Technical Details
 
 ### Dependencies
+
 - Vue 3 Composition API (`<script setup lang="ts">`)
 - TypeScript (strict mode)
 - Existing UI Components (shadcn-vue):
@@ -538,14 +585,15 @@ interface Parent {
   - Axios (three instances: authApiInstance, dataApiInstance, documentApiInstance)
 
 ### State Management (Both Views)
+
 ```typescript
 // Data state
-const teachers = ref<PersonData[]>([])  // or students
+const teachers = ref<PersonData[]>([]) // or students
 const loading = ref(false)
 const searchQuery = ref('')
 
 // Teacher-specific
-const activeTab = ref<TabType>('all')  // 'all' | 'government' | 'contract'
+const activeTab = ref<TabType>('all') // 'all' | 'government' | 'contract'
 
 // Pagination state
 const pagination = ref<PaginationData>({
@@ -557,18 +605,19 @@ const pagination = ref<PaginationData>({
 ```
 
 ### API Call Pattern
+
 ```typescript
 const fetchTeachers = async () => {
   loading.value = true
   try {
     // Build filter array
     const filterConditions: any[] = []
-    
+
     // Add filters based on tab/search
     if (activeTab.value === 'government') {
       filterConditions.push({ column: 'is_government', operator: 'eq', value: true })
     }
-    
+
     if (searchQuery.value.trim()) {
       filterConditions.push({
         logic: 'OR',
@@ -578,7 +627,7 @@ const fetchTeachers = async () => {
         ],
       })
     }
-    
+
     // Call API
     const response = await getTeachers({
       page: pagination.value.page,
@@ -587,7 +636,7 @@ const fetchTeachers = async () => {
       sort_by: 'first_name_th',
       sort_order: 'asc',
     })
-    
+
     // Update state
     teachers.value = response.data
     pagination.value.total_rows = response.total_rows
@@ -604,6 +653,7 @@ const fetchTeachers = async () => {
 ```
 
 ### Watchers
+
 ```typescript
 // Watch for tab changes (teacher only)
 watch([() => activeTab.value, () => pagination.value.page], () => {
@@ -629,6 +679,7 @@ onMounted(() => {
 ### Event Handlers
 
 **Teacher View:**
+
 - `changeTab(tab: TabType)`: Switch between tabs and reset to page 1
 - `goToPage(page: number)`: Navigate to specific page
 - `previousPage()`: Go to previous page if available
@@ -639,6 +690,7 @@ onMounted(() => {
 - `getTeacherType(teacher: PersonData)`: Returns label by checking `teacher.government` object
 
 **Student View:**
+
 - `goToPage(page: number)`: Navigate to specific page
 - `previousPage()`: Go to previous page if available
 - `nextPage()`: Go to next page if available
@@ -647,6 +699,7 @@ onMounted(() => {
 - `handleAddStudent()`: Shows "ฟีเจอร์กำลังพัฒนา" toast (TODO)
 
 ## Styling
+
 - Uses Tailwind CSS classes exclusively
 - Responsive design with container wrapper
 - Hover effects on table rows (`hover:bg-muted/30`)
@@ -659,11 +712,13 @@ onMounted(() => {
 ## Known Issues & Limitations
 
 ### ⚠️ Sort Field Restrictions
+
 - **Error**: `sort_by field 'grade_level' is not an allowed projection alias for sorting`
 - **Solution**: Remove `sort_by` parameter or use only allowed fields
 - **Affected**: ManageStudentView.vue - removed grade_level sorting
 
 ### 🔧 Pending Features (TODO)
+
 1. **Add/Edit Form Dialogs**: Both teacher and student views show "ฟีเจอร์กำลังพัฒนา" toast
 2. **Form Validation**: Need vee-validate + Zod schemas for create/update forms
 3. **Confirmation Dialogs**: Currently using native `confirm()`, should use AlertDialog component
@@ -672,9 +727,10 @@ onMounted(() => {
 6. **Bulk Operations**: Select multiple rows for batch delete/update
 
 ### ✅ Completed Integrations
+
 - [x] Real API calls to DMS backend
 - [x] Server-side pagination
-- [x] Server-side filtering  
+- [x] Server-side filtering
 - [x] Loading states with spinners
 - [x] Error handling with toast notifications
 - [x] Success feedback with toast notifications
@@ -688,6 +744,7 @@ onMounted(() => {
 ### Manual Testing Checklist
 
 **Teacher View:**
+
 - [x] Tab switching works correctly
 - [x] Tab switching resets to page 1
 - [x] Search filters results via API
@@ -703,6 +760,7 @@ onMounted(() => {
 - [x] Teacher type detection from `government` object
 
 **Student View:**
+
 - [x] Search by name or student ID works
 - [x] Search with debounce (500ms)
 - [x] Pagination navigates correctly
@@ -715,6 +773,7 @@ onMounted(() => {
 - [ ] Sort by grade level (blocked by API limitation)
 
 ### API Integration Testing
+
 - [x] Teacher list API (`/v1/datasets/capstone/versions/v1.0.0/data?view_name=person`)
 - [x] Student list API (`/v1/datasets/capstone/versions/v1.0.0/data?view_name=student`)
 - [x] Delete teacher API (`DELETE /v1/datasets/capstone/versions/v1.0.0/data/key/{id}?view_name=person`)
@@ -727,6 +786,7 @@ onMounted(() => {
 - [ ] Update student API (pending form dialog)
 
 ### Data Edge Cases
+
 - [x] No teachers/students available (empty state)
 - [x] Single page of results (< 15 items)
 - [x] Multiple pages navigation
@@ -737,6 +797,7 @@ onMounted(() => {
 - [ ] Invalid filter fields (API validation)
 
 ### Performance Testing
+
 - [x] Debounced search reduces API calls
 - [x] Loading states prevent duplicate requests
 - [x] Server-side pagination handles large datasets
@@ -746,6 +807,7 @@ onMounted(() => {
 ## Performance Considerations
 
 ### Current Implementation
+
 - ✅ Server-side filtering and pagination via DMS API
 - ✅ Debounced search input (500ms) to reduce API calls
 - ✅ Loading states prevent duplicate requests
@@ -754,6 +816,7 @@ onMounted(() => {
 - ✅ Pagination composable for reusable logic
 
 ### Optimization Strategies Applied
+
 1. **API Call Reduction**: Debouncing search prevents excessive requests
 2. **Request Deduplication**: Loading state blocks concurrent identical requests
 3. **Efficient Watchers**: Combined watchers for tab + page changes reduce redundant calls
@@ -761,6 +824,7 @@ onMounted(() => {
 5. **Selective Re-renders**: Only affected components re-render on state changes
 
 ### Future Optimizations
+
 1. **Request Caching**: Cache recently fetched pages to avoid redundant API calls
 2. **Optimistic Updates**: Update UI immediately on delete, rollback on error
 3. **Virtual Scrolling**: For very large single-page views (if needed)
@@ -769,7 +833,9 @@ onMounted(() => {
 6. **Request Cancellation**: Cancel pending requests when new search initiated
 
 ## Design Fidelity
+
 ✅ Matches Figma design specifications:
+
 - Tab navigation layout (teacher view)
 - Search input with left-aligned icon
 - Green add button with plus icon
@@ -782,6 +848,7 @@ onMounted(() => {
 - Action icons (Pencil, Trash2)
 
 ✅ Additional UI enhancements:
+
 - Toast notifications for user feedback
 - Loading spinners during API calls
 - Disabled states during operations
@@ -792,6 +859,7 @@ onMounted(() => {
 ## Important Implementation Notes
 
 ### Data Management
+
 - ✅ **No Mock Data**: All data fetched from real DMS API endpoints
 - ✅ **Server-Side Operations**: Filtering, sorting, and pagination handled by backend
 - ✅ **Type Safety**: Full TypeScript type definitions for all entities
@@ -799,13 +867,14 @@ onMounted(() => {
 - ✅ **Loading States**: Prevent user actions during API operations
 
 ### Filter Structure
+
 - **Format**: Flat array, NOT nested FilterGroup structure
 - **Logic Operators**: Use `{ logic: 'OR', conditions: [...] }` for OR conditions
 - **Column Names**: Must match database column names exactly
 - **Operators**: `eq`, `like`, `gt`, `lt`, etc.
 - **Example**:
   ```typescript
-  [
+  ;[
     { column: 'is_government', operator: 'eq', value: true },
     {
       logic: 'OR',
@@ -818,12 +887,14 @@ onMounted(() => {
   ```
 
 ### Teacher Type Detection
+
 - **Query Filter**: Uses `is_government` boolean field for database filtering
 - **Display Logic**: Checks for `government` object presence for UI display
 - **Reasoning**: `government` and `employment_contract` are relations that may or may not be loaded
 - **Implementation**: `teacher.government ? 'ข้าราชการ' : 'ครูอัตราจ้าง'`
 
 ### API Endpoint Structure
+
 - **Base**: `https://bscit.sit.kmutt.ac.th/capstone25/cp25us1/data/api`
 - **Pattern**: `/v1/datasets/{dataset_id}/versions/{version}/data`
 - **Query Params**: `view_name`, `page`, `per_page`, `filter`, `sort_by`, `sort_order`
@@ -832,12 +903,14 @@ onMounted(() => {
   - `student` → Student with Address/Parent relations
 
 ### Sort Field Limitations
+
 - ⚠️ **Not all fields support sorting** - API enforces allowed projection aliases
 - ❌ `grade_level` is NOT an allowed sort field
 - ✅ Use `first_name_th`, `last_name_th`, `student_id` for sorting
 - 💡 Remove `sort_by` parameter if field causes errors
 
 ### Component Architecture
+
 - **Pattern**: Composition API with `<script setup lang="ts">`
 - **State**: Reactive refs (not Pinia stores for views)
 - **Watchers**: Debounced search, tab changes, pagination
@@ -846,12 +919,14 @@ onMounted(() => {
 - **Emits**: None (self-contained)
 
 ### Toast Notifications
+
 - **Library**: vue-sonner (NOT useToast composable)
 - **Import**: `import { toast } from 'vue-sonner'`
 - **Methods**: `toast.success()`, `toast.error()`, `toast.info()`
 - **Structure**: `toast.error('หัวข้อ', { description: 'รายละเอียด' })`
 
 ### Pending Implementation (TODO)
+
 1. **Form Dialogs**: Create/edit dialogs for teachers and students
 2. **Form Validation**: Vee-validate + Zod schemas
 3. **Confirmation Dialogs**: Replace native `confirm()` with AlertDialog component
@@ -864,33 +939,39 @@ onMounted(() => {
 ## Related Files
 
 ### Type Definitions
+
 - `src/types/dataset.ts` - DMS API types (Dataset, DatasetVersion, responses)
 - `src/types/teacher.ts` - PersonData, Government, EmploymentContract types
 - `src/types/student.ts` - Student, Address, Parent types
 
 ### API Layer
+
 - `src/stores/dataset.ts` - Generic CRUD functions + constants (DATASET_ID, DATASET_VERSION)
 - `src/stores/students.ts` - Student-specific API functions
 - `src/stores/teachers.ts` - Teacher-specific API functions
 - `src/stores/api.ts` - Axios instances, interceptors, and auth API functions
 
 ### Views
+
 - `src/views/manage/ManageTeacherView.vue` - Teacher management interface
 - `src/views/manage/ManageStudentView.vue` - Student management interface
 
 ### Composables
+
 - `src/composables/usePagination.ts` - Pagination state and helpers
 - `src/composables/useToast.ts` - Toast helper (NOT used in these views)
 
 ### UI Components (shadcn-vue)
+
 - `src/components/ui/button/` - Button component
 - `src/components/ui/input/` - Input component
 - `src/components/ui/dropdown-menu/` - Dropdown menu component
 - `src/components/ui/alert-dialog/` - Alert dialog (TODO: use for confirmations)
 
 ## Contact & Maintenance
+
 - **Documentation**: This file (`src/views/manage/agent.md`)
-- **Source Code**: 
+- **Source Code**:
   - Teacher view: `src/views/manage/ManageTeacherView.vue`
   - Student view: `src/views/manage/ManageStudentView.vue`
 - **API Types**: `src/types/dataset.ts`, `src/types/teacher.ts`, `src/types/student.ts`
@@ -915,14 +996,17 @@ For questions, modifications, or bug reports, refer to this documentation and th
 ## POST Data Endpoint (Create Row)
 
 ### Endpoint
+
 ```
 POST /v1/datasets/{dataset_id}/versions/{version}/data
 ```
 
 ### Request Structure
+
 - **Content-Type**: `application/json`
 - **Body**: Plain JSON object with field names as keys
 - **Example**:
+
 ```json
 {
   "first_name_th": "สมชาย",
@@ -933,6 +1017,7 @@ POST /v1/datasets/{dataset_id}/versions/{version}/data
 ```
 
 ### Response Structure
+
 ```json
 {
   "code": 201,
@@ -947,26 +1032,30 @@ POST /v1/datasets/{dataset_id}/versions/{version}/data
 ```
 
 ### Error Responses
-| Code | Scenario | Example |
-|------|----------|---------|
-| 400 | Config error in dataset policy | `"config error: field 'building' in AllowEdit not found in schema for table 'person_data'"` |
-| 400 | Validation error (missing required field) | `"validation failed: field 'first_name_th' is required"` |
-| 401 | Unauthorized (invalid/expired token) | `"Unauthorized"` |
-| 403 | Forbidden (no write permission for policy) | `"Forbidden"` |
-| 404 | Dataset or version not found | `"Dataset or version not found"` |
-| 409 | Conflict (duplicate key or constraint violation) | `"Conflict - duplicate key or constraint violation"` |
+
+| Code | Scenario                                         | Example                                                                                     |
+| ---- | ------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| 400  | Config error in dataset policy                   | `"config error: field 'building' in AllowEdit not found in schema for table 'person_data'"` |
+| 400  | Validation error (missing required field)        | `"validation failed: field 'first_name_th' is required"`                                    |
+| 401  | Unauthorized (invalid/expired token)             | `"Unauthorized"`                                                                            |
+| 403  | Forbidden (no write permission for policy)       | `"Forbidden"`                                                                               |
+| 404  | Dataset or version not found                     | `"Dataset or version not found"`                                                            |
+| 409  | Conflict (duplicate key or constraint violation) | `"Conflict - duplicate key or constraint violation"`                                        |
 
 ## DMS Validation Pipeline
 
 ### Step 1: Authentication
+
 - Check Bearer token in Authorization header
 - Return 401 if invalid/expired
 
 ### Step 2: Authorization
+
 - Check access policies (`access_policies`) for write permission
 - Return 403 if user doesn't have write permission
 
 ### Step 3: Policy Configuration Validation ⚠️ **CRITICAL**
+
 - Load dataset version's `policies.write` section:
   ```json
   "write": {
@@ -987,15 +1076,18 @@ POST /v1/datasets/{dataset_id}/versions/{version}/data
   ```
 
 ### Step 4: Schema Validation
+
 - Check request JSON keys against `allow_edit` list
 - Reject any field not in `allow_edit`
 
 ### Step 5: Data Validation
+
 - Check required fields (no NULL constraints)
 - Validate data types, formats, constraints
 - Return 400 if any validation fails
 
 ### Step 6: Insert Row
+
 - Execute INSERT using target table and validated data
 - Generate row ID (UUID)
 - Return 201 with full row data
@@ -1003,27 +1095,30 @@ POST /v1/datasets/{dataset_id}/versions/{version}/data
 ## Common DMS Configuration Errors
 
 ### Error 1: AllowEdit Field from Wrong Table
+
 **Symptom**: "field 'X' in AllowEdit not found in schema for table 'Y'"
 
 **Cause**: Backend admin configured `allow_edit` with fields from a related/joined table instead of the target table.
 
 **Example**:
+
 ```json
 {
   "write": {
     "query": { "from": { "table": "person_data" } },
     "allow_edit": [
-      "first_name_th",      // ✅ exists in person_data
-      "last_name_th",       // ✅ exists in person_data
-      "building",           // ❌ exists in person_addresses (wrong table!)
-      "phone",              // ❌ exists in person_phones (wrong table!)
-      "minor_group"         // ❌ exists in education_records (wrong table!)
+      "first_name_th", // ✅ exists in person_data
+      "last_name_th", // ✅ exists in person_data
+      "building", // ❌ exists in person_addresses (wrong table!)
+      "phone", // ❌ exists in person_phones (wrong table!)
+      "minor_group" // ❌ exists in education_records (wrong table!)
     ]
   }
 }
 ```
 
 **Solution**: Admin must remove fields that don't belong to the target table from `allow_edit`:
+
 ```json
 "allow_edit": [
   "first_name_th",
@@ -1038,10 +1133,12 @@ POST /v1/datasets/{dataset_id}/versions/{version}/data
 ```
 
 **Frontend Workaround** (temporary, not recommended):
+
 - Filter payload to only include whitelisted fields before sending
 - But this only masks the problem — request will eventually fail for allowed cross-table fields
 
 ### Error 2: Missing Required Fields
+
 **Symptom**: `validation failed: field 'X' is required`
 
 **Cause**: Request missing a field that has NOT NULL constraint and no default value.
@@ -1049,23 +1146,26 @@ POST /v1/datasets/{dataset_id}/versions/{version}/data
 **Solution**: Include all required fields in request body.
 
 ### Error 3: Trying to Update Related Tables via Main Table
+
 **Symptom**: Same as Error 1 (field not in schema)
 
 **Cause**: Trying to insert `person_addresses`, `person_family`, `education_records` etc. via the `person_data` dataset.
 
 **Solution**: Create separate dataset versions for each related table:
+
 - Dataset: `data_get_view`, Version: `v1.3.0` → for `person_data` CREATE
 - Dataset: `data_get_view`, Version: `v1.3.1` → for `person_addresses` CREATE (separate `allow_edit`)
 - Dataset: `data_get_view`, Version: `v1.3.2` → for `person_family` CREATE (separate `allow_edit`)
 - etc.
 
 **Current Implementation** (Add Teacher Feature):
+
 ```typescript
 // src/stores/teachers.ts
-const ADDRESS_DATASET_ID = DATASET_ID  // TODO: replace with real dataset ID
-const FAMILY_DATASET_ID = DATASET_ID    // TODO: replace with real dataset ID
+const ADDRESS_DATASET_ID = DATASET_ID // TODO: replace with real dataset ID
+const FAMILY_DATASET_ID = DATASET_ID // TODO: replace with real dataset ID
 const EDUCATION_DATASET_ID = DATASET_ID // TODO: replace with real dataset ID
-const LICENSE_DATASET_ID = DATASET_ID   // TODO: replace with real dataset ID
+const LICENSE_DATASET_ID = DATASET_ID // TODO: replace with real dataset ID
 
 // These all use the same dataset version (v1.3.0)
 // which is configured for person_data / allow_edit=['person_data fields only']
@@ -1077,6 +1177,7 @@ const LICENSE_DATASET_ID = DATASET_ID   // TODO: replace with real dataset ID
 ## Add Teacher Feature Implementation
 
 ### File Structure
+
 ```
 src/stores/
 ├── addTeacher.ts ← Pinia store to pass personId between wizard pages
@@ -1094,6 +1195,7 @@ src/views/manage/add-edit-teacher/personal/
 ```
 
 ### Wizard Data Flow
+
 1. **PersonalDetail**: Collect Thai name, prefix, gender, etc. → Call `createTeacher(TeacherCreateDTO)` → Save `result.data.id` to `addTeacherStore.personId` → Redirect to AddressInfo
 2. **AddressInfo**: Collect address fields → Call `createPersonAddress({ person_id: store.personId, ...address })` → Redirect to FamilyInfo
 3. **FamilyInfo**: Multi-entry family members → For each: Call `createFamilyMember({ person_id: store.personId, ...family })` → Redirect to EducationInfo
@@ -1101,6 +1203,7 @@ src/views/manage/add-edit-teacher/personal/
 5. **ProfessionalLicense**: Single professional license → Call `createProfessionalLicense({ person_id: store.personId, ...license })` → Clear store → Redirect to ManageTeachers
 
 ### Implementation Status
+
 - ✅ `useAddTeacherStore` (Pinia) created — stores `personId` across pages
 - ✅ DTOs created — PersonAddressCreateDTO, FamilyMemberCreateDTO, EducationRecordCreateDTO, ProfessionalLicenseCreateDTO
 - ✅ API functions created — createPersonAddress, createFamilyMember, createEducationRecord, createProfessionalLicense
@@ -1111,7 +1214,9 @@ src/views/manage/add-edit-teacher/personal/
 - ✅ ProfessionalLicense.vue — single form, wired to createProfessionalLicense API
 
 ### Current Blocker
+
 **DMS Configuration Error**: Dataset `data_get_view` v1.3.0 has mismatched `allow_edit` policy:
+
 - `write.query.from = person_data`
 - `allow_edit` includes fields from `person_addresses` (building, province_code, etc.)
 - Solution: Backend admin must fix by either:
@@ -1120,7 +1225,9 @@ src/views/manage/add-edit-teacher/personal/
   - Option C: Server validates and filters `allow_edit` based on actual `from` table schema (dynamic policy)
 
 ### Test Case
+
 Add a new teacher with minimal data:
+
 ```json
 {
   "first_name_th": "สมชาย",
@@ -1129,6 +1236,7 @@ Add a new teacher with minimal data:
   "is_government": true
 }
 ```
+
 **Expected**: 201, personId returned  
 **Actual**: 400, "config error: field 'building' in AllowEdit not found in schema..."
 

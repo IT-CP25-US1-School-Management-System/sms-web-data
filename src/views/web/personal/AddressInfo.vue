@@ -4,9 +4,9 @@ import NormalForm, {
   type NormalFormChangePayload,
   type NormalFormOption,
 } from '@/components/form/NormalForm.vue'
-import { DATASET_GET ,DATASET_EDIT } from '@/lib/constants'
+import { DATASET_GET, DATASET_EDIT } from '@/lib/constants'
 import { Button } from '@/components/ui/button'
-import { getDatasetRows , updateDatasetRow } from '@/stores/dataset'
+import { getDatasetRows, updateDatasetRow } from '@/stores/dataset'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import type {
   AddressDatasetRow,
@@ -44,7 +44,7 @@ const provinceData = provincesJson as Province[]
 const districtData = districtsJson as District[]
 const subDistrictData = subDistrictsJson as SubDistrict[]
 
-const action = ref('update') 
+const action = ref('update')
 const modalTopic = ref('ข้อมูลที่อยู่')
 const modalValue = ref('')
 const confirmModal = ref(false)
@@ -93,8 +93,6 @@ districtData.forEach((district) => {
   districtOptionsByProvince.get(provinceId)!.push(option)
   districtNameMap.set(option.value, option.label)
 })
-
-
 
 subDistrictData.forEach((subDistrict) => {
   const option: NormalFormOption = { label: subDistrict.name_th, value: String(subDistrict.id) }
@@ -310,7 +308,7 @@ async function getAddressData() {
         per_page: 50,
       },
     )
-    
+
     const records = response.data?.[0]?.person_addresses || []
     addressForms.value = (records.length ? records : [undefined]).map((address, index) =>
       createAddressFormState(address, index),
@@ -331,13 +329,13 @@ async function updateAddressData() {
 
   try {
     const response = await updateDatasetRow(
-       // assuming the API identifies the record to update by an 'id' field
-      datasetId, 
+      // assuming the API identifies the record to update by an 'id' field
+      datasetId,
       version,
       addressDataUpdate.value.id,
-      addressDataUpdate.value, 
+      addressDataUpdate.value,
     )
-    
+
     if ((response as { message?: string }).message === 'success') {
       toast.success(`อัพเดตข้อมูลที่อยู่สำเร็จ`, {
         position: 'bottom-right',
@@ -347,19 +345,21 @@ async function updateAddressData() {
         position: 'bottom-right',
       })
     }
-      
   } catch (error: any) {
-    toast.error(`อัพเดตข้อมูลส่วนตัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
-      position: 'bottom-right',
-    })
-  } 
+    toast.error(
+      `อัพเดตข้อมูลส่วนตัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`,
+      {
+        position: 'bottom-right',
+      },
+    )
+  }
   loading.value = false
 }
 
-function updateData(action:boolean) {
+function updateData(action: boolean) {
   if (action) {
-   updateAddressData()
-  } 
+    updateAddressData()
+  }
   confirmModal.value = false
 }
 
@@ -374,8 +374,7 @@ function handleFormChange(formId: string, payload: NormalFormChangePayload) {
   const target = addressForms.value.find((entry) => entry.id === formId)
   if (!target) return
   target.currentValues = cloneFormValues(payload.values)
-  target.hasChanges =
-    JSON.stringify(target.currentValues) !== JSON.stringify(target.initialValues)
+  target.hasChanges = JSON.stringify(target.currentValues) !== JSON.stringify(target.initialValues)
   syncCascade(target, payload.values)
 }
 
@@ -398,7 +397,10 @@ function normalizeAddressPayload(values: Record<string, any>) {
   }
 }
 
-function buildAddressUpdate(source: PersonAddress | undefined, payload: Record<string, any>): PersonAddress {
+function buildAddressUpdate(
+  source: PersonAddress | undefined,
+  payload: Record<string, any>,
+): PersonAddress {
   return {
     id: source?.id || '',
     person_id: source?.person_id || '',
@@ -423,7 +425,6 @@ function buildAddressUpdate(source: PersonAddress | undefined, payload: Record<s
   }
 }
 
-
 const hasAnyChanges = computed(() =>
   addressForms.value.some(
     (entry) => JSON.stringify(entry.currentValues) !== JSON.stringify(entry.initialValues),
@@ -436,14 +437,12 @@ const isSaveDisabled = computed(
   () => loading.value || !hasAnyChanges.value || hasAnyInvalidRequired.value,
 )
 
-
 function handleFormSave(formId: string, values: Record<string, any>) {
   const target = addressForms.value.find((entry) => entry.id === formId)
   if (!target) return
   const payload = normalizeAddressPayload(values)
   addressDataUpdate.value = buildAddressUpdate(target.source, payload)
   pendingPayloads.set(formId, payload)
-
 }
 
 async function onSaveAll() {
@@ -457,7 +456,7 @@ async function onSaveAll() {
       }
     }
   }
-  if (isAllValid.some((valid) => valid=== false)) {
+  if (isAllValid.some((valid) => valid === false)) {
     confirmModal.value = false
     return
   }
@@ -470,8 +469,6 @@ async function onSaveAll() {
     form.hasChanges = false
   })
 }
-
-
 </script>
 
 <template>
@@ -499,15 +496,14 @@ async function onSaveAll() {
       </Button>
     </div>
 
-  <!-- modal -->
-  <ConfirmModal
-    v-if="confirmModal"
-    :action="action"
-    :topic="modalTopic"
-    :value="modalValue"
-    :disabled="isSaveDisabled"
-    @confirm="updateData"
-  />
-
+    <!-- modal -->
+    <ConfirmModal
+      v-if="confirmModal"
+      :action="action"
+      :topic="modalTopic"
+      :value="modalValue"
+      :disabled="isSaveDisabled"
+      @confirm="updateData"
+    />
   </div>
 </template>

@@ -38,6 +38,6 @@ export interface CreateFileDocumentParams {
   description: string
 }
 
-export interface FileDocumentResponse<T= Record<string, any>> {
+export interface FileDocumentResponse<T = Record<string, any>> {
   data: T
 }

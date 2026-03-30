@@ -1,7 +1,12 @@
 import { dataApiInstance } from '@/stores/api'
+import { createDatasetRow, getDatasetRows } from '@/stores/dataset'
+import { generateUUID } from '@/lib/helpers'
+import type { DatasetListResponse, DatasetRowResponse, DatasetQueryParams } from '@/types/dataset'
 import type {
   ExportJobRequest,
   ExportJobResponse,
+  ExportTemplateJobResponse,
+  ExportTemplateResponse,
   GetExportJobResponse,
   ImportJobAcceptedResponse,
   ImportFileFormat,
@@ -10,7 +15,15 @@ import type {
   ImportJobStatusApiResponse,
   ImportTemplateRequest,
   ImportTemplateResponse,
+  ReportingTemplateCreateDTO,
+  ReportingTemplateRecord,
+  UploadReportTemplateParams,
+  UploadReportTemplateResponse,
 } from '@/types/reporting'
+
+const REPORT_TEMPLATE_DATASET_ID = 'data_get_view'
+const REPORT_TEMPLATE_DATASET_VERSION = 'v2.7.4'
+const REPORTING_TEMPLATE_VIEW = 'reporting_template'
 
 export async function getUrlFile(job_id: string): Promise<GetExportJobResponse> {
   const response = await dataApiInstance.get<GetExportJobResponse>(
@@ -65,11 +78,7 @@ export async function getReportImportJobStatus(jobId: string): Promise<ImportJob
     `/v1/reporting/import/job/${jobId}`,
   )
 
-  if (
-    typeof response.data === 'object' &&
-    response.data !== null &&
-    'data' in response.data
-  ) {
+  if (typeof response.data === 'object' && response.data !== null && 'data' in response.data) {
     return response.data.data
   }
 
@@ -79,6 +88,84 @@ export async function getReportImportJobStatus(jobId: string): Promise<ImportJob
 export async function getReportImportJobResult(jobId: string): Promise<ImportJobResult> {
   const response = await dataApiInstance.get<ImportJobResult>(
     `/v1/reporting/import/job/${jobId}/result`,
+  )
+
+  return response.data
+}
+
+export async function uploadReportTemplate(
+  file: File,
+  params: UploadReportTemplateParams,
+): Promise<UploadReportTemplateResponse> {
+  const formData = new FormData()
+  formData.append('file', file, file.name)
+  formData.append('params', JSON.stringify(params))
+
+  const response = await dataApiInstance.post<UploadReportTemplateResponse>(
+    '/v1/reporting/templates/upload',
+    formData,
+    {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    },
+  )
+
+  return response.data
+}
+
+export async function createReportingTemplate(
+  data: ReportingTemplateCreateDTO,
+): Promise<DatasetRowResponse<ReportingTemplateRecord>> {
+  return createDatasetRow<ReportingTemplateRecord>(
+    REPORT_TEMPLATE_DATASET_ID,
+    REPORT_TEMPLATE_DATASET_VERSION,
+    data,
+    REPORTING_TEMPLATE_VIEW,
+  )
+}
+
+export async function createReportingTemplateFromUpload(
+  name: string,
+  templateId: string,
+): Promise<DatasetRowResponse<ReportingTemplateRecord>> {
+  return createReportingTemplate({
+    id: generateUUID(),
+    name,
+    template_id: templateId,
+    created_at: new Date().toISOString(),
+  })
+}
+
+export async function getReportingTemplates(
+  params?: DatasetQueryParams,
+): Promise<DatasetListResponse<ReportingTemplateRecord>> {
+  return getDatasetRows<ReportingTemplateRecord>(
+    REPORT_TEMPLATE_DATASET_ID,
+    REPORT_TEMPLATE_DATASET_VERSION,
+    {
+      ...params,
+      view: REPORTING_TEMPLATE_VIEW,
+    },
+  )
+}
+
+export async function exportReportingTemplate(
+  templateId: string,
+  key: string,
+): Promise<ExportTemplateResponse> {
+  const response = await dataApiInstance.post<ExportTemplateResponse>(
+    `/v1/reporting/templates/${templateId}/export/key/${key}`,
+  )
+
+  return response.data
+}
+
+export async function getReportingTemplateExportJob(
+  jobId: string,
+): Promise<ExportTemplateJobResponse> {
+  const response = await dataApiInstance.get<ExportTemplateJobResponse>(
+    `/v1/reporting/templates/export/job/${jobId}`,
   )
 
   return response.data

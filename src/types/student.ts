@@ -12,13 +12,13 @@ export interface Student {
   class_section: string // ห้อง เช่น "1"
   academic_track?: string // สายการเรียน
   student_type?: string // ประเภทนักเรียน
-  
+
   prefixe_id: string
   first_name_th: string
   last_name_th: string
   first_name_en?: string
   last_name_en?: string
-  
+
   date_of_birth?: string
   age_years: number
   birth_province?: string
@@ -31,7 +31,7 @@ export interface Student {
   nationality?: string // สัญชาติ
   phone_number?: string
   marital_status?: string // สถานภาพสมรส
-  
+
   address_id: string
   created_at: string
   updated_at: string
@@ -53,7 +53,7 @@ export interface Address {
   province_code?: string
   province?: string // จังหวัด
   postal_code?: string // รหัสไปรษณีย์
-  
+
   is_house_registered?: boolean // ที่อยู่ตามทะเบียนบ้าน
   is_current?: boolean // ที่อยู่ปัจจุบัน
   created_at: string

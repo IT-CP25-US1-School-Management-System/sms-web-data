@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import NormalForm, { type NormalFormChangePayload, type NormalFormField } from '@/components/form/NormalForm.vue'
+import NormalForm, {
+  type NormalFormChangePayload,
+  type NormalFormField,
+} from '@/components/form/NormalForm.vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import { Button } from '@/components/ui/button'
 import { DATASET_EDIT, DATASET_GET } from '@/lib/constants'
@@ -64,7 +67,10 @@ const positionFields: NormalFormField[] = [
       { label: 'กลุ่มสาระฯภาษาไทย', value: 'กลุ่มสาระฯภาษาไทย' },
       { label: 'กลุ่มสาระฯคณิตศาสตร์', value: 'กลุ่มสาระฯคณิตศาสตร์' },
       { label: 'กลุ่มสาระฯวิทยาศาสตร์และเทคโนโลยี', value: 'กลุ่มสาระฯวิทยาศาสตร์และเทคโนโลยี' },
-      { label: 'กลุ่มสาระฯสังคมศึกษา ศาสนา และวัฒนธรรม', value: 'กลุ่มสาระฯสังคมศึกษา ศาสนา และวัฒนธรรม' },
+      {
+        label: 'กลุ่มสาระฯสังคมศึกษา ศาสนา และวัฒนธรรม',
+        value: 'กลุ่มสาระฯสังคมศึกษา ศาสนา และวัฒนธรรม',
+      },
       { label: 'กลุ่มสาระฯภาษาต่างประเทศ', value: 'กลุ่มสาระฯภาษาต่างประเทศ' },
       { label: 'กลุ่มสาระฯการงานอาชีพ', value: 'กลุ่มสาระฯการงานอาชีพ' },
       { label: 'กลุ่มสาระฯสุขศึกษาและพลศึกษา', value: 'กลุ่มสาระฯสุขศึกษาและพลศึกษา' },
@@ -78,15 +84,69 @@ const positionFields: NormalFormField[] = [
   { name: 'position', label: 'ตำแหน่ง', type: 'text', disabled: true, placeholder: '' },
   { name: 'work_status', label: 'สถานการทำงาน', type: 'text', disabled: true, placeholder: '' },
   { name: 'direct_pay_no', label: 'เลขที่จ่ายตรง', type: 'text', disabled: true, placeholder: '' },
-  { name: 'position_number', label: 'เลขที่ตำแหน่ง', type: 'text', disabled: true, placeholder: '' },
-  { name: 'appointment_type', label: 'ประเภทการบรรจุ', type: 'text', disabled: true, placeholder: 'เลือกประเภทการบรรจุ' },
-  { name: 'appointment_date', label: 'ว/ด/ป ที่บรรจุ', type: 'date', disabled: true, placeholder: 'วว / ดด / ปปปป' },
-  { name: 'service_start_date', label: 'ว/ด/ป ที่เริ่มปฏิบัติราชการ', type: 'date', disabled: true, placeholder: 'วว / ดด / ปปปป' },
-  { name: 'birth_date', label: 'วัน / เดือน / ปี เกษียณ', type: 'date', disabled: true, placeholder: 'วว / ดด / ปปปป' },
-  { name: 'position_held_date', label: 'ว/ด/ป ที่ดำรงตำแหน่ง', type: 'date', disabled: true, placeholder: 'วว / ดด / ปปปป' },
-  { name: 'school_entry_date', label: 'ว/ด/ป ที่ปฏิบัติหน้าที่ในโรงเรียนคณะราษฎร์ฯ', type: 'date', disabled: true, placeholder: 'วว / ดด / ปปปป' },
-  { name: 'work_age_from_appointment', label: 'อายุงาน(นับจากวันบรรจุ)', type: 'text', disabled: true, placeholder: '' },
-  { name: 'work_age_at_school', label: 'อายุงาน ณ โรงเรียนคณะราษฎร์ฯ', type: 'text', disabled: true, placeholder: '' },
+  {
+    name: 'position_number',
+    label: 'เลขที่ตำแหน่ง',
+    type: 'text',
+    disabled: true,
+    placeholder: '',
+  },
+  {
+    name: 'appointment_type',
+    label: 'ประเภทการบรรจุ',
+    type: 'text',
+    disabled: true,
+    placeholder: 'เลือกประเภทการบรรจุ',
+  },
+  {
+    name: 'appointment_date',
+    label: 'ว/ด/ป ที่บรรจุ',
+    type: 'date',
+    disabled: true,
+    placeholder: 'วว / ดด / ปปปป',
+  },
+  {
+    name: 'service_start_date',
+    label: 'ว/ด/ป ที่เริ่มปฏิบัติราชการ',
+    type: 'date',
+    disabled: true,
+    placeholder: 'วว / ดด / ปปปป',
+  },
+  {
+    name: 'birth_date',
+    label: 'วัน / เดือน / ปี เกษียณ',
+    type: 'date',
+    disabled: true,
+    placeholder: 'วว / ดด / ปปปป',
+  },
+  {
+    name: 'position_held_date',
+    label: 'ว/ด/ป ที่ดำรงตำแหน่ง',
+    type: 'date',
+    disabled: true,
+    placeholder: 'วว / ดด / ปปปป',
+  },
+  {
+    name: 'school_entry_date',
+    label: 'ว/ด/ป ที่ปฏิบัติหน้าที่ในโรงเรียนคณะราษฎร์ฯ',
+    type: 'date',
+    disabled: true,
+    placeholder: 'วว / ดด / ปปปป',
+  },
+  {
+    name: 'work_age_from_appointment',
+    label: 'อายุงาน(นับจากวันบรรจุ)',
+    type: 'text',
+    disabled: true,
+    placeholder: '',
+  },
+  {
+    name: 'work_age_at_school',
+    label: 'อายุงาน ณ โรงเรียนคณะราษฎร์ฯ',
+    type: 'text',
+    disabled: true,
+    placeholder: '',
+  },
 ]
 
 function cloneFormValues(values: Record<string, any> = {}) {
@@ -121,11 +181,10 @@ async function getPositionData() {
 
     const records = response.data?.[0]?.governments || []
     console.log('Position API Response:', records)
-    positionForms.value = (records.length ? records : [undefined]).map((record: PositionRow | undefined, index: number) =>
-      createPositionFormState(record, index),
+    positionForms.value = (records.length ? records : [undefined]).map(
+      (record: PositionRow | undefined, index: number) => createPositionFormState(record, index),
     )
     console.log('Position API Response:', positionForms.value)
-
   } catch (error: any) {
     console.error('Position API Error:', error)
     toast.error(`โหลดข้อมูลตำแหน่งไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
@@ -149,11 +208,13 @@ function handleFormChange(formId: string, payload: NormalFormChangePayload) {
   if (!target) return
 
   target.currentValues = cloneFormValues(payload.values)
-  target.hasChanges =
-    JSON.stringify(target.currentValues) !== JSON.stringify(target.initialValues)
+  target.hasChanges = JSON.stringify(target.currentValues) !== JSON.stringify(target.initialValues)
 }
 
-function buildPositionUpdate(source: PositionRow | undefined, payload: Record<string, any>): PositionRow {
+function buildPositionUpdate(
+  source: PositionRow | undefined,
+  payload: Record<string, any>,
+): PositionRow {
   return {
     ...source,
     ...payload,
@@ -171,9 +232,7 @@ function handleFormSave(formId: string, values: Record<string, any>) {
   pendingPayloads.set(formId, buildPositionUpdate(target.source, values))
 }
 
-const hasAnyChanges = computed(() =>
-  positionForms.value.some((form) => form.hasChanges),
-)
+const hasAnyChanges = computed(() => positionForms.value.some((form) => form.hasChanges))
 
 const hasAnyInvalidRequired = computed(() =>
   positionForms.value.some((form) => Boolean(form.formRef?.hasMissingRequiredFields)),
@@ -203,15 +262,16 @@ async function updatePositionData() {
     await getPositionData()
   } catch (error: any) {
     console.error('Position update error:', error)
-    toast.error(`บันทึกข้อมูลตำแหน่งไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
-      position: 'bottom-right',
-    })
+    toast.error(
+      `บันทึกข้อมูลตำแหน่งไม่สำเร็จ: ${error?.response?.data?.message || error.message}`,
+      {
+        position: 'bottom-right',
+      },
+    )
   } finally {
     loading.value = false
   }
 }
-
-
 
 function updateData(confirmed: boolean) {
   if (confirmed) {
@@ -335,7 +395,6 @@ async function handleDownloadTemplate() {
   }
 }
 
-
 onMounted(() => {
   getPositionData()
 })
@@ -345,7 +404,7 @@ onMounted(() => {
   <div class="flex flex-col">
     <div class="sticky right-0 bottom-0 z-40 flex w-full justify-end bg-white p-3">
       <Button
-         @click="handleDownloadTemplate()"
+        @click="handleDownloadTemplate()"
         class="cursor-pointer rounded-lg bg-[#1675dc] px-8 py-2 font-semibold text-white shadow-sm hover:bg-[#1567be]"
       >
         <ArrowUpFromLine />
@@ -366,7 +425,9 @@ onMounted(() => {
       </div>
     </div>
 
-    <div class="sticky right-0 bottom-0 z-40 flex w-full justify-end border-t border-gray-200 bg-white p-3">
+    <div
+      class="sticky right-0 bottom-0 z-40 flex w-full justify-end border-t border-gray-200 bg-white p-3"
+    >
       <Button
         :disabled="isSaveDisabled"
         @click="onSaveAll"

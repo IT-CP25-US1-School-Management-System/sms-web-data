@@ -16,7 +16,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-    (e: 'confirm', action: boolean): void
+  (e: 'confirm', action: boolean): void
 }>()
 
 const topic = computed(() => {
@@ -31,25 +31,41 @@ const topic = computed(() => {
 })
 </script>
 <template>
-<Dialog :open="true" @update:open="(open) => { if (!open) emit('confirm', false) }">
-
-      <DialogContent class="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>{{ topic }} {{ props.topic }}</DialogTitle>
-          <DialogDescription>
-            ท่านกำลังจะ{{ topic }} ข้อมูล{{ props.value ? `ของ ${props.value}` : '' }} กรุณายืนยันการดำเนินการ
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button class="cursor-pointer bg-[#b11717] hover:bg-[#8d1717] text-white " type="button" form="dialogForm" @click="emit('confirm', false)">
-            ยกเลิก
-          </Button>
-          <Button class="cursor-pointer bg-[#16A34A] hover:bg-[#15803D] text-white " type="submit" form="dialogForm" @click="emit('confirm', true)">
-           ตกลง
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-</template> 
-<style>
-</style>
+  <Dialog
+    :open="true"
+    @update:open="
+      (open) => {
+        if (!open) emit('confirm', false)
+      }
+    "
+  >
+    <DialogContent class="sm:max-w-[425px]">
+      <DialogHeader>
+        <DialogTitle>{{ topic }} {{ props.topic }}</DialogTitle>
+        <DialogDescription>
+          ท่านกำลังจะ{{ topic }} ข้อมูล{{ props.value ? `ของ ${props.value}` : '' }}
+          กรุณายืนยันการดำเนินการ
+        </DialogDescription>
+      </DialogHeader>
+      <DialogFooter>
+        <Button
+          class="cursor-pointer bg-[#b11717] text-white hover:bg-[#8d1717]"
+          type="button"
+          form="dialogForm"
+          @click="emit('confirm', false)"
+        >
+          ยกเลิก
+        </Button>
+        <Button
+          class="cursor-pointer bg-[#16A34A] text-white hover:bg-[#15803D]"
+          type="submit"
+          form="dialogForm"
+          @click="emit('confirm', true)"
+        >
+          ตกลง
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+</template>
+<style></style>

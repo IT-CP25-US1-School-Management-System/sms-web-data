@@ -25,15 +25,15 @@ export interface PersonData {
   prefix_id: number | string
   role_id: string
   is_government: boolean | string // ข้าราชการ หรือ ครูอัตราจ้าง (API returns as string "true"/"false")
-  
+
   first_name_th: string
   middle_name_th?: string
   last_name_th: string
-  
+
   first_name_en?: string
   middle_name_en?: string
   last_name_en?: string
-  
+
   national_id?: string // เลขบัตรประชาชน
   passport_id?: string // เลขpassport
   department_id?: number | null // กลุ่มสาระ (มีเมื่อเป็นครูอัตราจ้าง)
@@ -51,7 +51,7 @@ export interface PersonData {
   line_id?: string // ไลน์ไอดี
   marital_status?: string // สถานะภาพ เช่น สมรส โสด หย่า ร้าง และ หม้าย
   spouse_name?: string // ชื่อคู่สมรส
-  
+
   // Relations (loaded from API when needed)
   governments?: Government[] // มีเมื่อเป็นข้าราชการ
   employment_contract?: EmploymentContract[] // มีเมื่อเป็นครูอัตราจ้าง
@@ -136,13 +136,13 @@ export interface Government {
   work_status: string // ทำงาน/ย้าย/เกษียณอายุราชการ/ช่วยราชการ/ลาออก/เสียชีวิต
   executive_group?: string // กลุ่มงาน เช่น งานบุคคล
   department_id?: number // กลุ่มสาระ
-  
+
   salary?: number // เงินเดือน
   retirement_date?: string // วันเกษียณ
   government_entry_date?: string // วันเดือนปีเข้ารับราชการ
   direct_pay_no?: string // เลขที่จ่ายตรง
   position_number?: string // เลขที่ตำแหน่ง
-  
+
   created_at: string
   updated_at?: string
 }
@@ -153,25 +153,22 @@ export interface EmploymentContract {
   contract_action: string // ทำสัญญาครั้งแรก, ต่อสัญญา
   hiring_nature: string // จ้างใหม่, ต่อเนื่อง
   department_id?: number
-  
+
   salary: number // เงินค่าจ้าง/เดือน
   social_security: string // มาตรา 33, 39, 40, อื่นๆ
   period_start: string
   period_end: string
   first_contract_start?: string
-  
+
   order_no?: string
   contract_sequence?: number
   budget_type: string // เงินงบประมาณ, เงินรายได้สถานศึกษา
   school_revenue_type?: string // ลูกจ้างชั่วคราว, เหมาบริการ
   work_status: string // ทำงาน/ลาออก/ย้าย
-  
+
   created_at: string
   updated_at?: string
 }
-
-
-
 
 // For API operations
 export interface TeacherCreateDTO {

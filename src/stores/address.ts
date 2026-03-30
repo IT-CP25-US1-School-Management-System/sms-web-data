@@ -19,8 +19,7 @@ addressApiInstance.interceptors.response.use(
   },
 )
 
-export async function listAddressRow<T = Record<string, any>>(
-): Promise<AddressRowResponse<T>> {
+export async function listAddressRow<T = Record<string, any>>(): Promise<AddressRowResponse<T>> {
   const response = await addressApiInstance.get<AddressRowResponse<T>>(
     `/latest/sub_district_with_district_and_province.json`,
   )

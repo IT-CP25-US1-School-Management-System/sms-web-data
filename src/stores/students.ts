@@ -6,7 +6,15 @@ import {
   deleteDatasetRow,
 } from '@/stores/dataset'
 import type { DatasetListResponse, DatasetRowResponse, DatasetQueryParams } from '@/types/dataset'
-import type { Student, StudentCreateDTO, StudentUpdateDTO, AddressCreateDTO, ParentCreateDTO, Address, Parent } from '@/types/student'
+import type {
+  Student,
+  StudentCreateDTO,
+  StudentUpdateDTO,
+  AddressCreateDTO,
+  ParentCreateDTO,
+  Address,
+  Parent,
+} from '@/types/student'
 
 const STUDENT_DATASET_ID = 'data_student'
 const STUDENT_DATASET_VERSION = 'v1.0.0'
@@ -42,9 +50,7 @@ export async function getStudentById(studentId: string): Promise<DatasetRowRespo
 /**
  * Create a new student
  */
-export async function createStudent(
-  data: StudentCreateDTO,
-): Promise<DatasetRowResponse<Student>> {
+export async function createStudent(data: StudentCreateDTO): Promise<DatasetRowResponse<Student>> {
   return createDatasetRow<Student>(STUDENT_DATASET_ID, STUDENT_DATASET_VERSION, data)
 }
 
@@ -55,12 +61,7 @@ export async function updateStudent(
   studentId: string,
   data: StudentUpdateDTO,
 ): Promise<DatasetRowResponse<Student>> {
-  return updateDatasetRow<Student>(
-    STUDENT_DATASET_ID,
-    STUDENT_DATASET_VERSION,
-    studentId,
-    data,
-  )
+  return updateDatasetRow<Student>(STUDENT_DATASET_ID, STUDENT_DATASET_VERSION, studentId, data)
 }
 
 /**

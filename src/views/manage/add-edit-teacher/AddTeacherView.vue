@@ -21,7 +21,7 @@ const goBack = () => {
       <!-- Back button -->
       <div class="shrink-0 pt-3">
         <button
-          class="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          class="text-muted-foreground hover:text-foreground flex items-center gap-1 text-sm transition-colors"
           @click="goBack"
         >
           <ChevronLeft class="h-4 w-4" />
@@ -33,8 +33,8 @@ const goBack = () => {
       <h2 class="mx-6 text-2xl font-bold">ข้อมูลบุคคล</h2>
 
       <!-- Section header -->
-      <div class="mx-6 rounded-[10px] border bg-primary p-3">
-        <h4 class="text-xl font-bold text-primary-foreground">
+      <div class="bg-primary mx-6 rounded-[10px] border p-3">
+        <h4 class="text-primary-foreground text-xl font-bold">
           {{ route.meta.label }}
         </h4>
       </div>

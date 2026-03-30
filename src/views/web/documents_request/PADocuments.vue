@@ -14,7 +14,7 @@ import { createFileDocument } from '@/stores/document'
 import type { CreateFileDocumentParams, FileDocument } from '@/types/document'
 import type { DocumentLink, DocumentRequest } from '@/types/document_request'
 import { Spinner } from '@/components/ui/spinner'
-import {  DOCUMENT_EDIT } from '@/lib/constants'
+import { DOCUMENT_EDIT } from '@/lib/constants'
 const fileMap = ref<Record<string, File[]>>({})
 const fileInputRefs = ref<Record<string, HTMLInputElement | null>>({})
 const formRef = ref<any>(null)
@@ -113,7 +113,9 @@ function triggerFileInput(key: string) {
 }
 
 function getCurrentUserName() {
-  return authStore.user?.name || authStore.user?.given_name || authStore.user?.email || 'current-user'
+  return (
+    authStore.user?.name || authStore.user?.given_name || authStore.user?.email || 'current-user'
+  )
 }
 
 function getSelectedFiles(): File[] {
@@ -146,8 +148,6 @@ function resetPAForm() {
     values: Object.fromEntries(paSections.map((_, idx) => [`pa-${idx}-count`, 0])),
   })
 }
-
-
 
 async function createDocumentType() {
   const datasetId = DOCUMENT_EDIT.DATASET_ID //'document_create'
@@ -232,7 +232,6 @@ async function storeFile(uploadedFiles: UploadedSectionFile[]) {
   }
 }
 
-
 async function onSubmit(values: Record<string, any>) {
   isSubmitting.value = true
   const payload: Record<string, any> = { ...values }
@@ -254,7 +253,6 @@ async function onSubmit(values: Record<string, any>) {
   } catch (_error) {
     // แต่ละฟังก์ชันจัดการ error toast ของตัวเองแล้ว
     toast.error('การส่งเอกสาร PA ไม่สำเร็จ', { position: 'bottom-right' })
-
   } finally {
     isSubmitting.value = false
   }
@@ -307,7 +305,9 @@ async function submitPAForm() {
           >
             <div class="overflow-hidden">
               <CardContent class="pt-3">
-                <p class="mb-2 text-sm font-semibold">แนบไฟล์ PDF <span class="text-red-500">*</span></p>
+                <p class="mb-2 text-sm font-semibold">
+                  แนบไฟล์ PDF <span class="text-red-500">*</span>
+                </p>
                 <VeeField :name="`pa-${sIdx}-count`" v-slot="{ errors }">
                   <input
                     :ref="
@@ -339,7 +339,7 @@ async function submitPAForm() {
                       }}</span>
                       <button
                         type="button"
-                        class="hover:text-destructive text-muted-foreground rounded p-0.5 cursor-pointer"
+                        class="hover:text-destructive text-muted-foreground cursor-pointer rounded p-0.5"
                         @click="removeFile(`pa-${sIdx}`, i)"
                       >
                         <X class="h-3.5 w-3.5" />
