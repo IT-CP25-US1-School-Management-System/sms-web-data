@@ -1462,9 +1462,9 @@ onMounted(() => {
                     <div
                       v-for="(file, i) in fileMap['slip']"
                       :key="i"
-                      class="border-muted bg-muted/40 flex min-h-11 w-fit max-w-xl items-center gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
+                      class="border-muted bg-muted/40 flex min-h-11 w-full max-w-full min-w-0 items-center gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
                     >
-                      <span class="truncate">{{ file.name }}</span>
+                      <span class="min-w-0 flex-1 truncate">{{ file.name }}</span>
                       <span class="text-muted-foreground shrink-0 text-xs">{{
                         formatFileSize(file.size)
                       }}</span>
@@ -1528,9 +1528,9 @@ onMounted(() => {
                     <div
                       v-for="(file, i) in fileMap['card-doc']"
                       :key="i"
-                      class="border-muted bg-muted/40 flex min-h-11 w-fit max-w-xl items-center gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
+                      class="border-muted bg-muted/40 flex min-h-11 w-full max-w-full min-w-0 items-center gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
                     >
-                      <span class="truncate">{{ file.name }}</span>
+                      <span class="min-w-0 flex-1 truncate">{{ file.name }}</span>
                       <span class="text-muted-foreground shrink-0 text-xs">{{
                         formatFileSize(file.size)
                       }}</span>
@@ -1745,9 +1745,9 @@ onMounted(() => {
                     <div
                       v-for="(file, i) in fileMap['reason-doc']"
                       :key="i"
-                      class="border-muted bg-muted/40 flex min-h-11 w-fit max-w-xl items-center gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
+                      class="border-muted bg-muted/40 flex min-h-11 w-full max-w-full min-w-0 items-center gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
                     >
-                      <span class="truncate">{{ file.name }}</span>
+                      <span class="min-w-0 flex-1 truncate">{{ file.name }}</span>
                       <span class="text-muted-foreground shrink-0 text-xs">{{
                         formatFileSize(file.size)
                       }}</span>
@@ -1888,9 +1888,9 @@ onMounted(() => {
                     <div
                       v-for="(file, i) in fileMap['letter-doc']"
                       :key="i"
-                      class="border-muted bg-muted/40 flex min-h-11 w-fit max-w-xl items-center gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
+                      class="border-muted bg-muted/40 flex min-h-11 w-full max-w-full min-w-0 items-center gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
                     >
-                      <span class="truncate">{{ file.name }}</span>
+                      <span class="min-w-0 flex-1 truncate">{{ file.name }}</span>
                       <span class="text-muted-foreground shrink-0 text-xs">{{
                         formatFileSize(file.size)
                       }}</span>
@@ -2154,9 +2154,9 @@ onMounted(() => {
                   <div
                     v-for="(file, i) in fileMap['education-request-doc']"
                     :key="i"
-                    class="border-muted bg-muted/40 flex min-h-11 w-fit max-w-xl items-center gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
+                    class="border-muted bg-muted/40 flex min-h-11 w-full max-w-full min-w-0 items-center gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
                   >
-                    <span class="truncate">{{ file.name }}</span>
+                    <span class="min-w-0 flex-1 truncate">{{ file.name }}</span>
                     <span class="text-muted-foreground shrink-0 text-xs">{{
                       formatFileSize(file.size)
                     }}</span>

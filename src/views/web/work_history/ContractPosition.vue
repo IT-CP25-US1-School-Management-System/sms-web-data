@@ -55,7 +55,7 @@ const contractFields: CreateFormSection[][] = [[
       { name: 'position', label: 'ตำแหน่ง', type: 'text', required: true, placeholder: '-', disabled: false },
       { name: 'salary', label: 'เงินเดือน', type: 'number', required: true, placeholder: '-', disabled: false },
       { name: 'order_no', label: 'เลขที่คำสั่ง/สัญญาจ้าง', type: 'text', required: true, placeholder: '', disabled: false },
-      { name: FILE_FIELD, label: 'ดาวน์โหลดไฟล์', type: 'file', accept: '.pdf,.jpg,.png', multiple: true ,required: true },
+      { name: FILE_FIELD, label: 'แนบเอกสารเอกสารสัญญาจ้าง', type: 'file', accept: '.pdf,.jpg,.png', multiple: true ,required: true },
     ],
   },
 ]]
