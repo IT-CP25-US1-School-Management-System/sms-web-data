@@ -77,6 +77,8 @@ export const DATASET_EDIT = {
   DATASET_VERSION_ROYAL_DECORATIONS: 'v1.7.0',
   DATASET_VERSION_INNOVATIONS: 'v1.8.0',
   DATASET_VERSION_TRAINING: 'v1.9.0',
+  DATASET_VERSION_DEPARTMENT: 'v1.4.1',
+
 } as const
 
 export const DATASET_DELETE = {
@@ -90,9 +92,10 @@ export const DATASET_DELETE = {
 } as const
 
 
-// export const DOCUMENT_GET = {
-//   DATASET_ID: 'document_get',
-// } as const
+export const REPORTING = {
+  DATASET_ID: 'reporting',
+  EXPORT_VERSION: 'v1.0.0', 
+} as const
 
 export const DOCUMENT_EDIT = {
   DATASET_ID: 'document_create',

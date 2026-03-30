@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import CreateForm from '@/components/form/CreateForm.vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
+import SkeletonCard from '@/components/SkeletonCard.vue'
 import provincesJson from '@/assets/thai-province-data/provinces.json'
 import districtsJson from '@/assets/thai-province-data/districts.json'
 import subDistrictsJson from '@/assets/thai-province-data/sub_districts.json'
@@ -210,7 +211,7 @@ function createFamilyFields(values: Record<string, any>): CreateFormSection[] {
         },
         {
           name: 'phone',
-          label: 'โทรศัพท์',
+          label: 'เบอร์โทรศัพท์',
           type: 'text',
           required: true,
           placeholder: '0xxxxxxxxx',
@@ -289,7 +290,6 @@ function createFamilyFields(values: Record<string, any>): CreateFormSection[] {
           name: 'moo',
           label: 'หมู่ที่',
           type: 'text',
-          required: true,
           placeholder: '',
         },
         {
@@ -435,8 +435,7 @@ async function updateFamilyData(groupIndex: number, values?: Record<string, any>
       })
     }
   } catch (error: any) {
-    console.error('Family API Error:', error)
-    console.error('Error Response:', error?.response?.data)
+
     toast.error(`อัปเดตข้อมูลครอบครัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
       position: 'bottom-right',
     })
@@ -473,8 +472,11 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="mx-6 flex flex-col gap-4">
-    แก้ไขไม่ได้ ยกเว้นที่ เบอร์โทร อีเมล , ที่อยู่ update ได้
+  <div v-if="loading" class="flex-1 space-y-4 overflow-y-auto px-4 sm:px-6">
+    <SkeletonCard />
+  </div>
+
+  <div v-else class="mx-6 flex flex-col gap-4">
     <CreateForm
       :isDropdown="true"
       :readonly="true"

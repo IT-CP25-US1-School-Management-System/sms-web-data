@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import DropDownForm from '@/components/form/DropDownForm.vue'
+import SkeletonCard from '@/components/SkeletonCard.vue'
 import { Button } from '@/components/ui/button'
 import { DATASET_GET } from '@/lib/constants'
 
@@ -40,7 +41,11 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 mx-6"
+  <div v-if="loading" class="flex-1 space-y-4 overflow-y-auto px-4 sm:px-6">
+    <SkeletonCard />
+  </div>
+
+  <div v-else class="flex flex-col gap-4 mx-6"
    v-for="item in employmentData" :key="item.id"
    >
     <!-- ข้อมูลการทำงาน -->

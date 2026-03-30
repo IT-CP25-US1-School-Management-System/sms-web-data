@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import DropDownForm from '@/components/form/DropDownForm.vue'
+import SkeletonCard from '@/components/SkeletonCard.vue'
 import { Button } from '@/components/ui/button'
 import { getDatasetRows ,updateDatasetRow } from '@/stores/dataset'
 import { onMounted, ref ,computed } from 'vue'
@@ -42,7 +43,6 @@ async function getPersonalDetailData() {
       per_page: 50,
     })
     personalData.value = response.data[0] || {}
-    console.log('Personal Detail API Response:', response.data[0])
     personalData.value.birth_date = formatDateInput(personalData.value.birth_date)
     personalDataUpdate.value = {...personalData.value} as PersonData
     personalData.value.prefix_id = response.data[0]?.prefixes?.prefixes_name_th || ''
@@ -79,8 +79,6 @@ async function updateDataPersonalDetail() {
       })
     }
   } catch (error: any) {
-    console.error('Personal Detail API Error:', error)
-    console.error('Error Response:', error?.response?.data)
     toast.error(`อัพเดตข้อมูลส่วนตัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
       position: 'bottom-right',
     })
@@ -145,7 +143,11 @@ const isSaveDisabled = computed(() => loading.value|| !hasAnyChanges.value )
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 mx-6">
+  <div v-if="loading" class="flex-1 space-y-4 overflow-y-auto px-4 sm:px-6">
+    <SkeletonCard />
+  </div>
+
+  <div v-else class="flex flex-col gap-4 mx-6">
     <!-- ข้อมูลทั่วไป -->
     <DropDownForm
       topic="ข้อมูลทั่วไป"

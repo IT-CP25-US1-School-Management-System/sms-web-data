@@ -4,6 +4,7 @@ import NormalForm, {
   type NormalFormChangePayload,
   type NormalFormOption,
 } from '@/components/form/NormalForm.vue'
+import SkeletonCard from '@/components/SkeletonCard.vue'
 import { DATASET_GET ,DATASET_EDIT } from '@/lib/constants'
 import { Button } from '@/components/ui/button'
 import { getDatasetRows , updateDatasetRow } from '@/stores/dataset'
@@ -316,7 +317,6 @@ async function getAddressData() {
       createAddressFormState(address, index),
     )
   } catch (error: any) {
-    console.error('Address API Error:', error)
     toast.error(`โหลดข้อมูลที่อยู่ไม่สำเร็จ: ${error?.response?.data?.message || error.message}`)
     addressForms.value = [createAddressFormState(undefined, 0)]
   } finally {
@@ -476,9 +476,13 @@ async function onSaveAll() {
 
 <template>
   <div class="flex flex-col gap-4">
-    <div v-for="(form, index) in addressForms" :key="form.id" class="px-4 sm:px-6">
+    <div v-if="loading" class="flex-1 space-y-4 overflow-y-auto px-4 sm:px-6">
+      <SkeletonCard />
+    </div>
+
+    <div v-else v-for="(form, index) in addressForms" :key="form.id" class="px-4 sm:px-6">
       <NormalForm
-        :topic="`ข้อมูลที่อยู่ #${index + 1}`"
+        :topic="`ข้อมูลที่อยู่`"
         :fields="form.fields"
         :values="form.initialValues"
         :ref="(instance) => setFormRef(form.id, instance as NormalFormInstance | null)"
