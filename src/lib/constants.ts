@@ -77,7 +77,6 @@ export const DATASET_EDIT = {
   DATASET_VERSION_INNOVATIONS: 'v1.8.1',
   DATASET_VERSION_TRAINING: 'v1.9.0',
   DATASET_VERSION_DEPARTMENT: 'v1.4.1',
-
 } as const
 
 export const DATASET_DELETE = {
@@ -90,10 +89,9 @@ export const DATASET_DELETE = {
   DATASET_VERSION_TRAINING: 'v1.8.0',
 } as const
 
-
 export const REPORTING = {
   DATASET_ID: 'reporting',
-  EXPORT_VERSION: 'v1.0.0', 
+  EXPORT_VERSION: 'v1.0.0',
 } as const
 
 export const DOCUMENT_EDIT = {

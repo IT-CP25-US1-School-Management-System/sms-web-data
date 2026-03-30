@@ -428,7 +428,7 @@ const handleSave = async () => {
         },
 
         { name: 'first_name_en', label: 'Name', type: 'text', placeholder: 'Enter name' },
-                {
+        {
           name: 'middle_name_en',
           label: 'Middlename',
           type: 'text',

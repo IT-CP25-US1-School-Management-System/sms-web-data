@@ -219,11 +219,6 @@ function buildSchemas() {
           return
         }
 
-        if (f.type === 'number') {
-          shape[f.name] = buildNumberFieldSchema(label, f.required)
-          return
-        }
-
         // Default: treat as string. For required fields enforce non-empty with a Thai message.
         // Use preprocess to convert null/undefined to empty string so Zod returns our
         // custom message (rather than the generic "Expected string, received null").

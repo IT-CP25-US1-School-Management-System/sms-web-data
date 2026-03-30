@@ -5,7 +5,7 @@ import NormalForm, {
 } from '@/components/form/NormalForm.vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import { Button } from '@/components/ui/button'
-import { DATASET_EDIT, DATASET_GET ,REPORTING } from '@/lib/constants'
+import { DATASET_EDIT, DATASET_GET, REPORTING } from '@/lib/constants'
 import { ArrowUpFromLine } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { toast } from 'vue-sonner'
@@ -274,27 +274,27 @@ async function getPositionData() {
           created_at: personalRecord.departments.departments_created_at,
         }
       : null
-   
-    positionForms.value = (records.length ? records : [undefined]).map((record: PositionRow | undefined, index: number) =>
-      createPositionFormState(
-        record
-          ? {
-              ...record,
-              position: positionName || record.position || '',
-              subject_group: subjectGroup,
-              work_age_from_appointment: calculateWorkAge(record.government_entry_date),
-              work_age_at_school: calculateWorkAge(record.school_entry_date),
-            }
-          : {
-              position: positionName,
-              subject_group: subjectGroup,
-              work_age_from_appointment: '',
-              work_age_at_school: '',
-            },
-        index,
-      ),
-    )
 
+    positionForms.value = (records.length ? records : [undefined]).map(
+      (record: PositionRow | undefined, index: number) =>
+        createPositionFormState(
+          record
+            ? {
+                ...record,
+                position: positionName || record.position || '',
+                subject_group: subjectGroup,
+                work_age_from_appointment: calculateWorkAge(record.government_entry_date),
+                work_age_at_school: calculateWorkAge(record.school_entry_date),
+              }
+            : {
+                position: positionName,
+                subject_group: subjectGroup,
+                work_age_from_appointment: '',
+                work_age_at_school: '',
+              },
+          index,
+        ),
+    )
   } catch (error: any) {
     toast.error(`โหลดข้อมูลตำแหน่งไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
       position: 'bottom-right',
@@ -320,7 +320,10 @@ function handleFormChange(formId: string, payload: NormalFormChangePayload) {
   target.hasChanges = JSON.stringify(target.currentValues) !== JSON.stringify(target.initialValues)
 }
 
-function buildPositionUpdate(source: PositionRow | undefined, payload: Record<string, any>): PositionRow {
+function buildPositionUpdate(
+  source: PositionRow | undefined,
+  payload: Record<string, any>,
+): PositionRow {
   const mergedPayload = {
     ...source,
     ...payload,
@@ -403,9 +406,12 @@ async function updatePositionData() {
     toast.success('บันทึกข้อมูลตำแหน่งสำเร็จ', { position: 'bottom-right' })
     await getPositionData()
   } catch (error: any) {
-    toast.error(`บันทึกข้อมูลตำแหน่งไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
-      position: 'bottom-right',
-    })
+    toast.error(
+      `บันทึกข้อมูลตำแหน่งไม่สำเร็จ: ${error?.response?.data?.message || error.message}`,
+      {
+        position: 'bottom-right',
+      },
+    )
   } finally {
     loading.value = false
   }
@@ -469,13 +475,13 @@ async function pollExportJob(jobId: string): Promise<GetExportJobResponse> {
 
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     const response = await getUrlFile(jobId)
-    
+
     const status = response.data.status?.toLowerCase()
-    if ((status === 'succeeded') && response.data.destination_uri) {
+    if (status === 'succeeded' && response.data.destination_uri) {
       return response
     }
 
-    if (status === 'failed' ) {
+    if (status === 'failed') {
       throw new Error(response.data.error_message || 'Export failed')
     }
 
@@ -488,7 +494,7 @@ async function pollExportJob(jobId: string): Promise<GetExportJobResponse> {
 function getDownloadFileName(downloadUrl: string) {
   try {
     const fileName = 'ประวัติการดำรงตำแหน่ง.csv'
-    
+
     if (fileName) return decodeURIComponent(fileName)
   } catch {
     const fileName = downloadUrl.split('/').pop()
@@ -556,7 +562,7 @@ onMounted(() => {
     </div>
 
     <div v-else class="flex-1 space-y-4 overflow-y-auto px-4 sm:px-6">
-      <div v-for="(form, index) in positionForms" :key="form.id">
+      <div v-for="form in positionForms" :key="form.id">
         <NormalForm
           :topic="`ข้อมูลตำแหน่ง`"
           :ref="(instance) => setPositionFormRef(form.id, instance as NormalFormInstance | null)"

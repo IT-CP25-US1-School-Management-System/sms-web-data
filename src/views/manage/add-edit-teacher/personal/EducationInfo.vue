@@ -234,8 +234,7 @@ function handleFormChange(formId: string, payload: NormalFormChangePayload) {
   if (!target) return
 
   target.currentValues = cloneFormValues(payload.values)
-  target.hasChanges =
-    JSON.stringify(target.currentValues) !== JSON.stringify(target.initialValues)
+  target.hasChanges = JSON.stringify(target.currentValues) !== JSON.stringify(target.initialValues)
 }
 
 function handleFormSave(formId: string, values: Record<string, any>) {
@@ -279,9 +278,7 @@ function buildEducationRequestPayload(
 
 const hasAnyChanges = computed(() => educationForms.value.some((entry) => entry.hasChanges))
 
-const isSaveDisabled = computed(
-  () => loading.value || isSubmitting.value || !hasAnyChanges.value,
-)
+const isSaveDisabled = computed(() => loading.value || isSubmitting.value || !hasAnyChanges.value)
 
 async function onSaveAll() {
   if (isSubmitting.value) return
@@ -364,9 +361,9 @@ onMounted(() => {
 
 <template>
   <div class="flex flex-col gap-4">
-    <div v-if="loading" class="px-4 text-sm text-muted-foreground sm:px-6">กำลังโหลดข้อมูล...</div>
+    <div v-if="loading" class="text-muted-foreground px-4 text-sm sm:px-6">กำลังโหลดข้อมูล...</div>
 
-    <div v-for="(form) in educationForms" :key="form.id" class="px-4 sm:px-6">
+    <div v-for="form in educationForms" :key="form.id" class="px-4 sm:px-6">
       <NormalForm
         :topic="`ข้อมูลการศึกษา`"
         :fields="form.fields"

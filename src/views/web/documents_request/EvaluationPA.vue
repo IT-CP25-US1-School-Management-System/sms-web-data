@@ -73,7 +73,9 @@ const validationSchema = computed(() => {
       teaching_level_2: z.string().min(1, 'ปฏิบัติการสอนชั้น/ระดับ จำเป็นต้องกรอก'),
       subject_name: z.string().min(1, 'รายวิชา จำเป็นต้องกรอก'),
       teaching_hours_per_week: z.string().min(1, 'การสอนตามตารางสอน จำเป็นต้องกรอก'),
-      support_hours_per_week: z.string().min(1, 'งานส่งเสริมและสนับสนุนการจัดการเรียนรู้ จำเป็นต้องกรอก'),
+      support_hours_per_week: z
+        .string()
+        .min(1, 'งานส่งเสริมและสนับสนุนการจัดการเรียนรู้ จำเป็นต้องกรอก'),
       dev_quality_hours_per_week: z.string().min(1, 'งานพัฒนาคุณภาพการศึกษา จำเป็นต้องกรอก'),
       policy_hours_per_week: z.string().min(1, 'งานตอบสนองนโยบายและจุดเน้น จำเป็นต้องกรอก'),
       committee_name_1: z.string().min(1, 'คนที่ 1 จำเป็นต้องกรอก'),

@@ -2,7 +2,13 @@
 import CreateForm from '@/components/form/CreateForm.vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import SkeletonCard from '@/components/SkeletonCard.vue'
-import { DATASET_DELETE, DATASET_EDIT, DATASET_GET ,DOCUMENT_DELETE, DOCUMENT_EDIT } from '@/lib/constants'
+import {
+  DATASET_DELETE,
+  DATASET_EDIT,
+  DATASET_GET,
+  DOCUMENT_DELETE,
+  DOCUMENT_EDIT,
+} from '@/lib/constants'
 import { formatDateInput, generateUUID } from '@/lib/helpers'
 import { useAuthStore } from '@/stores/auth'
 import {

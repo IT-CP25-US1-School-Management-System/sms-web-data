@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed ,onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -63,7 +63,6 @@ const route = useRoute()
 const authStore = useAuthStore()
 const teacherStore = useTeacherStore()
 
-
 async function loadCurrentTeacher() {
   try {
     const response = await getDatasetRows(DATASET_GET.DATASET_ID, DATASET_GET.DATASET_VERSION, {
@@ -100,7 +99,6 @@ onMounted(async () => {
 
   await loadCurrentTeacher()
 })
-
 
 const menuConfig: {
   main: MenuItem[]
@@ -159,7 +157,7 @@ const menuConfig: {
           id: 'position-history',
           label: 'ข้อมูลการดำรงตำแหน่ง',
           icon: null,
-          routeName: ROUTE_NAMES.POSITION_HISTORY, 
+          routeName: ROUTE_NAMES.POSITION_HISTORY,
           showCondition: () => isGovernment.value, // only for government staff
         },
         {

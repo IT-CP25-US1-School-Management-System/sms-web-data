@@ -334,7 +334,7 @@ async function updateAddressData() {
       datasetId,
       version,
       savedPayload.id,
-      savedPayload, 
+      savedPayload,
     )
 
     if ((response as { message?: string }).message === 'success') {
@@ -358,10 +358,10 @@ async function updateAddressData() {
   loading.value = false
 }
 
-async function updateData(action:boolean) {
+async function updateData(action: boolean) {
   if (action) {
-   await updateAddressData()
-  } 
+    await updateAddressData()
+  }
   confirmModal.value = false
 }
 
@@ -452,7 +452,6 @@ function applySavedAddressState(savedPayload: PersonAddress) {
   addressForms.value = nextAddressForms
 }
 
-
 const hasAnyChanges = computed(() =>
   addressForms.value.some(
     (entry) => JSON.stringify(entry.currentValues) !== JSON.stringify(entry.initialValues),
@@ -500,7 +499,7 @@ async function onSaveAll() {
       <SkeletonCard />
     </div>
 
-    <div v-else v-for="(form, index) in addressForms" :key="form.id" class="px-4 sm:px-6">
+    <div v-else v-for="form in addressForms" :key="form.id" class="px-4 sm:px-6">
       <NormalForm
         :topic="`ข้อมูลที่อยู่`"
         :fields="form.fields"

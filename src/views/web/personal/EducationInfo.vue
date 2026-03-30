@@ -41,7 +41,12 @@ onMounted(() => {
     <SkeletonCard />
   </div>
 
-  <div v-else class="mx-6 flex flex-col gap-4" v-for="item in (educationData.length ? educationData : [{}])" :key="item.id">
+  <div
+    v-else
+    class="mx-6 flex flex-col gap-4"
+    v-for="item in educationData.length ? educationData : [{}]"
+    :key="item.id"
+  >
     <NormalForm
       :isDropdown="false"
       :values="item"

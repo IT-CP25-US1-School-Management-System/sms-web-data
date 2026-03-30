@@ -476,7 +476,9 @@ async function getPositionData() {
       },
     )
 
-    const records = sortPositionRecords(extractPositionRecords(response.data)).map(formatPositionRecord)
+    const records = sortPositionRecords(extractPositionRecords(response.data)).map(
+      formatPositionRecord,
+    )
     const primaryRecord = records[0]
 
     if (records.length > 1) {
@@ -523,10 +525,8 @@ function buildPositionPayload(
   const appointmentTypeId = payload.appointment_type_id ?? source?.appointment_type_id
   const appointmentDate =
     payload.appointment_date ?? payload.government_entry_date ?? source?.government_entry_date
-  const retirementDate =
-    payload.retirement_date ?? payload.birth_date ?? source?.retirement_date
-  const positionDate =
-    payload.position_held_date ?? payload.position_date ?? source?.position_date
+  const retirementDate = payload.retirement_date ?? payload.birth_date ?? source?.retirement_date
+  const positionDate = payload.position_held_date ?? payload.position_date ?? source?.position_date
   const serviceStartDate = payload.service_start_date ?? source?.service_start_date
   const schoolEntryDate = payload.school_entry_date ?? source?.school_entry_date
 
@@ -702,14 +702,14 @@ async function pollExportJob(jobId: string): Promise<GetExportJobResponse> {
 
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     const response = await getUrlFile(jobId)
-    const status = response.status?.toLowerCase()
+    const status = response.data.status?.toLowerCase()
 
-    if ((status === 'success' || status === 'completed') && response.destination_uri) {
+    if (status === 'succeeded' && response.data.destination_uri) {
       return response
     }
 
-    if (status === 'failed' || status === 'error') {
-      throw new Error(response.error_message || 'Export failed')
+    if (status === 'failed') {
+      throw new Error(response.data.error_message || 'Export failed')
     }
 
     await sleep(intervalMs)
@@ -750,7 +750,7 @@ async function handleDownloadTemplate() {
     }
 
     const exportResult = await pollExportJob(exportResponse.job_id)
-    fileUrl.value = exportResult.destination_uri || ''
+    fileUrl.value = exportResult.data.destination_uri || ''
 
     if (!fileUrl.value) {
       throw new Error('Export file URL not found')

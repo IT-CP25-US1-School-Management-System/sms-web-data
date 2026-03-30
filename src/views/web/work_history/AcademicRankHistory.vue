@@ -41,7 +41,19 @@ type AcademicRankRow = Record<string, any> & {
   document_links?: DocumentLinkRow[]
 }
 type AcademicRankFormValue = AcademicRankRow & { 'order-file'?: AcademicFileItem[] }
-type CreateFormField = { name: string; label?: string; type: 'text' | 'date' | 'date-range' | 'select' | 'number' | 'email' | 'textarea' | 'file'; placeholder?: string; required?: boolean; disabled?: boolean; isShow?: boolean; defaultValue?: any; options?: { label: string; value: any }[]; accept?: string; multiple?: boolean }
+type CreateFormField = {
+  name: string
+  label?: string
+  type: 'text' | 'date' | 'date-range' | 'select' | 'number' | 'email' | 'textarea' | 'file'
+  placeholder?: string
+  required?: boolean
+  disabled?: boolean
+  isShow?: boolean
+  defaultValue?: any
+  options?: { label: string; value: any }[]
+  accept?: string
+  multiple?: boolean
+}
 type CreateFormSection = { topic?: string; content: CreateFormField[] }
 
 const GET_VIEW = 'academic_get'
@@ -87,38 +99,102 @@ const pendingAction = ref<
   | null
 >(null)
 
-const academicRankFields: CreateFormSection[][] = [[
-  {
-    topic: 'ประวัติการมีวิทยฐานะ',
-    content: [
-      { name: 'order_no', label: 'คำสั่ง', type: 'text', required: true, isShow: true, placeholder: '' },
-      { name: 'criteria', label: 'หลักเกณฑ์การได้รับวิทยฐานะ ', type: 'select', required: true, isShow: true, placeholder: '' , options: [{ label: 'ว13', value: 'ว13' }, { label: 'ว17', value: 'ว17' }, { label: 'ว21', value: 'ว21' }] },
-      { name: 'position_rank', label: 'ตำแหน่งที่ได้รับวิทยฐานะ', type: 'select', required: true, isShow: true, placeholder: 'เลือกตำแหน่ง', options: [{ label: 'ครู', value: 'ครู' },  { label: 'รองผู้บริหาร', value: 'รองผู้บริหาร' }, { label: 'ผู้บริหาร', value: 'ผู้บริหาร' } ] },
-      { name: 'ranking_type', label: 'วิทยฐานะ', type: 'select', required: true, placeholder: 'เลือกวิทยฐานะ', options: [
-        { label: 'ชำนาญการ', value: 'ชำนาญการ' },
-        { label: 'ชำนาญการพิเศษ', value: 'ชำนาญการพิเศษ' },
-        { label: 'เชี่ยวชาญ', value: 'เชี่ยวชาญ' },
-        { label: 'เชี่ยวชาญพิเศษ', value: 'เชี่ยวชาญพิเศษ' },
-        // { label: 'รองผู้อำนวยชำนาญการพิเศษ', value: 'รองผู้อำนวยชำนาญการพิเศษ' },
-        // { label: 'รองผู้อำนวยเชี่ยวชาญ', value: 'รองผู้อำนวยเชี่ยวชาญ' },
-        // { label: 'ผู้อำนวยชำนาญการ', value: 'ผู้อำนวยชำนาญการ' },
-        // { label: 'ผู้อำนวยชำนาญการพิเศษ', value: 'ผู้อำนวยชำนาญการพิเศษ' },
-        // { label: 'ผู้อำนวยเชี่ยวชาญ', value: 'ผู้อำนวยเชี่ยวชาญ' },
-      ] },
-      { name: 'awarded_date', label: 'วันที่ได้รับวิทยฐานะ', type: 'date', required: true, placeholder: 'วว / ดด / ปปปป' },
-      { name: FILE_FIELD, label: 'แนบคำสั่ง', type: 'file',required: true, accept: '.pdf,.jpg,.png', multiple: true },
-    ],
-  },
-  {
-    topic: 'เงินเดือน',
-    content: [
-      { name: 'reward', label: 'เงินค่าตอบแทน', type: 'number', placeholder: '' },
-      { name: 'special_reward', label: 'เงินค่าตอบแทนพิเศษกรณีเต็มขั้น', type: 'number', placeholder: '', defaultValue: 0 },
-      { name: 'position_reward', label: 'เงินประจำตำแหน่ง', type: 'number', placeholder: '' },
-      { name: 'special-compensation', label: 'เงินค่าตอบแทนพิเศษ', type: 'number',  placeholder: '' },
-    ],
-  },
-]]
+const academicRankFields: CreateFormSection[][] = [
+  [
+    {
+      topic: 'ประวัติการมีวิทยฐานะ',
+      content: [
+        {
+          name: 'order_no',
+          label: 'คำสั่ง',
+          type: 'text',
+          required: true,
+          isShow: true,
+          placeholder: '',
+        },
+        {
+          name: 'criteria',
+          label: 'หลักเกณฑ์การได้รับวิทยฐานะ ',
+          type: 'select',
+          required: true,
+          isShow: true,
+          placeholder: '',
+          options: [
+            { label: 'ว13', value: 'ว13' },
+            { label: 'ว17', value: 'ว17' },
+            { label: 'ว21', value: 'ว21' },
+          ],
+        },
+        {
+          name: 'position_rank',
+          label: 'ตำแหน่งที่ได้รับวิทยฐานะ',
+          type: 'select',
+          required: true,
+          isShow: true,
+          placeholder: 'เลือกตำแหน่ง',
+          options: [
+            { label: 'ครู', value: 'ครู' },
+            { label: 'รองผู้บริหาร', value: 'รองผู้บริหาร' },
+            { label: 'ผู้บริหาร', value: 'ผู้บริหาร' },
+          ],
+        },
+        {
+          name: 'ranking_type',
+          label: 'วิทยฐานะ',
+          type: 'select',
+          required: true,
+          placeholder: 'เลือกวิทยฐานะ',
+          options: [
+            { label: 'ชำนาญการ', value: 'ชำนาญการ' },
+            { label: 'ชำนาญการพิเศษ', value: 'ชำนาญการพิเศษ' },
+            { label: 'เชี่ยวชาญ', value: 'เชี่ยวชาญ' },
+            { label: 'เชี่ยวชาญพิเศษ', value: 'เชี่ยวชาญพิเศษ' },
+            // { label: 'รองผู้อำนวยชำนาญการพิเศษ', value: 'รองผู้อำนวยชำนาญการพิเศษ' },
+            // { label: 'รองผู้อำนวยเชี่ยวชาญ', value: 'รองผู้อำนวยเชี่ยวชาญ' },
+            // { label: 'ผู้อำนวยชำนาญการ', value: 'ผู้อำนวยชำนาญการ' },
+            // { label: 'ผู้อำนวยชำนาญการพิเศษ', value: 'ผู้อำนวยชำนาญการพิเศษ' },
+            // { label: 'ผู้อำนวยเชี่ยวชาญ', value: 'ผู้อำนวยเชี่ยวชาญ' },
+          ],
+        },
+        {
+          name: 'awarded_date',
+          label: 'วันที่ได้รับวิทยฐานะ',
+          type: 'date',
+          required: true,
+          placeholder: 'วว / ดด / ปปปป',
+        },
+        {
+          name: FILE_FIELD,
+          label: 'แนบคำสั่ง',
+          type: 'file',
+          required: true,
+          accept: '.pdf,.jpg,.png',
+          multiple: true,
+        },
+      ],
+    },
+    {
+      topic: 'เงินเดือน',
+      content: [
+        { name: 'reward', label: 'เงินค่าตอบแทน', type: 'number', placeholder: '' },
+        {
+          name: 'special_reward',
+          label: 'เงินค่าตอบแทนพิเศษกรณีเต็มขั้น',
+          type: 'number',
+          placeholder: '',
+          defaultValue: 0,
+        },
+        { name: 'position_reward', label: 'เงินประจำตำแหน่ง', type: 'number', placeholder: '' },
+        {
+          name: 'special-compensation',
+          label: 'เงินค่าตอบแทนพิเศษ',
+          type: 'number',
+          placeholder: '',
+        },
+      ],
+    },
+  ],
+]
 
 function getCurrentUserName() {
   return (
@@ -201,7 +277,9 @@ function formatAcademicRecord(record: AcademicRankRow) {
     awarded_date: record.awarded_date ? formatDateInput(record.awarded_date) : null,
     approval_date: record.approval_date ? formatDateInput(record.approval_date) : null,
     special_reward:
-      record.special_reward === '' || record.special_reward === null || record.special_reward === undefined
+      record.special_reward === '' ||
+      record.special_reward === null ||
+      record.special_reward === undefined
         ? 0
         : record.special_reward,
   }
@@ -543,7 +621,10 @@ function handleChange(index: number, values: Record<string, any>) {
   academicRankData.value = nextAcademicRankData
 }
 
-async function deleteAcademicRankWithFiles(recordId?: string, currentRecord?: AcademicRankFormValue) {
+async function deleteAcademicRankWithFiles(
+  recordId?: string,
+  currentRecord?: AcademicRankFormValue,
+) {
   try {
     if (!recordId || !currentRecord?.id) {
       toast.success('ลบข้อมูลประวัติวิทยฐานะสำเร็จ', { position: 'bottom-right' })

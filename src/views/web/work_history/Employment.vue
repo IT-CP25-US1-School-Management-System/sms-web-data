@@ -48,7 +48,6 @@ async function getEmploymentData() {
       position: positionName || record.position || '',
     }))
     formRenderKey.value += 1
-
   } catch (error: any) {
     console.error('Personal Detail API Error:', error)
     console.error('Error Response:', error?.response?.data)
@@ -70,7 +69,12 @@ onMounted(() => {
     <SkeletonCard />
   </div>
 
-  <div v-else v-for="item in displayEmploymentData" :key="`${formRenderKey}-${item.id}`" class="mx-6 flex flex-col gap-4">
+  <div
+    v-else
+    v-for="item in displayEmploymentData"
+    :key="`${formRenderKey}-${item.id}`"
+    class="mx-6 flex flex-col gap-4"
+  >
     แก้ไขไม่ได้
     <DropDownForm
       topic="ข้อมูลการทำงาน"

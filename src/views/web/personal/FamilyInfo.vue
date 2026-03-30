@@ -124,7 +124,7 @@ function mapFamilyMemberForForm(
 ) {
   return {
     ...member,
-    
+
     prefix_name: (member as Record<string, any>)?.prefixes?.prefixes_name_th || '',
     is_alive: member.is_alive ? 'มีชีวิต' : 'ไม่มีชีวิต',
     province_code: member.province_code ?? '',
@@ -473,10 +473,12 @@ async function updateFamilyData(groupIndex: number, values?: Record<string, any>
       })
     }
   } catch (error: any) {
-
-    toast.error(`อัปเดตข้อมูลครอบครัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
-      position: 'bottom-right',
-    })
+    toast.error(
+      `อัปเดตข้อมูลครอบครัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`,
+      {
+        position: 'bottom-right',
+      },
+    )
   }
 
   loading.value = false
@@ -491,10 +493,7 @@ function updateData(confirmed: boolean) {
   confirmModal.value = false
 }
 
-function shouldSyncFamilyAddress(
-  groupIndex: number,
-  values?: Record<string, any>,
-) {
+function shouldSyncFamilyAddress(groupIndex: number, values?: Record<string, any>) {
   if (!values) return false
 
   const currentMember = familyData.value[groupIndex] || {}

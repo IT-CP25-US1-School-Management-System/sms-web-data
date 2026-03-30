@@ -379,12 +379,16 @@ async function getContractPositionData() {
         view: CONTRACT_POSITION_DATASET.VIEW_NAME,
         page: 1,
         per_page: 50,
-        where: [[{
-          table_name: CONTRACT_POSITION_DATASET.VIEW_NAME,
-          field: 'person_id',
-          operator: '=',
-          value: personId,
-        }]],
+        where: [
+          [
+            {
+              table_name: CONTRACT_POSITION_DATASET.VIEW_NAME,
+              field: 'person_id',
+              operator: '=',
+              value: personId,
+            },
+          ],
+        ],
       },
     )
     const { records, allDocumentLinks } = extractContractResponse(response.data)

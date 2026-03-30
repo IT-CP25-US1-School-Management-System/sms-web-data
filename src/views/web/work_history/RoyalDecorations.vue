@@ -60,10 +60,24 @@ const EDIT_VIEW = 'decorations_update'
 const ENTITY_TABLE = 'decorations'
 const FILE_FIELD = 'announcement-file'
 
-const DATASET_CONFIG = { DATASET_ID: DATASET_EDIT.DATASET_ID, DATASET_VERSION: DATASET_EDIT.DATASET_VERSION_ROYAL_DECORATIONS, VIEW_NAME: EDIT_VIEW } as const
-const DELETE_CONFIG = { DATASET_ID: DATASET_DELETE.DATASET_ID, DATASET_VERSION: DATASET_DELETE.DATASET_VERSION_ROYAL_DECORATIONS } as const
-const DOCUMENT_CREATE_CONFIG = { DATASET_ID: DOCUMENT_EDIT.DATASET_ID, DATASET_VERSION: DOCUMENT_EDIT.DATASET_VERSION_DOCUMENT_LINK, VIEW_NAME: 'file_view' } as const
-const DOCUMENT_DELETE_CONFIG = { DATASET_ID: DOCUMENT_DELETE.DATASET_ID, DATASET_VERSION: DOCUMENT_DELETE.DATASET_VERSION } as const
+const DATASET_CONFIG = {
+  DATASET_ID: DATASET_EDIT.DATASET_ID,
+  DATASET_VERSION: DATASET_EDIT.DATASET_VERSION_ROYAL_DECORATIONS,
+  VIEW_NAME: EDIT_VIEW,
+} as const
+const DELETE_CONFIG = {
+  DATASET_ID: DATASET_DELETE.DATASET_ID,
+  DATASET_VERSION: DATASET_DELETE.DATASET_VERSION_ROYAL_DECORATIONS,
+} as const
+const DOCUMENT_CREATE_CONFIG = {
+  DATASET_ID: DOCUMENT_EDIT.DATASET_ID,
+  DATASET_VERSION: DOCUMENT_EDIT.DATASET_VERSION_DOCUMENT_LINK,
+  VIEW_NAME: 'file_view',
+} as const
+const DOCUMENT_DELETE_CONFIG = {
+  DATASET_ID: DOCUMENT_DELETE.DATASET_ID,
+  DATASET_VERSION: DOCUMENT_DELETE.DATASET_VERSION,
+} as const
 
 const authStore = useAuthStore()
 const teacherStore = useTeacherStore()
@@ -84,21 +98,68 @@ const pendingAction = ref<
   | null
 >(null)
 
-const royalDecorationFields: CreateFormSection[][] = [[
-  {
-    content: [
-      { name: 'announce_date', label: 'วันที่ประกาศในราชกิจจา', type: 'date', required: true, isShow: true, placeholder: 'วว / ดด / ปปปป' },
-      { name: 'year', label: 'ประจำปี', type: 'number', required: true, isShow: true, placeholder: '' },
-      { name: 'class', label: 'ชั้นตรา', type: 'text', required: true, placeholder: '' },
-      { name: 'gazette_book_no', label: 'เล่มที่', type: 'text', required: true, placeholder: '' },
-      { name: 'gazette_section', label: 'ตอนที่', type: 'text', placeholder: '' },
-      { name: 'gazette_publish_date', label: 'ลงวันที่', type: 'date', required: true, placeholder: 'วว / ดด / ปปปป' },
-      { name: 'gazette_page', label: 'หน้า', type: 'text', required: true, placeholder: 'กรอกหน้า' },
-      { name: 'gazette_order_no', label: 'ลำดับที่', type: 'text', required: true, placeholder: 'กรอกลำดับที่' },
-      { name: 'announcement-file', label: 'แนบประกาศ', type: 'file', required: true, accept: '.pdf,.jpg,.png', multiple: true },
-    ],
-  },
-]]
+const royalDecorationFields: CreateFormSection[][] = [
+  [
+    {
+      content: [
+        {
+          name: 'announce_date',
+          label: 'วันที่ประกาศในราชกิจจา',
+          type: 'date',
+          required: true,
+          isShow: true,
+          placeholder: 'วว / ดด / ปปปป',
+        },
+        {
+          name: 'year',
+          label: 'ประจำปี',
+          type: 'number',
+          required: true,
+          isShow: true,
+          placeholder: '',
+        },
+        { name: 'class', label: 'ชั้นตรา', type: 'text', required: true, placeholder: '' },
+        {
+          name: 'gazette_book_no',
+          label: 'เล่มที่',
+          type: 'text',
+          required: true,
+          placeholder: '',
+        },
+        { name: 'gazette_section', label: 'ตอนที่', type: 'text', placeholder: '' },
+        {
+          name: 'gazette_publish_date',
+          label: 'ลงวันที่',
+          type: 'date',
+          required: true,
+          placeholder: 'วว / ดด / ปปปป',
+        },
+        {
+          name: 'gazette_page',
+          label: 'หน้า',
+          type: 'text',
+          required: true,
+          placeholder: 'กรอกหน้า',
+        },
+        {
+          name: 'gazette_order_no',
+          label: 'ลำดับที่',
+          type: 'text',
+          required: true,
+          placeholder: 'กรอกลำดับที่',
+        },
+        {
+          name: 'announcement-file',
+          label: 'แนบประกาศ',
+          type: 'file',
+          required: true,
+          accept: '.pdf,.jpg,.png',
+          multiple: true,
+        },
+      ],
+    },
+  ],
+]
 
 function getCurrentUserName() {
   return (
@@ -125,7 +186,9 @@ function formatRoyalRecord(record: RoyalDecorationRow) {
   return {
     ...record,
     year: record.year != null ? record.year : 0,
-    gazette_publish_date: record.gazette_publish_date ? formatDateInput(record.gazette_publish_date) : null,
+    gazette_publish_date: record.gazette_publish_date
+      ? formatDateInput(record.gazette_publish_date)
+      : null,
     announce_date: record.announce_date ? formatDateInput(record.announce_date) : null,
   }
 }
@@ -143,14 +206,19 @@ function buildRoyalPayload(
     id: currentRecord?.id || values.id || generateUUID(),
     person_id: teacherStore.personId || personId || '',
     year: values.year || 0,
-    gazette_publish_date: values.gazette_publish_date ? formatDateInput(values.gazette_publish_date) : null,
+    gazette_publish_date: values.gazette_publish_date
+      ? formatDateInput(values.gazette_publish_date)
+      : null,
     announce_date: values.announce_date ? formatDateInput(values.announce_date) : null,
     created_at: currentRecord?.created_at || new Date().toISOString(),
     updated_at: currentRecord?.id ? new Date().toISOString() : null,
   }
 }
 
-function resolveRoyalPersonId(values: RoyalDecorationFormValue, currentRecord?: RoyalDecorationRow) {
+function resolveRoyalPersonId(
+  values: RoyalDecorationFormValue,
+  currentRecord?: RoyalDecorationRow,
+) {
   return teacherStore.personId || currentRecord?.person_id || values.person_id || ''
 }
 
@@ -204,7 +272,11 @@ async function getRoyalFiles(record: RoyalDecorationRow, documentLinks: Document
 async function getRoyalDecorationData() {
   loading.value = true
   try {
-    const response = await getDatasetRows<RoyalDecorationRow>(DATASET_GET.DATASET_ID, DATASET_GET.DATASET_VERSION_ROYAL_DECORATIONS, { view: GET_VIEW, page: 1, per_page: 50 })
+    const response = await getDatasetRows<RoyalDecorationRow>(
+      DATASET_GET.DATASET_ID,
+      DATASET_GET.DATASET_VERSION_ROYAL_DECORATIONS,
+      { view: GET_VIEW, page: 1, per_page: 50 },
+    )
     const { records, allDocumentLinks } = extractRoyalResponse(response.data)
     documentLinksByDecoration.value = Object.fromEntries(
       records

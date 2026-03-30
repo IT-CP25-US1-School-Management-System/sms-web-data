@@ -41,7 +41,18 @@ type ContractRow = Record<string, any> & {
 }
 type ContractFormValue = ContractRow & { file?: ContractFileItem[] }
 type PersonalRow = Record<string, any> & { roles?: { roles_name?: string } | null }
-type CreateFormField = { name: string; label?: string; type: 'text' | 'date' | 'date-range' | 'select' | 'number' | 'email' | 'textarea' | 'file'; placeholder?: string; required?: boolean; disabled?: boolean; isShow?: boolean; options?: { label: string; value: any }[]; accept?: string; multiple?: boolean }
+type CreateFormField = {
+  name: string
+  label?: string
+  type: 'text' | 'date' | 'date-range' | 'select' | 'number' | 'email' | 'textarea' | 'file'
+  placeholder?: string
+  required?: boolean
+  disabled?: boolean
+  isShow?: boolean
+  options?: { label: string; value: any }[]
+  accept?: string
+  multiple?: boolean
+}
 type CreateFormSection = { topic?: string; content: CreateFormField[] }
 
 const GET_VIEW = 'contract_get'
@@ -87,17 +98,54 @@ const pendingAction = ref<
   | null
 >(null)
 
-const contractFields: CreateFormSection[][] = [[
-  {
-    content: [
-      { name: 'date', label: 'วันเดือนปี', type: 'date', required: true, placeholder: '', disabled: false },
-      { name: 'position', label: 'ตำแหน่ง', type: 'text', required: true, placeholder: '', disabled: false },
-      { name: 'salary', label: 'เงินเดือน', type: 'number', required: true, placeholder: '', disabled: false },
-      { name: 'order_no', label: 'เลขที่คำสั่ง/สัญญาจ้าง', type: 'text', required: true, placeholder: '', disabled: false },
-      { name: FILE_FIELD, label: 'แนบเอกสารเอกสารสัญญาจ้าง', type: 'file', accept: '.pdf,.jpg,.png', multiple: true ,required: true },
-    ],
-  },
-]]
+const contractFields: CreateFormSection[][] = [
+  [
+    {
+      content: [
+        {
+          name: 'date',
+          label: 'วันเดือนปี',
+          type: 'date',
+          required: true,
+          placeholder: '',
+          disabled: false,
+        },
+        {
+          name: 'position',
+          label: 'ตำแหน่ง',
+          type: 'text',
+          required: true,
+          placeholder: '',
+          disabled: false,
+        },
+        {
+          name: 'salary',
+          label: 'เงินเดือน',
+          type: 'number',
+          required: true,
+          placeholder: '',
+          disabled: false,
+        },
+        {
+          name: 'order_no',
+          label: 'เลขที่คำสั่ง/สัญญาจ้าง',
+          type: 'text',
+          required: true,
+          placeholder: '',
+          disabled: false,
+        },
+        {
+          name: FILE_FIELD,
+          label: 'แนบเอกสารเอกสารสัญญาจ้าง',
+          type: 'file',
+          accept: '.pdf,.jpg,.png',
+          multiple: true,
+          required: true,
+        },
+      ],
+    },
+  ],
+]
 
 function getCurrentUserName() {
   return (
@@ -214,8 +262,16 @@ async function getContractPositionData() {
   loading.value = true
   try {
     const [contractResponse, personalResponse] = await Promise.all([
-      getDatasetRows<ContractRow>(DATASET_GET.DATASET_ID, DATASET_GET.DATASET_VERSION_CONTRACT_POSITION, { view: GET_VIEW, page: 1, per_page: 50 }),
-      getDatasetRows<PersonalRow>(DATASET_GET.DATASET_ID, DATASET_GET.DATASET_VERSION, { view: 'personal_get', page: 1, per_page: 50 }),
+      getDatasetRows<ContractRow>(
+        DATASET_GET.DATASET_ID,
+        DATASET_GET.DATASET_VERSION_CONTRACT_POSITION,
+        { view: GET_VIEW, page: 1, per_page: 50 },
+      ),
+      getDatasetRows<PersonalRow>(DATASET_GET.DATASET_ID, DATASET_GET.DATASET_VERSION, {
+        view: 'personal_get',
+        page: 1,
+        per_page: 50,
+      }),
     ])
     personalPosition.value = personalResponse.data?.[0]?.roles?.roles_name || ''
     console.log('Contract Position API Response:', contractResponse)

@@ -598,12 +598,9 @@ async function deleteFamilyData(familyMemberId?: string) {
   } catch (error: any) {
     console.error('Family Delete API Error:', error)
     console.error('Error Response:', error?.response?.data)
-    toast.error(
-      `ลบข้อมูลครอบครัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`,
-      {
-        position: 'bottom-right',
-      },
-    )
+    toast.error(`ลบข้อมูลครอบครัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
+      position: 'bottom-right',
+    })
   } finally {
     loading.value = false
   }

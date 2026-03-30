@@ -51,9 +51,8 @@ async function getPersonalDetailData() {
     toast.error(`โหลดข้อมูลส่วนตัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
       position: 'bottom-right',
     })
-  } 
-  finally {
-  loadData.value = false
+  } finally {
+    loadData.value = false
   }
 }
 
@@ -79,10 +78,13 @@ async function updateDataPersonalDetail() {
       })
     }
   } catch (error: any) {
-    toast.error(`อัพเดตข้อมูลส่วนตัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
-      position: 'bottom-right',
-    })
-  } 
+    toast.error(
+      `อัพเดตข้อมูลส่วนตัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`,
+      {
+        position: 'bottom-right',
+      },
+    )
+  }
   loading.value = false
 }
 
@@ -149,7 +151,7 @@ const isSaveDisabled = computed(() => loading.value || !hasAnyChanges.value)
     <SkeletonCard />
   </div>
 
-  <div v-show="!loadData" class="flex flex-col gap-4 mx-6">
+  <div v-show="!loadData" class="mx-6 flex flex-col gap-4">
     <!-- ข้อมูลทั่วไป -->
     <DropDownForm
       topic="ข้อมูลทั่วไป"

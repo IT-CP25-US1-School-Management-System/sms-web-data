@@ -980,9 +980,11 @@ onMounted(() => {
 For questions, modifications, or bug reports, refer to this documentation and the component source code.
 
 ---
+
 ## March 30, 2026
 
 ### Add Teacher - EducationInfo uses teacher.ts with admin NormalForm flow
+
 - `src/views/manage/add-edit-teacher/personal/EducationInfo.vue` now fetches education data via `getEducationById()` from `src/stores/teachers.ts`.
 - The page stays in the manage/admin `NormalForm` style and does not switch to `CreateForm`.
 - Saving now uses teacher-side helpers:
@@ -1243,6 +1245,7 @@ Add a new teacher with minimal data:
 ---
 
 ## March 30, 2026
+
 ### Add Teacher - ProfessionalLicense uses teacher.ts with manage admin flow
 
 - `src/views/manage/add-edit-teacher/personal/ProfessionalLicense.vue` now resolves `personId` from the route query and `useTeacherStore()` like the other manage add-edit-teacher pages.

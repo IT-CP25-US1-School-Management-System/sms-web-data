@@ -221,7 +221,7 @@ function isExistingTrainingFile(file: TrainingFileItem): file is ExistingTrainin
 }
 
 function buildTrainingPurpose(values: Partial<TrainingRow>, fileField?: string) {
-   const topic = values.project_title || 'ไม่ระบุหัวข้อ'
+  const topic = values.project_title || 'ไม่ระบุหัวข้อ'
 
   if (fileField === 'photo-file') {
     return `ภาพข้อมูลผลงาน/นวัตกรรมสำหรับ ${topic}_${fileField}`
@@ -272,7 +272,8 @@ function buildTrainingPayload(
     ...currentRecord,
     ...payload,
     id: currentRecord?.id || values.id || generateUUID(),
-    person_id: teacherStore.personId || currentRecord?.person_id || values.person_id || '',
+    person_id:
+      personId || teacherStore.personId || currentRecord?.person_id || values.person_id || '',
     hours: hoursValue,
     start_date: formatTrainingDate(values.start_date),
     end_date: formatTrainingDate(values.end_date),
@@ -356,11 +357,15 @@ async function getTrainingFiles(
 async function getTrainingData() {
   loading.value = true
   try {
-    const response = await getDatasetRows<TrainingRow>(DATASET_GET.DATASET_ID, DATASET_GET.DATASET_VERSION_TRAINING, {
-      view: TRAINING_GET_VIEW,
-      page: 1,
-      per_page: 50,
-    })
+    const response = await getDatasetRows<TrainingRow>(
+      DATASET_GET.DATASET_ID,
+      DATASET_GET.DATASET_VERSION_TRAINING,
+      {
+        view: TRAINING_GET_VIEW,
+        page: 1,
+        per_page: 50,
+      },
+    )
 
     const { records, allDocumentLinks } = extractTrainingResponse(response.data)
 
