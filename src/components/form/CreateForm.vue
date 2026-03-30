@@ -120,7 +120,6 @@ function buildSchemas() {
           }
           return
         }
-
         // Special-case file fields: validate presence. Files are stored in
         // `fileMap[entryIndex][name]` and VeeField will receive either a File
         // or an array of File depending on `multiple`.

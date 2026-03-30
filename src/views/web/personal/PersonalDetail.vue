@@ -11,6 +11,7 @@ import {calAge ,formatDateInput} from '@/lib/helpers.ts'
 import { DATASET_EDIT, DATASET_GET } from '@/lib/constants'
 
 const loading = ref(false)
+const loadData = ref(false)
 const personalData = ref<Record<string, any>>({})
 const personalDataUpdate = ref<PersonData>({
   id: '',
@@ -35,7 +36,7 @@ const contactForm = ref<any>(null)
 
 
 async function getPersonalDetailData() {
-  loading.value = true
+  loadData.value = true
   try {
     const response = await getDatasetRows(DATASET_GET.DATASET_ID, DATASET_GET.DATASET_VERSION, {
       view: 'personal_get',
@@ -54,7 +55,9 @@ async function getPersonalDetailData() {
       position: 'bottom-right',
     })
   } 
-  loading.value = false
+  finally {
+  loadData.value = false
+  }
 }
 
 async function updateDataPersonalDetail() {
@@ -94,6 +97,7 @@ onMounted(() => {
 function updateData(action:boolean) {
   // Implementation for updating personal detail data
   if (action) {
+    contactForm.value?.submitForm?.()
     const now = new Date().toISOString()
     personalDataUpdate.value = {
     ...personalDataUpdate.value,
@@ -110,8 +114,8 @@ async function onSaveAll() {
   let isAllValid = []
 
   for (const fRef of forms) {
-    if (fRef.value?.submitForm) {
-      const isValid = await fRef.value.submitForm()
+    if (fRef.value?.validateForm) {
+      const isValid = await fRef.value.validateForm()
       if (!isValid) {
         isAllValid.push(false)
       }
@@ -143,11 +147,11 @@ const isSaveDisabled = computed(() => loading.value|| !hasAnyChanges.value )
 </script>
 
 <template>
-  <div v-if="loading" class="flex-1 space-y-4 overflow-y-auto px-4 sm:px-6">
+  <div v-show="loadData" class="flex-1 space-y-4 overflow-y-auto px-4 sm:px-6">
     <SkeletonCard />
   </div>
 
-  <div v-else class="flex flex-col gap-4 mx-6">
+  <div v-show="!loadData" class="flex flex-col gap-4 mx-6">
     <!-- ข้อมูลทั่วไป -->
     <DropDownForm
       topic="ข้อมูลทั่วไป"

@@ -51,12 +51,12 @@ const pendingAction = ref<
 const royalDecorationFields: CreateFormSection[][] = [[
   {
     content: [
-      { name: 'gazette_publish_date', label: 'วันที่ประกาศในราชกิจจา', type: 'date', required: true, isShow: true, placeholder: 'วว / ดด / ปปปป' },
+      { name: 'announce_date', label: 'วันที่ประกาศในราชกิจจา', type: 'date', required: true, isShow: true, placeholder: 'วว / ดด / ปปปป' },
       { name: 'year', label: 'ประจำปี', type: 'text', required: true, isShow: true, placeholder: '' },
       { name: 'class', label: 'ชั้นตรา', type: 'text', required: true, placeholder: '' },
       { name: 'gazette_book_no', label: 'เล่มที่', type: 'text', required: true, placeholder: '' },
       { name: 'gazette_section', label: 'ตอนที่', type: 'text', placeholder: '' },
-      { name: 'announce_date', label: 'ลงวันที่', type: 'date', required: true, placeholder: 'วว / ดด / ปปปป' },
+      { name: 'gazette_publish_date', label: 'ลงวันที่', type: 'date', required: true, placeholder: 'วว / ดด / ปปปป' },
       { name: 'gazette_page', label: 'หน้า', type: 'text', required: true, placeholder: 'กรอกหน้า' },
       { name: 'gazette_order_no', label: 'ลำดับที่', type: 'text', required: true, placeholder: 'กรอกลำดับที่' },
       { name: 'announcement-file', label: 'แนบประกาศ', type: 'file', required: true, accept: '.pdf,.jpg,.png', multiple: true },

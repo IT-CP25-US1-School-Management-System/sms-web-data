@@ -53,8 +53,9 @@ const academicRankFields: CreateFormSection[][] = [[
     topic: 'ประวัติการมีวิทยฐานะ',
     content: [
       { name: 'order-no', label: 'คำสั่ง', type: 'text', required: true, isShow: true, placeholder: '' },
+      { name: 'criteria', label: 'หลักเกณฑ์การได้รับวิทยฐานะ ', type: 'select', required: true, isShow: true, placeholder: '' , options: [{ label: 'ว13', value: 'ว13' }, { label: 'ว17', value: 'ว17' }, { label: 'ว21', value: 'ว21' }] },
       { name: 'position_rank', label: 'ตำแหน่งที่ได้รับวิทยฐานะ', type: 'select', required: true, isShow: true, placeholder: 'เลือกตำแหน่ง', options: [{ label: 'ครู', value: 'ครู' }, { label: 'ผู้บริหาร', value: 'ผู้บริหาร' }] },
-      { name: 'academic-rank', label: 'วิทยฐานะ', type: 'select', required: true, placeholder: 'เลือกวิทยฐานะ', options: [
+      { name: 'ranking_type', label: 'วิทยฐานะ', type: 'select', required: true, placeholder: 'เลือกวิทยฐานะ', options: [
         { label: 'ครูชำนาญการ', value: 'ครูชำนาญการ' },
         { label: 'ครูชำนาญการพิเศษ', value: 'ครูชำนาญการพิเศษ' },
         { label: 'ครูเชี่ยวชาญ', value: 'ครูเชี่ยวชาญ' },
@@ -66,7 +67,7 @@ const academicRankFields: CreateFormSection[][] = [[
         { label: 'ผู้อำนวยเชี่ยวชาญ', value: 'ผู้อำนวยเชี่ยวชาญ' },
       ] },
       { name: 'awarded_date', label: 'วันที่ได้รับวิทยฐานะ', type: 'date', required: true, placeholder: 'วว / ดด / ปปปป' },
-      { name: 'order-file', label: 'แนบคำสั่ง', type: 'file',required: true, accept: '.pdf,.jpg,.png', multiple: true },
+      { name: FILE_FIELD, label: 'แนบคำสั่ง', type: 'file',required: true, accept: '.pdf,.jpg,.png', multiple: true },
     ],
   },
   {

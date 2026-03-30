@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useTeacherStore } from '@/stores/teachers'
 import { env } from '@/lib/env'
 import { ROUTE_NAMES } from '@/lib/constants'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -29,7 +30,6 @@ import {
   SidebarMenuSubItem,
 } from '@/components/ui/sidebar'
 import {
-  Settings,
   User,
   ChevronsUpDown,
   LogOut,
@@ -60,6 +60,7 @@ interface MenuItem {
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const teacherStore = useTeacherStore()
 
 const menuConfig: {
   main: MenuItem[]
@@ -272,7 +273,8 @@ const mockAuth = {
 // coming from the auth store may vary in shape (some backends nest attributes),
 // so check common locations where `is_government` might appear.
 const isGovernment = computed(() => {
-  const u: any = authStore.user
+  const u: any = teacherStore.currentTeacher || authStore.user
+  console.log('Auth User Object:',  teacherStore.currentTeacher) // Debug log to inspect user object structure
   if (!u) return false
   return Boolean(
     u.is_government ??
@@ -282,6 +284,7 @@ const isGovernment = computed(() => {
       false,
   )
 })
+console.log('User is government staff:', isGovernment.value)
 
 const isActiveRoute = (routeName: string | null) => {
   if (!routeName) return false

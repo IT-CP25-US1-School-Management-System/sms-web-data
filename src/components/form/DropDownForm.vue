@@ -170,7 +170,16 @@ async function submitForm() {
   return result.valid && filesValid
 }
 
-defineExpose({ submitForm, isDirty })
+async function validateForm() {
+  if (!formRef.value) return false
+
+  const result = await formRef.value.validate()
+  const filesValid = validateFileFields()
+
+  return result.valid && filesValid
+}
+
+defineExpose({ submitForm, validateForm, isDirty })
 
 
 const isOpen = ref(true)

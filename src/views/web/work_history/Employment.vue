@@ -80,12 +80,15 @@ onMounted(() => {
           disabled: true,
         },
         {
-          name: 'latest-transfer-type',
+          name: 'contract_action',
           label: 'ประเภทการเคลื่อนไหวล่าสุด',
-          type: 'text',
+          type: 'select',
           placeholder: '-',
           disabled: true,
-
+          options: [
+            { label: 'การต่อสัญญา', value: 'การต่อสัญญา' },
+            { label: 'ทำสัญญาครั้งแรก', value: 'ทำสัญญาครั้งแรก' },
+          ],
         },
       ]"
     />
@@ -103,7 +106,7 @@ onMounted(() => {
           disabled: true,
         },
         {
-          name: 'social-security-contribution',
+          name: 'social_security',
           label: 'เงินสมทบกองทุนประกันสังคม',
           type: 'number',
           required: true,
@@ -143,7 +146,7 @@ onMounted(() => {
       topic="ข้อมูลระยะเวลาในการจ้างงาน"
       :fields="[
         {
-          name: 'first-contract-date',
+          name: 'first_contract_start',
           label: 'ว/ด/ป เริ่มสัญญาครั้งแรก',
           type: 'text',
           required: true,
@@ -160,7 +163,7 @@ onMounted(() => {
 
         },
         {
-          name: 'current-contract-start',
+          name: 'period_start',
           label: 'วันเดือนปีที่เริ่มสัญญาจ้าง (สัญญาปัจจุบัน)',
           type: 'text',
           required: true,
@@ -169,7 +172,7 @@ onMounted(() => {
 
         },
         {
-          name: 'contract-end-date',
+          name: 'period_end',
           label: 'วันเดือนปีสิ้นสุดสัญญาจ้าง',
           type: 'text',
           required: true,
@@ -184,21 +187,31 @@ onMounted(() => {
       topic="ข้อมูลแหล่งงบประมาณที่ใช้จ้าง"
       :fields="[
         {
-          name: 'budget-type',
+          name: 'budget_type',
           label: 'ประเภทเงินงบประมาณ',
-          type: 'text',
+          type: 'select',
           required: true,
           placeholder: '-',
           disabled: true,
+          options: [
+            { label: 'เงินงบประมาณ', value: 'เงินงบประมาณ' },
+            { label: 'เงินนอกงบประมาณ', value: 'เงินนอกงบประมาณ' },
+            { label: 'เงินรายได้สถานศึกษา', value: 'เงินรายได้สถานศึกษา' },
+            { label: 'เงินอุดหนุนค่าใช่จ่ายรายหัว', value: 'เงินอุดหนุนค่าใช่จ่ายรายหัว' },
+          ],
         },
         {
-          name: 'school-income-type',
+          name: 'school_revenue_type',
           label: 'ประเภทเงินรายได้สถานศึกษา',
-          type: 'text',
+          type: 'select',
           required: true,
           placeholder: '-',
           disabled: true,
-
+          options: [
+            { label: 'ลูกจ้างชั่วคราว (มีประกันสังคม)', value: 'ลูกจ้างชั่วคราว (มีประกันสังคม)' },
+            { label: 'เหมาบริการ (ไม่มีประกันสังคม)', value: 'เหมาบริการ(ไม่มีประกันสังคม)' },
+            { label: 'เหมาบริการ (ประกันตนเอง)', value: 'เหมาบริการ (ประกันตนเอง)' },
+          ],
         },
       ]"
     />

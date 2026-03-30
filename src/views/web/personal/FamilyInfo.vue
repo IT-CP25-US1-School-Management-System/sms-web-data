@@ -9,7 +9,7 @@ import { DATASET_GET, DATASET_EDIT } from '@/lib/constants'
 import { getDatasetRows, updateDatasetRow } from '@/stores/dataset'
 import type { District, Province, SubDistrict } from '@/types/address'
 import type { FamilyMember } from '@/types/teacher'
-import { computed, onMounted, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { toast } from 'vue-sonner'
 
 type CreateFormField = {
@@ -314,18 +314,22 @@ function syncFamilyAddress(index: number, incomingValues?: Record<string, any>) 
   const previousProvinceCode = String(currentValues.province_code || '')
   const previousDistrictCode = String(currentValues.district_code || '')
   const nextProvinceCode = String(values.province_code || '')
+  let shouldRefreshFields = false
+
   if (nextProvinceCode !== previousProvinceCode) {
     values.district_code = ''
     values.district = ''
     values.subdistrict_code = ''
     values.subdistrict = ''
     values.postal_code = ''
+    shouldRefreshFields = true
   }
 
   if (String(values.district_code || '') !== previousDistrictCode) {
     values.subdistrict_code = ''
     values.subdistrict = ''
     values.postal_code = ''
+    shouldRefreshFields = true
   }
 
   const resolvedProvinceCode = String(values.province_code || '')
@@ -340,8 +344,15 @@ function syncFamilyAddress(index: number, incomingValues?: Record<string, any>) 
     values.postal_code = postalCodeBySubDistrict.get(resolvedSubDistrictCode) || values.postal_code || ''
   }
 
-  familyData.value[index] = values
-  familyFields.value[index] = createFamilyFields(values)
+  const nextFamilyData = [...familyData.value]
+  nextFamilyData[index] = values
+  familyData.value = nextFamilyData
+
+  if (shouldRefreshFields) {
+    const nextFamilyFields = [...familyFields.value]
+    nextFamilyFields[index] = createFamilyFields(values)
+    familyFields.value = nextFamilyFields
+  }
 }
 
 function normalizeFamilyPayload(currentMember: Record<string, any>, values?: Record<string, any>) {
@@ -419,11 +430,16 @@ async function updateFamilyData(groupIndex: number, values?: Record<string, any>
       payload,
     )
 
-    familyData.value[groupIndex] = mapFamilyMemberForForm({
+    const nextFamilyData = [...familyData.value]
+    nextFamilyData[groupIndex] = mapFamilyMemberForForm({
       ...currentMember,
       ...payload,
     })
-    familyFields.value[groupIndex] = createFamilyFields(familyData.value[groupIndex])
+    familyData.value = nextFamilyData
+
+    const nextFamilyFields = [...familyFields.value]
+    nextFamilyFields[groupIndex] = createFamilyFields(nextFamilyData[groupIndex] || {})
+    familyFields.value = nextFamilyFields
 
     if ((response as { message?: string }).message === 'success') {
       toast.success('บันทึกข้อมูลข้อมูลครอบครัวสำเร็จ', {
@@ -453,18 +469,31 @@ function updateData(confirmed: boolean) {
   confirmModal.value = false
 }
 
+function shouldSyncFamilyAddress(
+  groupIndex: number,
+  values?: Record<string, any>,
+) {
+  if (!values) return false
+
+  const currentMember = familyData.value[groupIndex] || {}
+  return (
+    String(values.province_code || '') !== String(currentMember.province_code || '') ||
+    String(values.district_code || '') !== String(currentMember.district_code || '') ||
+    String(values.subdistrict_code || '') !== String(currentMember.subdistrict_code || '') ||
+    String(values.postal_code || '') !== String(currentMember.postal_code || '')
+  )
+}
+
 function handleChange(groupIndex: number, values?: Record<string, any>) {
+  if (!shouldSyncFamilyAddress(groupIndex, values)) return
   syncFamilyAddress(groupIndex, values)
 }
 
 function handleSave(groupIndex: number, values?: Record<string, any>) {
-  syncFamilyAddress(groupIndex, values)
   pendingGroupIndex.value = groupIndex
-  pendingValues.value = familyData.value[groupIndex] || {}
+  pendingValues.value = values || {}
   confirmModal.value = true
 }
-
-const createFormValues = computed(() => familyData.value.map((member) => ({ ...member })))
 
 onMounted(() => {
   void getFamilyData()
@@ -481,7 +510,7 @@ onMounted(() => {
       :isDropdown="true"
       :readonly="true"
       :deferCommitOnSave="true"
-      :values="createFormValues"
+      :values="familyData"
       :canDelete="false"
       :fields="familyFields"
       @change="handleChange"

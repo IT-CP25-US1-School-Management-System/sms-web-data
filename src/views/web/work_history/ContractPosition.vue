@@ -54,8 +54,8 @@ const contractFields: CreateFormSection[][] = [[
       { name: 'date', label: 'วันเดือนปี', type: 'date', required: true, placeholder: '-', disabled: false },
       { name: 'position', label: 'ตำแหน่ง', type: 'text', required: true, placeholder: '-', disabled: false },
       { name: 'salary', label: 'เงินเดือน', type: 'number', required: true, placeholder: '-', disabled: false },
-      { name: 'contract_number', label: 'เลขที่คำสั่ง/สัญญาจ้าง', type: 'text', required: true, placeholder: '', disabled: false },
-      { name: 'file', label: 'ดาวน์โหลดไฟล์', type: 'file', accept: '.pdf,.jpg,.png', multiple: true ,required: true },
+      { name: 'order_no', label: 'เลขที่คำสั่ง/สัญญาจ้าง', type: 'text', required: true, placeholder: '', disabled: false },
+      { name: FILE_FIELD, label: 'ดาวน์โหลดไฟล์', type: 'file', accept: '.pdf,.jpg,.png', multiple: true ,required: true },
     ],
   },
 ]]
@@ -133,6 +133,7 @@ async function getContractPositionData() {
   loading.value = true
   try {
     const response = await getDatasetRows<ContractRow>(DATASET_GET.DATASET_ID, DATASET_GET.DATASET_VERSION_CONTRACT_POSITION, { view: GET_VIEW, page: 1, per_page: 50 })
+    console.log('Contract Position API Response:', response)
     const { records, allDocumentLinks } = extractContractResponse(response.data)
     documentLinksByContract.value = Object.fromEntries(
       records.filter((record) => Boolean(record.id)).map((record) => [record.id as string, allDocumentLinks.filter((link) => link.entity_id === record.id)]),

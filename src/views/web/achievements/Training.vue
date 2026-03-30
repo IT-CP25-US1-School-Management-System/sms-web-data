@@ -104,15 +104,15 @@ const trainingFields: CreateFormSection[][] = [
   [
     {
       content: [
-        {
-          name: 'work-type',
-          label: 'เลือกประเภทผลงาน',
-          type: 'select',
-          required: true,
-          isShow: true,
-          placeholder: 'เลือกประเภทผลงาน',
-          options: [],
-        },
+        // {
+        //   name: 'work-type',
+        //   label: 'เลือกประเภทผลงาน',
+        //   type: 'select',
+        //   required: true,
+        //   isShow: true,
+        //   placeholder: 'เลือกประเภทผลงาน',
+        //   options: [],
+        // },
         {
           name: 'course_title',
           label: 'หลักสูตร/เรื่อง/หัวข้อ',

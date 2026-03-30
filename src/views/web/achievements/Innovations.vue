@@ -53,8 +53,8 @@ const innovationFields: CreateFormSection[][] = [[
   {
     topic: 'ข้อมูลพื้นฐาน',
     content: [
-      { name: 'academic-year', label: 'ปีการศึกษา', type: 'text', required: true, isShow: true, placeholder: '' },
-      { name: 'course-title', label: 'หลักสูตร / เรื่อง / หัวข้อ', type: 'text', required: true, isShow: true, placeholder: '' },
+      { name: 'academic_year', label: 'ปีการศึกษา', type: 'text', required: true, isShow: true, placeholder: '' },
+      { name: 'project_title', label: 'หลักสูตร / เรื่อง / หัวข้อ', type: 'text', required: true, isShow: true, placeholder: '' },
       { name: 'start_date', label: 'วันเริ่มต้น', type: 'date', required: true, placeholder: 'วว / ดด / ปปปป' },
       { name: 'end_date', label: 'วันสิ้นสุด', type: 'date', required: true, placeholder: 'วว / ดด / ปปปป' },
       { name: 'organizer', label: 'หน่วยงานที่จัด', type: 'text', required: true, placeholder: '' },
@@ -64,26 +64,30 @@ const innovationFields: CreateFormSection[][] = [[
   {
     topic: 'ข้อมูลผลงาน',
     content: [
-      { name: 'award', label: 'รางวัล', type: 'text', required: true, placeholder: '' },
-      { name: 'achievement-level', label: 'ผลงานระดับ', type: 'text', required: true, placeholder: '' },
+      { name: 'achivement_level', label: 'ผลงานระดับ', type: 'select', required: true, placeholder: '', options: [
+        { label: 'ระดับเขต', value: 'ระดับเขต' },
+        { label: 'ระดับภาค', value: 'ระดับภาค' },
+        { label: 'ระดับประเทศ', value: 'ระดับประเทศ' } ,
+         { label: 'ระดับนานาชาติ', value: 'ระดับนานาชาติ' }
+      ] },
     ],
   },
   {
     topic: 'ข้อมูลนักเรียนผู้เข้าร่วม',
     content: [],
     subFields: [
-      { name: 'student-name', label: 'ชื่อนักเรียน', type: 'text', required: true, placeholder: '' },
-      { name: 'class-level', label: 'ชั้น', type: 'text', required: true, placeholder: '' },
-      { name: 'room', label: 'ห้อง', type: 'text', required: true, placeholder: '' },
+      { name: 'student_name', label: 'ชื่อนักเรียน', type: 'text', required: true, placeholder: '' },
+      { name: 'class_level', label: 'ชั้น', type: 'text', required: true, placeholder: '' },
+      { name: 'class_room', label: 'ห้อง', type: 'text', required: true, placeholder: '' },
     ],
   },
   {
     topic: 'ข้อมูลผู้ครูที่ดูแล',
     content: [
-      { name: 'teacher-name', label: 'ครูผู้ดูแล', type: 'text', required: true, placeholder: '' },
-      { name: 'learning-group', label: 'กลุ่มสาระการเรียนรู้', type: 'text', required: true, placeholder: '' },
-      { name: 'photo-file', label: 'แนบภาพ', type: 'file', accept: '.jpg,.jpeg,.png', multiple: true ,required: true},
-      { name: 'certificate-file', label: 'แนบเกียรติบัตร', type: 'file', accept: '.pdf,.jpg,.png', multiple: true ,required: true },
+      { name: 'teacher_name', label: 'ครูผู้ดูแล', type: 'text', required: true, placeholder: '' },
+      { name: 'learning_group', label: 'กลุ่มสาระการเรียนรู้', type: 'text', required: true, placeholder: '' },
+      { name: 'photo_file', label: 'แนบภาพ', type: 'file', accept: '.jpg,.jpeg,.png', multiple: true ,required: true},
+      { name: 'certificate_file', label: 'แนบเกียรติบัตร', type: 'file', accept: '.pdf,.jpg,.png', multiple: true ,required: true },
     ],
   },
 ]]

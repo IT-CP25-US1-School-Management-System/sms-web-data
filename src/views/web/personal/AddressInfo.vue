@@ -464,11 +464,6 @@ async function onSaveAll() {
   if (!pendingPayloads.size) return
 
   confirmModal.value = true
-
-  addressForms.value.forEach((form) => {
-    form.initialValues = cloneFormValues(form.currentValues)
-    form.hasChanges = false
-  })
 }
 
 
