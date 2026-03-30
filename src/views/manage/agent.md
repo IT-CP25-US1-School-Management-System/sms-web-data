@@ -1139,7 +1139,7 @@ Add a new teacher with minimal data:
 
 - `src/views/manage/add-edit-teacher/personal/ProfessionalLicense.vue` now resolves `personId` from the route query and `useTeacherStore()` like the other manage add-edit-teacher pages.
 - The page fetches professional license records via `getProfessionalLicensesByTeacherId()` from `src/stores/teachers.ts`.
-- The store now uses the same row-by-key pattern as the other personal sections via `getDatasetRowByKey(..., teacherId, 'personal_professional_license')`.
+- The store fetches professional licenses with `getDatasetRows(..., { view: 'professional_licenses', where: professional_licenses.person_id = teacherId })` so manage pages receive every license row for the selected teacher, including nested `document_links`.
 - License record persistence now uses the teacher helpers:
   - `createProfessionalLicense()`
   - `updateProfessionalLicense()`
@@ -1151,4 +1151,22 @@ Add a new teacher with minimal data:
 - Only the document-link handling now mirrors `src/views/web/personal/ProfessionalLicense.vue`, including the `storeFile()` payload shape and the objects passed into `storeFile()` during create/update.
 - When creating document links, the manage page now prefers `person_id` from the saved license record over the local payload to reduce FK failures on `document_links.person_id`.
   - delete detached files and links during edit/delete flows
+
+### Add Teacher - Work History pages now use manage-scoped teacher selection
+
+- `src/views/manage/add-edit-teacher/work_history/AcademicRankHistory.vue`
+- `src/views/manage/add-edit-teacher/work_history/ContractPosition.vue`
+- `src/views/manage/add-edit-teacher/work_history/Employment.vue`
+- `src/views/manage/add-edit-teacher/work_history/PositionHistory.vue`
+- `src/views/manage/add-edit-teacher/work_history/RoyalDecorations.vue`
+- These pages no longer proxy directly to `src/views/web/work_history/*`.
+- They now keep the same UI and page behavior as the web versions, but resolve `personId` from the admin route query plus `useTeacherStore()`.
+- Their fetches now filter by the selected teacher with these table names:
+  - `governments`
+  - `employment_contracts`
+  - `academic_rank`
+  - `contract_positions`
+  - `decorations`
+- Editable work-history pages now also fall back to the selected manage `personId` when building payloads, so updates stay scoped to the teacher being edited by the admin.
 - Admin placeholders were updated, including the `license_no` field and the loading-state messaging on the page.
+- `AcademicRankHistory.vue` now uses `data_manage / v7.0.0` for academic create/update/delete and `data_manage / v0.0.0` for its `document_links`.

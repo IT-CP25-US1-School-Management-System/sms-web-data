@@ -151,8 +151,8 @@
 ## March 30, 2026 - ProfessionalLicense manage flow update
 
 - `src/views/manage/add-edit-teacher/personal/ProfessionalLicense.vue` now resolves the selected teacher from URL query plus `useTeacherStore()`.
-- Professional license fetching now goes through `getProfessionalLicensesByTeacherId()` from `src/stores/teachers.ts` using the same row-by-key pattern as the other personal sections.
-- The store now reads the selected teacher via `getDatasetRowByKey(..., teacherId, 'personal_professional_license')`.
+- Professional license fetching now goes through `getProfessionalLicensesByTeacherId()` from `src/stores/teachers.ts`.
+- The store fetches professional licenses with `getDatasetRows(..., { view: 'professional_licenses', where: professional_licenses.person_id = teacherId })` so the manage page receives every license row for the selected teacher, including nested `document_links`.
 - Create, update, and delete license records now use the teacher store helpers:
   - `createProfessionalLicense()`
   - `updateProfessionalLicense()`
@@ -165,3 +165,16 @@
 - Only the document-link handling is now aligned with `src/views/web/personal/ProfessionalLicense.vue`, including the `storeFile()` payload shape and the object passed into `storeFile()` during create/update.
 - When creating document links, the manage page now prefers `person_id` from the saved license record over the local payload to avoid FK failures on `document_links.person_id`.
 - The form placeholders were updated for the admin flow, including a clearer placeholder for `license_no`.
+
+## March 30, 2026 - Work History manage pages now own their admin flow
+
+- `src/views/manage/add-edit-teacher/work_history/*.vue` no longer import the `src/views/web/work_history/*.vue` pages as wrappers.
+- The manage pages now use the same UI and page-level logic as the matching web pages, but resolve the selected teacher from the admin route query plus `useTeacherStore()`.
+- Fetching on each manage work-history page now filters by the selected teacher `person_id`:
+  - `PositionHistory.vue` uses `governments.person_id`
+  - `Employment.vue` uses `employment_contracts.person_id`
+  - `AcademicRankHistory.vue` uses `academic_rank.person_id`
+  - `ContractPosition.vue` uses `contract_positions.person_id`
+  - `RoyalDecorations.vue` uses `decorations.person_id`
+- Save flows on the editable pages now also fall back to the selected manage `personId` when building payloads, so admin edits stay attached to the chosen teacher instead of the logged-in user context.
+- `AcademicRankHistory.vue` now writes academic rows through `data_manage / v7.0.0` and writes/deletes its `document_links` through `data_manage / v0.0.0`.

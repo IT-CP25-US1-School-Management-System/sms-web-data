@@ -32,7 +32,7 @@ const FAMILY_DATASET_VERSION = 'v4.0.0'
 const EDUCATION_DATASET_ID = 'data_manage'
 const EDUCATION_DATASET_VERSION = 'v5.0.0'
 const LICENSE_DATASET_ID = 'data_manage'
-const LICENSE_DATASET_VERSION = 'v6.2.0'
+const LICENSE_DATASET_VERSION = 'v6.1.0'
 
 /**
  * Get list of teachers with pagination and filters
@@ -101,33 +101,47 @@ export async function getEducationById(
 export async function getProfessionalLicensesByTeacherId(
   teacherId: string,
 ): Promise<DatasetRowResponse<{ professional_licenses?: ProfessionalLicense[] }>> {
-  const response = await getDatasetRowByKey<
+  const response = await getDatasetRows<
     ProfessionalLicense | { professional_licenses?: ProfessionalLicense[] }
   >(
     LICENSE_DATASET_ID,
     LICENSE_DATASET_VERSION,
-    teacherId,
-    'professional_licenses',
+    {
+      view: 'professional_licenses',
+      page: 1,
+      per_page: 100,
+      where: [
+        [
+          {
+            table_name: 'professional_licenses',
+            field: 'person_id',
+            operator: '=',
+            value: teacherId,
+          },
+        ],
+      ],
+    },
   )
 
-  const rawData = response.data
+  const rawData = response.data || []
+  const firstRow = rawData[0]
 
   if (
-    rawData &&
-    typeof rawData === 'object' &&
-    'professional_licenses' in rawData &&
-    Array.isArray(rawData.professional_licenses)
+    firstRow &&
+    typeof firstRow === 'object' &&
+    'professional_licenses' in firstRow &&
+    Array.isArray(firstRow.professional_licenses)
   ) {
     return {
       data: {
-        professional_licenses: rawData.professional_licenses,
+        professional_licenses: firstRow.professional_licenses,
       },
     }
   }
 
   return {
     data: {
-      professional_licenses: rawData ? [rawData as ProfessionalLicense] : [],
+      professional_licenses: rawData as ProfessionalLicense[],
     },
   }
 }
