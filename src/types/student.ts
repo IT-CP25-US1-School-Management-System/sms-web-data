@@ -77,6 +77,7 @@ export interface Parent {
 
 // For creating/updating students
 export interface StudentCreateDTO {
+  id: string
   student_id: string
   grade_level: string
   class_section: string
@@ -100,11 +101,14 @@ export interface StudentCreateDTO {
   nationality?: string
   phone_number?: string
   marital_status?: string
+  created_at: string
+  updated_at?: string
 }
 
 export interface StudentUpdateDTO extends Partial<StudentCreateDTO> {}
 
 export interface AddressCreateDTO {
+  id?: string
   student_id: string
   house_registry_no?: string
   house_no?: string
@@ -121,9 +125,12 @@ export interface AddressCreateDTO {
   postal_code?: string
   is_house_registered?: boolean
   is_current?: boolean
+  created_at?: string
+  updated_at?: string
 }
 
 export interface ParentCreateDTO {
+  id?: string
   student_id: string
   prefixe_id: string
   first_name_th: string
@@ -133,4 +140,6 @@ export interface ParentCreateDTO {
   occupation?: string
   phone_number?: string
   relation: string
+  created_at?: string
+  updated_at?: string
 }

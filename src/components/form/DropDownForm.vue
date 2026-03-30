@@ -161,8 +161,16 @@ function buildValuesFromProps() {
   return result
 }
 
-function syncFormState() {
+function serializeValues(source: Record<string, any> = {}) {
+  return JSON.stringify(source)
+}
+
+function syncFormState(force = false) {
   const next = buildValuesFromProps()
+  if (!force && serializeValues(next) === serializeValues(localValues.value)) {
+    return
+  }
+
   initialValues.value = cloneValues(next)
   localValues.value = cloneValues(next)
   fileErrors.value = {}
@@ -189,7 +197,7 @@ watch(
 watch(
   () => (props.fields || []).map((field) => field.name).join('|'),
   () => {
-    syncFormState()
+    syncFormState(true)
   },
 )
 
