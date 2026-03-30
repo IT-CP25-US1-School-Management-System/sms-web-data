@@ -11,15 +11,7 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar'
-import {
-  Home,
-  Settings,
-  Users,
-  User,
-  Database,
-  FileText,
-  UserPlus,
-} from 'lucide-vue-next'
+import { Home, Settings, Users, User, Database, FileText, UserPlus } from 'lucide-vue-next'
 import AppSidebar from '@/layouts/manage/AppSidebar.vue'
 import ModeToggle from '@/components/ModeToggle.vue'
 
@@ -167,7 +159,7 @@ onUnmounted(() => {
       <!-- Header -->
       <header
         :class="[
-          'sticky top-0 z-50 flex h-16 shrink-0 items-center gap-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 transition-all duration-300',
+          'bg-background/95 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 flex h-16 shrink-0 items-center gap-2 border-b px-4 backdrop-blur transition-all duration-300',
           isScrolled ? 'mx-0 mt-0 rounded-none shadow-md' : 'rounded-t-lg shadow-sm',
         ]"
       >
@@ -180,12 +172,12 @@ onUnmounted(() => {
                 <BreadcrumbItem v-for="(crumb, index) in currentBreadcrumbs" :key="index">
                   <BreadcrumbLink v-if="crumb.to && !crumb.isLast" as-child>
                     <RouterLink :to="crumb.to" class="flex items-center">
-                      <component :is="crumb.icon" class="size-4 mr-2" v-if="crumb.icon" />
+                      <component :is="crumb.icon" class="mr-2 size-4" v-if="crumb.icon" />
                       {{ crumb.label }}
                     </RouterLink>
                   </BreadcrumbLink>
                   <BreadcrumbPage v-else class="flex items-center font-semibold">
-                    <component :is="crumb.icon" class="size-4 mr-2" v-if="crumb.icon" />
+                    <component :is="crumb.icon" class="mr-2 size-4" v-if="crumb.icon" />
                     {{ crumb.label }}
                   </BreadcrumbPage>
                   <BreadcrumbSeparator v-if="!crumb.isLast" />

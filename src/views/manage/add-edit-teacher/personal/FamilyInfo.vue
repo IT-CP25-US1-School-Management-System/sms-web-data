@@ -66,7 +66,9 @@ const provinceOptions = provinceData.map((province) => ({
   value: String(province.id),
 }))
 
-const provinceNameMap = new Map(provinceOptions.map((option) => [String(option.value), option.label]))
+const provinceNameMap = new Map(
+  provinceOptions.map((option) => [String(option.value), option.label]),
+)
 const districtOptionsByProvince = new Map<string, { label: string; value: string }[]>()
 const districtNameMap = new Map<string, string>()
 const subDistrictOptionsByDistrict = new Map<string, { label: string; value: string }[]>()
@@ -452,8 +454,8 @@ async function getFamilyData() {
 
     const response = await getFamilyById(personId)
 
-    familyData.value = (response.data?.family_members || []).map(
-      (member: FamilyMember) => mapFamilyMemberForForm(member),
+    familyData.value = (response.data?.family_members || []).map((member: FamilyMember) =>
+      mapFamilyMemberForForm(member),
     )
     familyFields.value = familyData.value.length
       ? familyData.value.map((member) => createFamilyFields(member))
@@ -550,9 +552,12 @@ async function updateFamilyData(groupIndex: number, values?: Record<string, any>
   } catch (error: any) {
     console.error('Family API Error:', error)
     console.error('Error Response:', error?.response?.data)
-    toast.error(`อัปเดตข้อมูลครอบครัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
-      position: 'bottom-right',
-    })
+    toast.error(
+      `อัปเดตข้อมูลครอบครัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`,
+      {
+        position: 'bottom-right',
+      },
+    )
   } finally {
     loading.value = false
   }
@@ -579,7 +584,9 @@ function handleSave(groupIndex: number, values?: Record<string, any>) {
   modalValue.value =
     [familyData.value[groupIndex]?.first_name_th, familyData.value[groupIndex]?.last_name_th]
       .filter(Boolean)
-      .join(' ') || familyData.value[groupIndex]?.relation_type || ''
+      .join(' ') ||
+    familyData.value[groupIndex]?.relation_type ||
+    ''
   confirmModal.value = true
 }
 
@@ -591,7 +598,7 @@ onMounted(() => {
 
 <template>
   <div class="mx-6 flex flex-col gap-4">
-    <p v-if="loading" class="text-sm text-muted-foreground">กำลังโหลดข้อมูล...</p>
+    <p v-if="loading" class="text-muted-foreground text-sm">กำลังโหลดข้อมูล...</p>
 
     <CreateForm
       :isDropdown="true"

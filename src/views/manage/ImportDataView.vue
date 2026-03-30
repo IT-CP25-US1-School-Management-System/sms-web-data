@@ -77,8 +77,7 @@ const templateFormat = 'xlsx'
 
 const currentTarget = computed<ImportTarget>(
   () =>
-    importTargets.find((target) => target.key === selectedTargetKey.value) ??
-    defaultImportTarget,
+    importTargets.find((target) => target.key === selectedTargetKey.value) ?? defaultImportTarget,
 )
 
 const selectedFileName = computed(() => selectedFile.value?.name || 'ยังไม่ได้เลือกไฟล์')
@@ -254,7 +253,6 @@ async function downloadTemplate() {
 
     templateUrlCache.value[currentTarget.value.key] = templateUrl
     triggerTemplateDownload(templateUrl)
-
   } catch (error: any) {
     toast.error(`โหลดเทมเพลต${currentTarget.value.label}ไม่สำเร็จ`, {
       description: error?.response?.data?.message || error?.message,
@@ -293,7 +291,7 @@ async function refreshImportJobStatus(jobId = latestJobId.value) {
 
 async function submitImportJob() {
   const importFile = selectedFile.value
-  
+
   if (!importFile) {
     toast.error('กรุณาเลือกไฟล์ที่ต้องการนำเข้า')
     return
@@ -362,18 +360,14 @@ onBeforeUnmount(() => {
               <component :is="target.icon" class="mt-0.5 h-5 w-5 shrink-0" />
               <div class="space-y-1">
                 <p class="font-semibold">{{ target.label }}</p>
-                <p class="text-sm text-muted-foreground">{{ target.description }}</p>
+                <p class="text-muted-foreground text-sm">{{ target.description }}</p>
               </div>
             </button>
           </div>
 
           <div
             class="rounded-2xl border-2 border-dashed p-8 text-center transition-colors"
-            :class="
-              dragActive
-                ? 'border-[#1C509F] bg-[#1C509F]/5'
-                : 'border-border bg-muted/20'
-            "
+            :class="dragActive ? 'border-[#1C509F] bg-[#1C509F]/5' : 'border-border bg-muted/20'"
             @dragover="handleDragOver"
             @dragleave="handleDragLeave"
             @drop="handleDrop"
@@ -395,19 +389,15 @@ onBeforeUnmount(() => {
                 <p class="text-lg font-semibold">
                   ลากไฟล์มาวางที่นี่ หรือเลือกไฟล์เพื่อ import {{ currentTarget.label }}
                 </p>
-                <p class="text-sm text-muted-foreground">
-                  รองรับไฟล์ CSV, XLS และ XLSX
-                </p>
+                <p class="text-muted-foreground text-sm">รองรับไฟล์ CSV, XLS และ XLSX</p>
               </div>
 
-              <Button variant="outline" @click="openFilePicker">
-                เลือกไฟล์
-              </Button>
+              <Button variant="outline" @click="openFilePicker"> เลือกไฟล์ </Button>
 
-              <div class="w-full rounded-xl border bg-background px-4 py-3 text-left">
+              <div class="bg-background w-full rounded-xl border px-4 py-3 text-left">
                 <div class="flex items-center justify-between gap-3">
                   <div class="min-w-0">
-                    <p class="text-xs text-muted-foreground">ไฟล์ที่เลือก</p>
+                    <p class="text-muted-foreground text-xs">ไฟล์ที่เลือก</p>
                     <p class="truncate font-medium">{{ selectedFileName }}</p>
                   </div>
 
@@ -430,14 +420,14 @@ onBeforeUnmount(() => {
           </div>
 
           <div
-            class="flex flex-col gap-3 rounded-xl border bg-muted/20 p-4 md:flex-row md:items-center md:justify-between"
+            class="bg-muted/20 flex flex-col gap-3 rounded-xl border p-4 md:flex-row md:items-center md:justify-between"
           >
             <div class="space-y-1">
               <p class="font-medium">ประเภทข้อมูล: {{ currentTarget.label }}</p>
-              <p class="text-sm text-muted-foreground">
+              <p class="text-muted-foreground text-sm">
                 Dataset ที่จะใช้: {{ currentTarget.datasetId }}
               </p>
-              <p class="text-sm text-muted-foreground">
+              <p class="text-muted-foreground text-sm">
                 เวอร์ชันที่ใช้: {{ currentTarget.version }}
               </p>
             </div>
@@ -465,39 +455,30 @@ onBeforeUnmount(() => {
             </div>
           </div>
 
-          <div
-            v-if="latestJobId"
-            class="rounded-xl border border-[#1C509F]/20 bg-[#1C509F]/5 p-4"
-          >
+          <div v-if="latestJobId" class="rounded-xl border border-[#1C509F]/20 bg-[#1C509F]/5 p-4">
             <p class="font-medium">เริ่มงานนำเข้าสำเร็จแล้ว</p>
-            <p class="mt-1 text-sm text-muted-foreground">
-              Job ID: <span class="font-medium text-foreground">{{ latestJobId }}</span>
+            <p class="text-muted-foreground mt-1 text-sm">
+              Job ID: <span class="text-foreground font-medium">{{ latestJobId }}</span>
             </p>
-            <p class="text-sm text-muted-foreground">
+            <p class="text-muted-foreground text-sm">
               เวลาเริ่มงาน:
-              <span class="font-medium text-foreground">
+              <span class="text-foreground font-medium">
                 {{ formatTrackingDateTime(latestImportedAt) }}
               </span>
             </p>
-            <p class="text-sm text-muted-foreground">
+            <p class="text-muted-foreground text-sm">
               สถานะ:
               <span :class="['font-medium', latestJobStatusClass]">
                 {{ latestJobStatusLabel }}
               </span>
             </p>
-            <p
-              v-if="latestCompletedAt"
-              class="text-sm text-muted-foreground"
-            >
+            <p v-if="latestCompletedAt" class="text-muted-foreground text-sm">
               เสร็จสิ้นเมื่อ:
-              <span class="font-medium text-foreground">
+              <span class="text-foreground font-medium">
                 {{ formatTrackingDateTime(latestCompletedAt) }}
               </span>
             </p>
-            <p
-              v-if="latestErrorMessage"
-              class="text-sm text-red-600"
-            >
+            <p v-if="latestErrorMessage" class="text-sm text-red-600">
               {{ latestErrorMessage }}
             </p>
             <div class="mt-3">

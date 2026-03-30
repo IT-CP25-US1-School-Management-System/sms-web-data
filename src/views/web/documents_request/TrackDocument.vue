@@ -9,7 +9,7 @@ import { computed, reactive } from 'vue'
 
 import { onMounted, ref, watch } from 'vue'
 import { getDatasetRows } from '@/stores/dataset'
-import { formatDateThaiInput ,formatTime } from '@/lib/helpers'
+import { formatDateThaiInput, formatTime } from '@/lib/helpers'
 
 const loading = ref(false)
 const statusData = ref<Record<string, any>[]>([])
@@ -27,12 +27,12 @@ async function trackStatusData() {
     statusData.value = response?.data?.[0]?.document_requests ?? response?.data ?? []
   } catch (error: any) {
     throw error
-  } 
+  }
   loading.value = false
 }
 
 onMounted(() => {
-  console.log("statusData");
+  console.log('statusData')
   trackStatusData()
 })
 
@@ -89,26 +89,26 @@ function goToPage(page: number | string) {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 mx-6 pb-6">
-    <Card class="w-full gap-0 pb-0 overflow-hidden">
+  <div class="mx-6 flex flex-col gap-4 pb-6">
+    <Card class="w-full gap-0 overflow-hidden pb-0">
       <CardContent class="p-0">
         <!-- Table -->
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
             <thead>
-              <tr class="border-b bg-muted/40">
-                <th class="px-6 py-4 text-center font-semibold text-muted-foreground">
+              <tr class="bg-muted/40 border-b">
+                <th class="text-muted-foreground px-6 py-4 text-center font-semibold">
                   ประเภทคำร้อง
                 </th>
-                <th class="px-6 py-4 text-center font-semibold text-muted-foreground">สถานะ</th>
-                <th class="px-6 py-4 text-center font-semibold text-muted-foreground">เวลา</th>
+                <th class="text-muted-foreground px-6 py-4 text-center font-semibold">สถานะ</th>
+                <th class="text-muted-foreground px-6 py-4 text-center font-semibold">เวลา</th>
               </tr>
             </thead>
             <tbody v-if="paginatedData.length">
               <tr
                 v-for="(item, idx) in paginatedData"
                 :key="idx"
-                class="border-b last:border-b-0 hover:bg-muted/20 transition-colors"
+                class="hover:bg-muted/20 border-b transition-colors last:border-b-0"
               >
                 <td class="px-6 py-4 text-center">{{ item.document_type }}</td>
                 <td class="px-6 py-4 text-center">
@@ -119,7 +119,9 @@ function goToPage(page: number | string) {
                     {{ item.status }}
                   </Badge>
                 </td>
-                <td class="px-6 py-4 text-center"> {{ formatDateThaiInput(item.created_at) }} : {{ formatTime(item.created_at) }}</td>
+                <td class="px-6 py-4 text-center">
+                  {{ formatDateThaiInput(item.created_at) }} : {{ formatTime(item.created_at) }}
+                </td>
               </tr>
             </tbody>
           </table>
@@ -127,18 +129,18 @@ function goToPage(page: number | string) {
           <!-- Empty state -->
           <div
             v-if="!paginatedData.length"
-            class="flex flex-col items-center justify-center py-16 text-muted-foreground"
+            class="text-muted-foreground flex flex-col items-center justify-center py-16"
           >
-            <FileX2 class="w-12 h-12 mb-3 opacity-40" />
+            <FileX2 class="mb-3 h-12 w-12 opacity-40" />
             <p class="text-base font-medium">ไม่พบข้อมูลคำร้อง</p>
-            <p class="text-sm mt-1">ยังไม่มีรายการคำร้องในขณะนี้</p>
+            <p class="mt-1 text-sm">ยังไม่มีรายการคำร้องในขณะนี้</p>
           </div>
         </div>
 
         <!-- Pagination -->
         <div
           v-if="paginationData.total_rows > 0"
-          class="flex items-center justify-end gap-2 px-6 py-4 border-t"
+          class="flex items-center justify-end gap-2 border-t px-6 py-4"
         >
           <Button
             variant="ghost"
@@ -147,17 +149,17 @@ function goToPage(page: number | string) {
             class="gap-1"
             @click="goToPage(paginationData.page - 1)"
           >
-            <ChevronLeft class="w-4 h-4" />
+            <ChevronLeft class="h-4 w-4" />
             Previous
           </Button>
 
           <template v-for="(page, pIdx) in getVisiblePages" :key="pIdx">
-            <span v-if="page === '...'" class="px-1 text-muted-foreground">...</span>
+            <span v-if="page === '...'" class="text-muted-foreground px-1">...</span>
             <Button
               v-else
               size="sm"
               :variant="page === paginationData.page ? 'default' : 'outline'"
-              class="min-w-8 h-8"
+              class="h-8 min-w-8"
               @click="goToPage(page)"
             >
               {{ page }}
@@ -172,7 +174,7 @@ function goToPage(page: number | string) {
             @click="goToPage(paginationData.page + 1)"
           >
             Next
-            <ChevronRight class="w-4 h-4" />
+            <ChevronRight class="h-4 w-4" />
           </Button>
         </div>
       </CardContent>

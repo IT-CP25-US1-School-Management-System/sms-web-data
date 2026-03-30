@@ -73,14 +73,20 @@ const handleBack = () => {
 
 <template>
   <div class="mx-6 pb-24">
-    <p class="mb-4 text-sm text-muted-foreground">รูปแบบฟอร์มสอดคล้องกับข้อมูลใบประกอบวิชาชีพในหน้าข้อมูลส่วนบุคคล</p>
+    <p class="text-muted-foreground mb-4 text-sm">
+      รูปแบบฟอร์มสอดคล้องกับข้อมูลใบประกอบวิชาชีพในหน้าข้อมูลส่วนบุคคล
+    </p>
     <DropDownForm
       topic="ข้อมูลใบอนุญาตประกอบวิชาชีพ"
       :values="formValues"
       @change="handleValuesUpdate"
       :fields="[
         {
-          name: 'license_type', label: 'ใบประกอบวิชาชีพ', type: 'select', required: true, placeholder: 'เลือกประเภทใบประกอบวิชาชีพ',
+          name: 'license_type',
+          label: 'ใบประกอบวิชาชีพ',
+          type: 'select',
+          required: true,
+          placeholder: 'เลือกประเภทใบประกอบวิชาชีพ',
           options: [
             { label: 'ใบอนุญาตปฏิบัติหน้าที่ครู (P-License)', value: 'P-License' },
             { label: 'ใบอนุญาตประกอบวิชาชีพครูชั้นต้น (B-License)', value: 'B-License' },
@@ -88,18 +94,41 @@ const handleBack = () => {
             { label: 'ใบอนุญาตสอน', value: 'ใบอนุญาตสอน' },
           ],
         },
-        { name: 'license_no', label: 'เลขที่ใบประกอบวิชาชีพ', type: 'text', required: true, placeholder: 'กรุณาระบุเลขที่ใบประกอบวิชาชีพ' },
-        { name: 'issue_date', label: 'วันเดือนปีที่ออกบัตร', type: 'date', placeholder: 'วว / ดด / ปปปป' },
-        { name: 'expiry_date', label: 'วันเดือนปีบัตรหมดอายุ', type: 'date', placeholder: 'วว / ดด / ปปปป' },
-        { name: 'license-file', label: 'แนบใบประกอบวิชาชีพ', type: 'file', accept: '.pdf,.jpg,.png', multiple: true, placeholder: 'แนบไฟล์เอกสาร' },
+        {
+          name: 'license_no',
+          label: 'เลขที่ใบประกอบวิชาชีพ',
+          type: 'text',
+          required: true,
+          placeholder: 'กรุณาระบุเลขที่ใบประกอบวิชาชีพ',
+        },
+        {
+          name: 'issue_date',
+          label: 'วันเดือนปีที่ออกบัตร',
+          type: 'date',
+          placeholder: 'วว / ดด / ปปปป',
+        },
+        {
+          name: 'expiry_date',
+          label: 'วันเดือนปีบัตรหมดอายุ',
+          type: 'date',
+          placeholder: 'วว / ดด / ปปปป',
+        },
+        {
+          name: 'license-file',
+          label: 'แนบใบประกอบวิชาชีพ',
+          type: 'file',
+          accept: '.pdf,.jpg,.png',
+          multiple: true,
+          placeholder: 'แนบไฟล์เอกสาร',
+        },
       ]"
     />
   </div>
 
-  <div class="sticky bottom-0 right-0 z-40 flex w-full justify-end border-t border-gray-200 bg-white p-3">
-    <Button variant="outline" class="mr-2" @click="handleBack">
-      ย้อนกลับ
-    </Button>
+  <div
+    class="sticky right-0 bottom-0 z-40 flex w-full justify-end border-t border-gray-200 bg-white p-3"
+  >
+    <Button variant="outline" class="mr-2" @click="handleBack"> ย้อนกลับ </Button>
     <Button
       class="rounded-lg bg-[#16A34A] px-8 py-2 font-semibold text-white shadow-sm hover:bg-[#15803D]"
       :disabled="isSaving"

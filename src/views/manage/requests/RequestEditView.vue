@@ -18,7 +18,11 @@ import { ArrowLeft, ExternalLink, Eye, Loader2 } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
 import type { DocumentRequest, ApprovalLog, DocumentLink } from '@/types/document_request'
 import type { FileDocument } from '@/types/document'
-import { getDocumentRequestById, updateDocumentRequest, createApprovalLog } from '@/stores/document_request'
+import {
+  getDocumentRequestById,
+  updateDocumentRequest,
+  createApprovalLog,
+} from '@/stores/document_request'
 import { getFileDocumentRows } from '@/stores/document'
 import { toDateInputFormat, getPrefixName } from '@/lib/helpers'
 import { useAuthStore } from '@/stores/auth'
@@ -58,16 +62,10 @@ const selectedDocumentType = computed(
   () => formData.value.document_type || request.value?.document_type || '',
 )
 
-const requestGeneralDetail = computed(
-  () => request.value?.request_general_documents?.[0] || null,
-)
-const requestHistoryDetail = computed(
-  () => request.value?.request_history_changes?.[0] || null,
-)
+const requestGeneralDetail = computed(() => request.value?.request_general_documents?.[0] || null)
+const requestHistoryDetail = computed(() => request.value?.request_history_changes?.[0] || null)
 const requestEducationDetail = computed(
-  () =>
-    request.value?.request_education_records_changes?.[0] ||
-    null,
+  () => request.value?.request_education_records_changes?.[0] || null,
 )
 type DocumentLinkWithResource = DocumentLink & {
   resource: FileDocument | null
@@ -98,7 +96,9 @@ const isGeneralRequest = computed(
   () => Boolean(requestGeneralDetail.value) || selectedDocumentType.value === 'คำร้องขอเอกสาร',
 )
 const isHistoryRequest = computed(
-  () => Boolean(requestHistoryDetail.value) || selectedDocumentType.value.includes('แบบรายงานเปลี่ยนแปลง'),
+  () =>
+    Boolean(requestHistoryDetail.value) ||
+    selectedDocumentType.value.includes('แบบรายงานเปลี่ยนแปลง'),
 )
 const isEducationRequest = computed(
   () => Boolean(requestEducationDetail.value) || selectedDocumentType.value.includes('เพิ่มวุ'),
@@ -141,8 +141,7 @@ function isImageFile(contentType?: string | null, fileName?: string | null) {
   const normalizedName = fileName?.toLowerCase() || ''
 
   return (
-    normalizedType.startsWith('image/') ||
-    /\.(png|jpe?g|gif|bmp|webp|svg)$/i.test(normalizedName)
+    normalizedType.startsWith('image/') || /\.(png|jpe?g|gif|bmp|webp|svg)$/i.test(normalizedName)
   )
 }
 
@@ -241,7 +240,7 @@ async function fetchDocumentResources(links: DocumentLink[]) {
 // Fetch request data
 const fetchRequest = async () => {
   if (!route.params.id) return
-  
+
   loading.value = true
   try {
     const response = await getDocumentRequestById(route.params.id as string)
@@ -269,55 +268,50 @@ const fetchRequest = async () => {
 
 // Save changes
 const handleSave = async () => {
-   if (!request.value) return
- 
-   saving.value = true
-   try {
-     const updateData: Partial<DocumentRequest> = {
-       id: request.value.id,
-       title: request.value.title,
-       person_id: request.value.person_id,
-       document_type: formData.value.document_type,
-       description: formData.value.description,
-       start_date: formData.value.start_date || undefined,
-       end_date: formData.value.end_date || undefined,
-       quantity: parseFloat(formData.value.quantity) || 0,
-       status: (
-         formData.value.status as
-           | 'กำลังดำเนินการ'
-           | 'อนุมัติ'
-           | 'ไม่อนุมัติ'
-       ) || undefined,
-       created_at: request.value.created_at,
-       updated_at: new Date().toISOString(),
-     }
-     await updateDocumentRequest(request.value.id, updateData)
-     
-     // Create approval log
-     const authStore = useAuthStore()
-     const approvalLogData: Omit<ApprovalLog, 'id' | 'created_at'> = {
-       request_id: request.value.id,
-       approver_id: authStore.user?.id || '', //9667f10f-12d2-4795-86a1-3e82deb6ac0e
-       action: formData.value.status as 'อนุมัติ' | 'ไม่อนุมัติ' | 'กำลังดำเนินการ',
-       comment: `แก้ไขคำร้อง: เปลี่ยนสถานะจาก ${request.value.status || ''} เป็น ${formData.value.status || ''}`,
-     }
-     await createApprovalLog(approvalLogData)
-     
-     toast.success('สำเร็จ', {
-       description: 'บันทึกการเปลี่ยนแปลงเรียบร้อยแล้ว',
-     })
-     console.log(updateData);
-     
-     router.back()
-   } catch (error: any) {
-     console.error('Failed to update request:', error)
-     toast.error('เกิดข้อผิดพลาด', {
-       description: error.message || 'ไม่สามารถบันทึกการเปลี่ยนแปลง',
-     })
-   } finally {
-     saving.value = false
-   }
- }
+  if (!request.value) return
+
+  saving.value = true
+  try {
+    const updateData: Partial<DocumentRequest> = {
+      id: request.value.id,
+      title: request.value.title,
+      person_id: request.value.person_id,
+      document_type: formData.value.document_type,
+      description: formData.value.description,
+      start_date: formData.value.start_date || undefined,
+      end_date: formData.value.end_date || undefined,
+      quantity: parseFloat(formData.value.quantity) || 0,
+      status: (formData.value.status as 'กำลังดำเนินการ' | 'อนุมัติ' | 'ไม่อนุมัติ') || undefined,
+      created_at: request.value.created_at,
+      updated_at: new Date().toISOString(),
+    }
+    await updateDocumentRequest(request.value.id, updateData)
+
+    // Create approval log
+    const authStore = useAuthStore()
+    const approvalLogData: Omit<ApprovalLog, 'id' | 'created_at'> = {
+      request_id: request.value.id,
+      approver_id: authStore.user?.id || '', //9667f10f-12d2-4795-86a1-3e82deb6ac0e
+      action: formData.value.status as 'อนุมัติ' | 'ไม่อนุมัติ' | 'กำลังดำเนินการ',
+      comment: `แก้ไขคำร้อง: เปลี่ยนสถานะจาก ${request.value.status || ''} เป็น ${formData.value.status || ''}`,
+    }
+    await createApprovalLog(approvalLogData)
+
+    toast.success('สำเร็จ', {
+      description: 'บันทึกการเปลี่ยนแปลงเรียบร้อยแล้ว',
+    })
+    console.log(updateData)
+
+    router.back()
+  } catch (error: any) {
+    console.error('Failed to update request:', error)
+    toast.error('เกิดข้อผิดพลาด', {
+      description: error.message || 'ไม่สามารถบันทึกการเปลี่ยนแปลง',
+    })
+  } finally {
+    saving.value = false
+  }
+}
 
 // Handle cancel
 const handleCancel = () => {
@@ -339,10 +333,10 @@ onBeforeUnmount(() => {
     <div class="flex h-full flex-col gap-3 py-3">
       <!-- Header -->
       <div class="shrink-0 space-y-2">
-        <div class="flex gap-4 justify-between items-center">
+        <div class="flex items-center justify-between gap-4">
           <div class="flex items-center gap-2">
             <Button variant="ghost" size="sm" @click="handleCancel">
-              <ArrowLeft class="h-4 w-4 mr-2" />
+              <ArrowLeft class="mr-2 h-4 w-4" />
               ย้อนกลับ
             </Button>
             <h1 class="text-lg font-semibold">แก้ไขคำร้องเอกสาร</h1>
@@ -351,14 +345,18 @@ onBeforeUnmount(() => {
       </div>
 
       <!-- Form Card Header -->
-      <div class="shrink-0 bg-primary text-primary-foreground rounded-lg px-4 py-2">
-        <h2 class="text-base font-semibold">ข้อมูลคำร้องเอกสาร {{ getPrefixName(request?.person_data?.[0]?.prefix_id) }}{{ request?.person_data?.[0]?.first_name_th }} {{ request?.person_data?.[0]?.last_name_th }}</h2>
+      <div class="bg-primary text-primary-foreground shrink-0 rounded-lg px-4 py-2">
+        <h2 class="text-base font-semibold">
+          ข้อมูลคำร้องเอกสาร {{ getPrefixName(request?.person_data?.[0]?.prefix_id)
+          }}{{ request?.person_data?.[0]?.first_name_th }}
+          {{ request?.person_data?.[0]?.last_name_th }}
+        </h2>
       </div>
 
       <!-- Loading state -->
       <div v-if="loading" class="flex min-h-0 flex-1 items-center justify-center">
         <div class="flex flex-col items-center gap-2">
-          <Loader2 class="h-8 w-8 animate-spin text-primary" />
+          <Loader2 class="text-primary h-8 w-8 animate-spin" />
           <span class="text-muted-foreground">กำลังโหลดข้อมูล...</span>
         </div>
       </div>
@@ -435,8 +433,14 @@ onBeforeUnmount(() => {
                   id="status"
                   v-model="formData.status"
                   :class="[
-                    'flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring font-medium',
-                    formData.status === 'อนุมัติ' ? 'border-green-600 bg-green-600 text-white' : formData.status === 'ไม่อนุมัติ' ? 'border-red-600 bg-red-400 text-white' : formData.status === 'กำลังดำเนินการ' ? 'border-yellow-300 bg-yellow-300 text-blue-800' : 'border-input bg-transparent',
+                    'focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm font-medium shadow-sm transition-colors focus-visible:ring-1 focus-visible:outline-none',
+                    formData.status === 'อนุมัติ'
+                      ? 'border-green-600 bg-green-600 text-white'
+                      : formData.status === 'ไม่อนุมัติ'
+                        ? 'border-red-600 bg-red-400 text-white'
+                        : formData.status === 'กำลังดำเนินการ'
+                          ? 'border-yellow-300 bg-yellow-300 text-blue-800'
+                          : 'border-input bg-transparent',
                   ]"
                 >
                   <option value="">-- เลือกสถานะ --</option>
@@ -641,7 +645,9 @@ onBeforeUnmount(() => {
                 <div class="space-y-2">
                   <Label>ใช้บรรจุครั้งแรก</Label>
                   <Input
-                    :model-value="formatBooleanLabel(requestEducationDetail.is_used_for_first_appointment)"
+                    :model-value="
+                      formatBooleanLabel(requestEducationDetail.is_used_for_first_appointment)
+                    "
                     :disabled="true"
                     :class="staticFieldClass"
                   />
@@ -671,29 +677,30 @@ onBeforeUnmount(() => {
                   class="rounded-md border p-2"
                 >
                   <div class="font-medium">{{ group.purpose }}</div>
-                  <div class="mt-1 space-y-1 text-muted-foreground">
+                  <div class="text-muted-foreground mt-1 space-y-1">
                     <div
                       v-for="(link, index) in group.links"
                       :key="`${group.purpose}-${link.document_key}-${index}`"
-                      class="rounded border bg-muted/30 px-3 py-2"
+                      class="bg-muted/30 rounded border px-3 py-2"
                     >
-                      <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                      <div
+                        class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between"
+                      >
                         <div class="min-w-0">
                           <a
                             v-if="link.resource?.url"
                             :href="link.resource.url"
                             target="_blank"
                             rel="noopener noreferrer"
-                            class="cursor-pointer text-left font-medium text-primary underline underline-offset-2"
+                            class="text-primary cursor-pointer text-left font-medium underline underline-offset-2"
                           >
                             {{ index + 1 }}. {{ link.resource.original_filename }}
                           </a>
-                          <div v-else>
-                            {{ index + 1 }}. {{ link.document_key }}
-                          </div>
-                          <div class="text-xs text-muted-foreground">
+                          <div v-else>{{ index + 1 }}. {{ link.document_key }}</div>
+                          <div class="text-muted-foreground text-xs">
                             <span v-if="link.resource">
-                              {{ formatFileSize(link.resource.size) }} | {{ link.resource.content_type }}
+                              {{ formatFileSize(link.resource.size) }} |
+                              {{ link.resource.content_type }}
                             </span>
                             <span v-else>มีบางผิดพลาดใน document service</span>
                           </div>
@@ -743,31 +750,31 @@ onBeforeUnmount(() => {
           </DialogDescription>
         </DialogHeader>
 
-        <div class="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+        <div class="text-muted-foreground flex items-center justify-between gap-3 text-xs">
           <span>{{ previewContentType || 'ไม่พบประเภทไฟล์' }}</span>
           <a
             v-if="previewOriginalUrl"
             :href="previewOriginalUrl"
             target="_blank"
             rel="noopener noreferrer"
-            class="inline-flex items-center gap-1 text-primary underline underline-offset-2"
+            class="text-primary inline-flex items-center gap-1 underline underline-offset-2"
           >
             <ExternalLink class="h-4 w-4" />
             เปิดแท็บใหม่
           </a>
         </div>
 
-        <div class="overflow-hidden rounded-md border bg-muted/20">
+        <div class="bg-muted/20 overflow-hidden rounded-md border">
           <div v-if="previewLoading" class="flex h-[82vh] items-center justify-center">
-            <div class="flex flex-col items-center gap-2 text-muted-foreground">
-              <Loader2 class="h-6 w-6 animate-spin text-primary" />
+            <div class="text-muted-foreground flex flex-col items-center gap-2">
+              <Loader2 class="text-primary h-6 w-6 animate-spin" />
               <span>กำลังโหลดตัวอย่างไฟล์...</span>
             </div>
           </div>
 
           <div
             v-else-if="previewError"
-            class="flex h-[82vh] items-center justify-center px-6 text-center text-sm text-muted-foreground"
+            class="text-muted-foreground flex h-[82vh] items-center justify-center px-6 text-center text-sm"
           >
             {{ previewError }}
           </div>
@@ -781,7 +788,7 @@ onBeforeUnmount(() => {
 
           <div
             v-else-if="previewFileKind === 'image' && previewUrl"
-            class="flex h-[82vh] items-center justify-center bg-background p-4"
+            class="bg-background flex h-[82vh] items-center justify-center p-4"
           >
             <img
               :src="previewUrl"
@@ -792,7 +799,7 @@ onBeforeUnmount(() => {
 
           <div
             v-else
-            class="flex h-[82vh] items-center justify-center px-6 text-center text-sm text-muted-foreground"
+            class="text-muted-foreground flex h-[82vh] items-center justify-center px-6 text-center text-sm"
           >
             ไฟล์ประเภทนี้ยังไม่รองรับการแสดงตัวอย่างในหน้าเว็บ กรุณาเปิดในแท็บใหม่
           </div>

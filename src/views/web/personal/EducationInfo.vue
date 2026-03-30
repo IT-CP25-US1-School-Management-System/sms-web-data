@@ -22,10 +22,7 @@ async function getEducationRecordData() {
     // Previously this used `response.data[0]` which is a single object and
     // caused a type/assignment mismatch with `educationData: Ref<Record<string, any>[]>`.
     educationData.value = response.data[0]?.education_records || []
-
-   
   } catch (error: any) {
-  
     toast.error(`โหลดข้อมูลครอบครัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
       position: 'bottom-right',
     })
@@ -40,7 +37,11 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="mx-6 flex flex-col gap-4" v-for="item in (educationData.length ? educationData : [{}])" :key="item.id">
+  <div
+    class="mx-6 flex flex-col gap-4"
+    v-for="item in educationData.length ? educationData : [{}]"
+    :key="item.id"
+  >
     <NormalForm
       :isDropdown="false"
       :values="item"

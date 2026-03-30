@@ -188,7 +188,6 @@ async function submitForm() {
 
 defineExpose({ submitForm, isDirty })
 
-
 const isOpen = ref(true)
 
 function getFiles(fieldName: string): File[] {
@@ -427,7 +426,7 @@ function formatDisplayDate(str: string | undefined): string {
                     />
                     <label
                       :for="`form-field-${fieldItem.name}`"
-                      class="cursor-pointer text-sm text-muted-foreground"
+                      class="text-muted-foreground cursor-pointer text-sm"
                       :class="{ 'cursor-not-allowed opacity-50': fieldItem.disabled }"
                     >
                       {{ fieldItem.placeholder || fieldItem.label || fieldItem.name }}
@@ -506,7 +505,7 @@ function formatDisplayDate(str: string | undefined): string {
                 <div
                   v-for="(file, fileIdx) in getFiles(fieldItem.name)"
                   :key="fileIdx"
-                  class="border-muted bg-muted/40 flex c min-h-11 w-fit max-w-xl items-center justify-between gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
+                  class="border-muted bg-muted/40 c flex min-h-11 w-fit max-w-xl items-center justify-between gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
                 >
                   <span class="truncate">{{ file.name }}</span>
                   <span class="text-muted-foreground shrink-0 text-xs">
@@ -515,7 +514,7 @@ function formatDisplayDate(str: string | undefined): string {
                   <button
                     v-if="!fieldItem.disabled"
                     type="button"
-                    class="hover:text-destructive text-muted-foreground rounded p-0.5 transition-colors ursor-pointer"
+                    class="hover:text-destructive text-muted-foreground ursor-pointer rounded p-0.5 transition-colors"
                     @click.stop="removeFile(fieldItem.name, fileIdx)"
                   >
                     <X class="h-3.5 w-3.5" />

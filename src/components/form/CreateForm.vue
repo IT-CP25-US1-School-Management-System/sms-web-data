@@ -9,7 +9,7 @@ import { Calendar } from '@/components/ui/calendar'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { RangeCalendar } from '@/components/ui/range-calendar'
 
-import { ChevronUp, CirclePlus, CalendarIcon, Trash2, X  , ArrowDownToLine} from 'lucide-vue-next'
+import { ChevronUp, CirclePlus, CalendarIcon, Trash2, X, ArrowDownToLine } from 'lucide-vue-next'
 
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
@@ -97,8 +97,8 @@ function buildSchemas() {
         const label = f.label || f.name
         const requiredMsg = `กรุณากรอก ${label}`
 
-  // Special-case email fields so we provide a specific Thai message
-  if (f.type === 'email') {
+        // Special-case email fields so we provide a specific Thai message
+        if (f.type === 'email') {
           const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
           if (f.required) {
             // Required email: coerce null/undefined -> '' so min(1) triggers when empty.
@@ -109,7 +109,9 @@ function buildSchemas() {
               z
                 .string()
                 .min(1, { message: requiredMsg })
-                .refine((val) => val === '' || emailRegex.test(val), { message: 'รูปแบบอีเมลไม่ถูกต้อง' }),
+                .refine((val) => val === '' || emailRegex.test(val), {
+                  message: 'รูปแบบอีเมลไม่ถูกต้อง',
+                }),
             )
           } else {
             // Optional email: treat null/empty as not-present, otherwise validate format.
@@ -126,16 +128,23 @@ function buildSchemas() {
         // or an array of File depending on `multiple`.
         if (f.type === 'file') {
           const requiredMsg = `กรุณาอัปโหลดเอกสาร`
-      
+
           // Build file validation with size check (15 MB)
           if (f.required) {
             if (f.multiple) {
               // required multiple files: array with at least one item and each file <= MAX
               shape[f.name] = z
-                .preprocess((v) => (v == null ? [] : v), z.array(z.any()).min(1, { message: requiredMsg }))
-                .refine((arr: any[]) => arr.every((file) => !file || (file.size && file.size <= MAX_FILE_SIZE)), {
-                  message: `ขนาดไฟล์ต้องไม่เกิน ${Math.floor(MAX_FILE_SIZE / (1024 * 1024))} MB`,
-                })
+                .preprocess(
+                  (v) => (v == null ? [] : v),
+                  z.array(z.any()).min(1, { message: requiredMsg }),
+                )
+                .refine(
+                  (arr: any[]) =>
+                    arr.every((file) => !file || (file.size && file.size <= MAX_FILE_SIZE)),
+                  {
+                    message: `ขนาดไฟล์ต้องไม่เกิน ${Math.floor(MAX_FILE_SIZE / (1024 * 1024))} MB`,
+                  },
+                )
             } else {
               // required single file: non-null and size <= MAX
               shape[f.name] = z
@@ -151,9 +160,13 @@ function buildSchemas() {
               shape[f.name] = z
                 .array(z.any())
                 .optional()
-                .refine((arr: any[] | undefined) => !arr || arr.every((file) => !file || (file.size && file.size <= MAX_FILE_SIZE)), {
-                  message: `ขนาดไฟล์ต้องไม่เกิน ${Math.floor(MAX_FILE_SIZE / (1024 * 1024))} MB`,
-                })
+                .refine(
+                  (arr: any[] | undefined) =>
+                    !arr || arr.every((file) => !file || (file.size && file.size <= MAX_FILE_SIZE)),
+                  {
+                    message: `ขนาดไฟล์ต้องไม่เกิน ${Math.floor(MAX_FILE_SIZE / (1024 * 1024))} MB`,
+                  },
+                )
             else
               shape[f.name] = z
                 .any()
@@ -170,7 +183,10 @@ function buildSchemas() {
         // Use preprocess to convert null/undefined to empty string so Zod returns our
         // custom message (rather than the generic "Expected string, received null").
         if (f.required) {
-          shape[f.name] = z.preprocess((v) => (v == null ? '' : v), z.string().min(1, { message: requiredMsg }))
+          shape[f.name] = z.preprocess(
+            (v) => (v == null ? '' : v),
+            z.string().min(1, { message: requiredMsg }),
+          )
         } else {
           // non-required: accept null/undefined without error
           shape[f.name] = z.string().nullable().optional()
@@ -326,9 +342,9 @@ watch(
     while (localValuesVersions.value.length < entriesCount) localValuesVersions.value.push(0)
     while (localValuesVersions.value.length > entriesCount) localValuesVersions.value.pop()
 
-  // keep formRefs in sync with entries so indices remain stable
-  while (formRefs.value.length < entriesCount) formRefs.value.push(null)
-  while (formRefs.value.length > entriesCount) formRefs.value.pop()
+    // keep formRefs in sync with entries so indices remain stable
+    while (formRefs.value.length < entriesCount) formRefs.value.push(null)
+    while (formRefs.value.length > entriesCount) formRefs.value.pop()
     while (fileMap.value.length < entriesCount) fileMap.value.push({})
     while (fileMap.value.length > entriesCount) fileMap.value.pop()
     while (fileInputRefs.value.length < entriesCount) fileInputRefs.value.push({})
@@ -347,8 +363,7 @@ watch(
 
 watch(
   () => props.values,
-  () => {
-  },
+  () => {},
 )
 function addEntry() {
   if (!props.fields?.length) return
@@ -449,14 +464,15 @@ async function saveEntry(entryIndex: number) {
             return
           }
         }
-      } catch (err) {
-      }
+      } catch (err) {}
     }
 
     // Fallback 1: try to click the hidden submit button inside the form so the
     // native submit occurs within the correct form element (this should trigger
     // vee-validate's @submit handler).
-    const submitBtn = document.getElementById('form-submit-' + entryIndex) as HTMLButtonElement | null
+    const submitBtn = document.getElementById(
+      'form-submit-' + entryIndex,
+    ) as HTMLButtonElement | null
     if (submitBtn) {
       submitBtn.click()
       return
@@ -498,7 +514,11 @@ function onSubmitEntry(entryIndex: number, values: Record<string, any>) {
 
   // Preserve current local entry values because vee-validate result may omit
   // editable optional fields that are not part of the generated schema.
-  const mergedValues = { ...(localValues.value[entryIndex] || {}), ...(values || {}), ...normalizedFiles }
+  const mergedValues = {
+    ...(localValues.value[entryIndex] || {}),
+    ...(values || {}),
+    ...normalizedFiles,
+  }
   localValues.value[entryIndex] = { ...mergedValues }
   if (!props.deferCommitOnSave) {
     initialEntryValues.value[entryIndex] = { ...mergedValues }
@@ -679,7 +699,7 @@ function addFiles(entryIndex: number, fieldItem: FieldItem, files: File[]) {
   updateEntryValue(
     entryIndex,
     fieldItem.name,
-    fieldItem.multiple ? [...(map[fieldItem.name] || [])] : map[fieldItem.name]?.[0] ?? undefined,
+    fieldItem.multiple ? [...(map[fieldItem.name] || [])] : (map[fieldItem.name]?.[0] ?? undefined),
   )
 
   // set per-field file size error message for this entry
@@ -688,7 +708,8 @@ function addFiles(entryIndex: number, fieldItem: FieldItem, files: File[]) {
   if (rejectedBySize.length > 0) errs[fieldItem.name] = sizeMsg
   else errs[fieldItem.name] = undefined
   const typeErrs = fileTypeErrors.value[entryIndex] || (fileTypeErrors.value[entryIndex] = {})
-  if (rejectedByType.length > 0) typeErrs[fieldItem.name] = getFileAcceptErrorMessage(fieldItem.accept)
+  if (rejectedByType.length > 0)
+    typeErrs[fieldItem.name] = getFileAcceptErrorMessage(fieldItem.accept)
   else typeErrs[fieldItem.name] = undefined
 }
 
@@ -701,10 +722,11 @@ function removeFile(entryIndex: number, fieldName: string, index: number) {
   updateEntryValue(
     entryIndex,
     fieldName,
-    fieldDef?.multiple ? [...remaining] : remaining[0] ?? undefined,
+    fieldDef?.multiple ? [...remaining] : (remaining[0] ?? undefined),
   )
   const errs = fileSizeErrors.value[entryIndex] || (fileSizeErrors.value[entryIndex] = {})
-  if (remaining.some((f) => f.size > MAX_FILE_SIZE)) errs[fieldName] = `ขนาดไฟล์ต้องไม่เกิน ${Math.floor(MAX_FILE_SIZE / (1024 * 1024))} MB`
+  if (remaining.some((f) => f.size > MAX_FILE_SIZE))
+    errs[fieldName] = `ขนาดไฟล์ต้องไม่เกิน ${Math.floor(MAX_FILE_SIZE / (1024 * 1024))} MB`
   else errs[fieldName] = undefined
   const typeErrs = fileTypeErrors.value[entryIndex] || (fileTypeErrors.value[entryIndex] = {})
   typeErrs[fieldName] = undefined
@@ -716,10 +738,10 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-function hasDownloadUrl(
-  file: UploadedFileItem,
-): file is ExistingFileItem & { url: string } {
-  return typeof file === 'object' && 'url' in file && typeof file.url === 'string' && Boolean(file.url)
+function hasDownloadUrl(file: UploadedFileItem): file is ExistingFileItem & { url: string } {
+  return (
+    typeof file === 'object' && 'url' in file && typeof file.url === 'string' && Boolean(file.url)
+  )
 }
 
 async function downloadFile(file: UploadedFileItem) {
@@ -887,7 +909,7 @@ function formatDisplayDateRange(str: string | undefined): string {
                     <button
                       v-if="sectionIndex === 0 && isDropdown === true"
                       type="button"
-                      class="hover:bg-muted rounded-md p-1 transition-colors duration-150 cursor-pointer"
+                      class="hover:bg-muted cursor-pointer rounded-md p-1 transition-colors duration-150"
                       @click="toggleEntry(entryIndex)"
                     >
                       <ChevronUp
@@ -919,10 +941,16 @@ function formatDisplayDateRange(str: string | undefined): string {
                                 value.type === 'date'
                                   ? formatDisplayDate(localValues[entryIndex]?.[value.name])
                                   : value.type === 'date-range'
-                                  ? formatDisplayDateRange(localValues[entryIndex]?.[value.name])
-                                  : value.type === 'select' && value.options
-                                  ? ((value.options.find((o) => o.value === localValues[entryIndex]?.[value.name]) || {}).label || (localValues[entryIndex]?.[value.name] ?? '-'))
-                                  : (localValues[entryIndex]?.[value.name] ?? '-')
+                                    ? formatDisplayDateRange(localValues[entryIndex]?.[value.name])
+                                    : value.type === 'select' && value.options
+                                      ? (
+                                          value.options.find(
+                                            (o) =>
+                                              o.value === localValues[entryIndex]?.[value.name],
+                                          ) || {}
+                                        ).label ||
+                                        (localValues[entryIndex]?.[value.name] ?? '-')
+                                      : (localValues[entryIndex]?.[value.name] ?? '-')
                               }}
                             </p>
                           </template>
@@ -983,9 +1011,7 @@ function formatDisplayDateRange(str: string | undefined): string {
                                 }
                               "
                               :type="fieldItem.type"
-                              :placeholder="
-                                fieldItem.placeholder 
-                              "
+                              :placeholder="fieldItem.placeholder"
                               autocomplete="off"
                               :aria-invalid="!!errors.length"
                               :disabled="fieldItem.disabled"
@@ -1010,7 +1036,7 @@ function formatDisplayDateRange(str: string | undefined): string {
                                     'w-full justify-start text-left font-normal',
                                     !veeField.value && 'text-muted-foreground',
                                     fieldItem.disabled && 'opacity-50',
-                                    errors.length && 'border-red-500 ',
+                                    errors.length && 'border-red-500',
                                   ]"
                                 >
                                   <CalendarIcon class="mr-2 h-4 w-4" />
@@ -1167,8 +1193,10 @@ function formatDisplayDateRange(str: string | undefined): string {
                                       () => {
                                         veeField['onUpdate:modelValue']?.(opt.value)
                                         updateEntryValue(entryIndex, fieldItem.name, opt.value)
-                                        comboboxOpen[getComboboxKey(entryIndex, fieldItem.name)] = false
-                                        comboboxQuery[getComboboxKey(entryIndex, fieldItem.name)] = ''
+                                        comboboxOpen[getComboboxKey(entryIndex, fieldItem.name)] =
+                                          false
+                                        comboboxQuery[getComboboxKey(entryIndex, fieldItem.name)] =
+                                          ''
                                       }
                                     "
                                   >
@@ -1246,7 +1274,6 @@ function formatDisplayDateRange(str: string | undefined): string {
                               "
                               class="gap-0"
                             >
-
                               <input
                                 :ref="(el: any) => setFileInputRef(entryIndex, fieldItem.name, el)"
                                 type="file"
@@ -1254,19 +1281,33 @@ function formatDisplayDateRange(str: string | undefined): string {
                                 :accept="fieldItem.accept"
                                 :multiple="fieldItem.multiple"
                                 :disabled="fieldItem.disabled"
-                                @change="(e) => { handleFileSelect(e, entryIndex, fieldItem); const files = getFiles(entryIndex, fieldItem.name); if (fieldItem.multiple) field['onUpdate:modelValue']?.(files); else field['onUpdate:modelValue']?.(files[0] ?? undefined) }"
+                                @change="
+                                  (e) => {
+                                    handleFileSelect(e, entryIndex, fieldItem)
+                                    const files = getFiles(entryIndex, fieldItem.name)
+                                    if (fieldItem.multiple) field['onUpdate:modelValue']?.(files)
+                                    else field['onUpdate:modelValue']?.(files[0] ?? undefined)
+                                  }
+                                "
                               />
                               <div class="w-28">
                                 <Button
                                   type="button"
-                                  class="cursor-pointer rounded-lg px-6 py-2 text-sm font-semibold bg-[#0b63b8] hover:bg-[#0a58a6] text-white w-fit"
+                                  class="w-fit cursor-pointer rounded-lg bg-[#0b63b8] px-6 py-2 text-sm font-semibold text-white hover:bg-[#0a58a6]"
                                   :disabled="fieldItem.disabled"
                                   @click="fileInputRefs[entryIndex]?.[fieldItem.name]?.click()"
                                 >
                                   อัปโหลดไฟล์
                                 </Button>
                               </div>
-                              <div class="min-h-6" v-if="fileTypeErrors[entryIndex]?.[fieldItem.name] || fileSizeErrors[entryIndex]?.[fieldItem.name] || errors.length">
+                              <div
+                                class="min-h-6"
+                                v-if="
+                                  fileTypeErrors[entryIndex]?.[fieldItem.name] ||
+                                  fileSizeErrors[entryIndex]?.[fieldItem.name] ||
+                                  errors.length
+                                "
+                              >
                                 <div
                                   v-if="fileTypeErrors[entryIndex]?.[fieldItem.name]"
                                   class="mt-2 text-sm text-red-600"
@@ -1286,7 +1327,7 @@ function formatDisplayDateRange(str: string | undefined): string {
                                 />
                               </div>
 
-                               <!-- รายการไฟล์ที่เลือก -->
+                              <!-- รายการไฟล์ที่เลือก -->
                               <div
                                 v-if="getFiles(entryIndex, fieldItem.name).length"
                                 class="mt-2 flex flex-col gap-2"
@@ -1296,9 +1337,9 @@ function formatDisplayDateRange(str: string | undefined): string {
                                   :key="fileIdx"
                                   class="border-muted bg-muted/40 flex min-h-11 w-fit max-w-xl items-center justify-between gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
                                 >
-                                  <span class="text-black truncate">{{ file.name }}</span>
+                                  <span class="truncate text-black">{{ file.name }}</span>
                                   <span class="text-muted-foreground shrink-0 text-xs">
-                                    {{ formatFileSize(file.size) }} 
+                                    {{ formatFileSize(file.size) }}
                                   </span>
                                   <button
                                     v-if="hasDownloadUrl(file)"
@@ -1311,14 +1352,21 @@ function formatDisplayDateRange(str: string | undefined): string {
                                   <button
                                     v-if="!fieldItem.disabled"
                                     type="button"
-                                    class="hover:text-destructive text-muted-foreground rounded p-0.5 transition-colors  cursor-pointer "
-                                    @click.stop="() => { removeFile(entryIndex, fieldItem.name, fileIdx); const files = getFiles(entryIndex, fieldItem.name); if (fieldItem.multiple) field['onUpdate:modelValue']?.(files); else field['onUpdate:modelValue']?.(files[0] ?? undefined) }"
+                                    class="hover:text-destructive text-muted-foreground cursor-pointer rounded p-0.5 transition-colors"
+                                    @click.stop="
+                                      () => {
+                                        removeFile(entryIndex, fieldItem.name, fileIdx)
+                                        const files = getFiles(entryIndex, fieldItem.name)
+                                        if (fieldItem.multiple)
+                                          field['onUpdate:modelValue']?.(files)
+                                        else field['onUpdate:modelValue']?.(files[0] ?? undefined)
+                                      }
+                                    "
                                   >
                                     <X class="h-3.5 w-3.5 cursor-pointer" />
                                   </button>
                                 </div>
                               </div>
-                          
                             </Field>
                           </VeeField>
                         </div>
@@ -1499,7 +1547,6 @@ function formatDisplayDateRange(str: string | undefined): string {
                   </div>
                 </div>
               </div>
-              
             </VeeForm>
 
             <!-- ปุ่มบันทึก / ลบ -->
@@ -1511,7 +1558,7 @@ function formatDisplayDateRange(str: string | undefined): string {
                 v-if="canDelete"
                 type="button"
                 variant="destructive"
-                class="rounded-lg px-6 py-2 font-semibold shadow-sm cursor-pointer"
+                class="cursor-pointer rounded-lg px-6 py-2 font-semibold shadow-sm"
                 :disabled="Boolean(props.busyEntries?.[entryIndex])"
                 @click="deleteEntry(entryIndex)"
               >
@@ -1520,7 +1567,7 @@ function formatDisplayDateRange(str: string | undefined): string {
               </Button>
               <Button
                 type="button"
-                class="rounded-lg cursor-pointer bg-[#16A34A] px-6 py-2 font-semibold text-white shadow-sm hover:bg-[#15803D]"
+                class="cursor-pointer rounded-lg bg-[#16A34A] px-6 py-2 font-semibold text-white shadow-sm hover:bg-[#15803D]"
                 :disabled="disabledSaveByEntry[entryIndex]"
                 @click="saveEntry(entryIndex)"
               >

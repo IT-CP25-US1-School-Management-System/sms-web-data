@@ -15,7 +15,7 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { Spinner } from '@/components/ui/spinner'
 import { FileText, X, CalendarIcon } from 'lucide-vue-next'
-import { ref, watch, computed ,onMounted } from 'vue'
+import { ref, watch, computed, onMounted } from 'vue'
 import { Form as VeeForm, Field as VeeField, ErrorMessage } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { z } from 'zod'
@@ -28,10 +28,16 @@ import { useAuthStore } from '@/stores/auth'
 import { createDatasetRow } from '@/stores/dataset'
 import { createFileDocument } from '@/stores/document'
 import type { CreateFileDocumentParams, FileDocument } from '@/types/document'
-import type { DocumentRequest ,DocumentLink ,RequestEducationRecords ,RequestGeneral ,RequestHistory } from '@/types/document_request'
+import type {
+  DocumentRequest,
+  DocumentLink,
+  RequestEducationRecords,
+  RequestGeneral,
+  RequestHistory,
+} from '@/types/document_request'
 import { getFileDocumentRows } from '@/stores/document'
 import { FILE_KEY_TEMPLATES } from '@/lib/constants'
-import {  DOCUMENT_EDIT } from '@/lib/constants'
+import { DOCUMENT_EDIT } from '@/lib/constants'
 
 /* ──────────────────── ประเภทคำร้อง ──────────────────── */
 const requestTypeOptions = [
@@ -61,7 +67,6 @@ const salary_info = ref('')
 const salary_base = ref('')
 const salary_compensation = ref('')
 
-
 const documentRequest = ref<DocumentRequest>({
   id: '',
   person_id: '',
@@ -78,7 +83,7 @@ const documentLink = ref<DocumentLink>({
   purpose: '',
   person_id: '',
   created_at: '',
-})  
+})
 
 const requestEducationRecords = ref<RequestEducationRecords>({
   id: '',
@@ -209,7 +214,9 @@ function getRequestTypeLabel() {
 }
 
 function getCurrentUserName() {
-  return authStore.user?.name || authStore.user?.given_name || authStore.user?.email || 'current-user'
+  return (
+    authStore.user?.name || authStore.user?.given_name || authStore.user?.email || 'current-user'
+  )
 }
 
 function getSelectedFiles(): File[] {
@@ -388,12 +395,13 @@ function buildDocumentDetailPayload(values: Record<string, any>) {
 }
 
 async function createDocumentType() {
-  const datasetId =  DOCUMENT_EDIT.DATASET_ID //'document_create'
+  const datasetId = DOCUMENT_EDIT.DATASET_ID //'document_create'
   const version = DOCUMENT_EDIT.DATASET_VERSION_DOCUMENT_REQUEST //'v1.0.0'
 
   documentRequest.value.id = generateUUID()
   documentRequest.value.person_id = authStore.user?.id || ''
-  documentRequest.value.document_type = (getRequestTypeLabel() as DocumentRequest['document_type']) || null
+  documentRequest.value.document_type =
+    (getRequestTypeLabel() as DocumentRequest['document_type']) || null
   documentRequest.value.created_at = new Date().toISOString()
   documentRequest.value.updated_at = new Date().toISOString()
 
@@ -443,44 +451,37 @@ async function uploadFile() {
 }
 
 async function getFileTemplateType2() {
-  
   try {
     const response = await getFileDocumentRows(FILE_KEY_TEMPLATES.DOCUMENT_TYPE_2)
     console.log('getFileTemplateType2:', response.data)
     urlDownload2.value = response.data?.url || ''
     downloadFileName2.value = response.data?.original_filename || 'template-type-2'
   } catch (error: any) {
-   
     throw error
   }
 }
 
 async function getFileTemplateType3() {
-  
   try {
     const response = await getFileDocumentRows(FILE_KEY_TEMPLATES.DOCUMENT_TYPE_3)
     console.log('getFileTemplateType3:', response.data)
     urlDownload3.value = response.data?.url || ''
     downloadFileName3.value = response.data?.original_filename || 'template-type-3'
   } catch (error: any) {
-    
     throw error
   }
 }
 async function getFileTemplateType4_1() {
-  
   try {
     const response = await getFileDocumentRows(FILE_KEY_TEMPLATES.DOCUMENT_TYPE_4_1)
     console.log('getFileTemplateType4_1:', response.data)
     urlDownload4_1.value = response.data?.url || ''
     downloadFileName4_1.value = response.data?.original_filename || 'template-type-4-1'
   } catch (error: any) {
-    
     throw error
   }
 }
 async function getFileTemplateType4_2() {
-  
   try {
     const response = await getFileDocumentRows(FILE_KEY_TEMPLATES.DOCUMENT_TYPE_4_2)
     console.log('getFileTemplateType4_2:', response.data)
@@ -508,7 +509,7 @@ async function handleDownloadTemplate(fileUrl: string, fileName: string) {
   }
 }
 async function storeFile(documentIds: string[]) {
-  const datasetId =  DOCUMENT_EDIT.DATASET_ID //'document_create'
+  const datasetId = DOCUMENT_EDIT.DATASET_ID //'document_create'
   const version = DOCUMENT_EDIT.DATASET_VERSION_DOCUMENT_LINK //'v1.1.0'
 
   try {
@@ -536,7 +537,7 @@ async function storeFile(documentIds: string[]) {
 
 async function createDocumentDetail(values: Record<string, any>) {
   const data = buildDocumentDetailPayload(values)
-  const datasetId =  DOCUMENT_EDIT.DATASET_ID //'document_create'
+  const datasetId = DOCUMENT_EDIT.DATASET_ID //'document_create'
   let version: 'v1.2.0' | 'v1.2.1' | 'v1.2.2' | null = null
 
   switch (requestType.value) {
@@ -563,14 +564,17 @@ async function createDocumentDetail(values: Record<string, any>) {
   } catch (error: any) {
     console.error('Create Document Detail API Error:', error)
     console.error('Error Response:', error?.response?.data)
-    toast.error(`บันทึกรายละเอียดคำร้องไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
-      position: 'bottom-right',
-    })
+    toast.error(
+      `บันทึกรายละเอียดคำร้องไม่สำเร็จ: ${error?.response?.data?.message || error.message}`,
+      {
+        position: 'bottom-right',
+      },
+    )
     throw error
   }
 }
 
- type FileSelectOptions = {
+type FileSelectOptions = {
   maxFiles?: number
 }
 
@@ -1041,8 +1045,6 @@ const schema = computed(() => {
   return toTypedSchema(base)
 })
 
-
-
 async function onSubmit(values: Record<string, any>) {
   isSubmitting.value = true
   const payload: Record<string, any> = { ...values }
@@ -1055,7 +1057,7 @@ async function onSubmit(values: Record<string, any>) {
     )
   } catch (_error) {
     // ignore
-     toast.error(`เกิดข้อผิดพลาด: ${_error}`, {
+    toast.error(`เกิดข้อผิดพลาด: ${_error}`, {
       position: 'bottom-right',
     })
   }
@@ -1073,7 +1075,7 @@ async function onSubmit(values: Record<string, any>) {
     resetCreateDocumentForm()
   } catch (_error) {
     // แต่ละฟังก์ชันจัดการ error toast ของตัวเองแล้ว
-     toast.error(`ยื่นคำร้องไม่สำเร็จ: ${_error}`, {
+    toast.error(`ยื่นคำร้องไม่สำเร็จ: ${_error}`, {
       position: 'bottom-right',
     })
   } finally {
@@ -1172,7 +1174,6 @@ onMounted(() => {
   getFileTemplateType4_1()
   getFileTemplateType4_2()
 })
-
 </script>
 
 <template>
@@ -1470,7 +1471,7 @@ onMounted(() => {
                       }}</span>
                       <button
                         type="button"
-                        class="hover:text-destructive text-muted-foreground rounded p-0.5 cursor-pointer"
+                        class="hover:text-destructive text-muted-foreground cursor-pointer rounded p-0.5"
                         @click="removeFile('slip', i, field.onChange)"
                       >
                         <X class="h-3.5 w-3.5" />
@@ -1536,7 +1537,7 @@ onMounted(() => {
                       }}</span>
                       <button
                         type="button"
-                        class="hover:text-destructive text-muted-foreground rounded p-0.5 cursor-pointer"
+                        class="hover:text-destructive text-muted-foreground cursor-pointer rounded p-0.5"
                         @click="removeFile('card-doc', i, field.onChange)"
                       >
                         <X class="h-3.5 w-3.5" />
@@ -1597,7 +1598,7 @@ onMounted(() => {
                     <div
                       v-for="(file, i) in fileMap['abroad-doc']"
                       :key="i"
-                      class="border-muted bg-muted/40 flex min-h-11 w-fit  max-w-xl items-center gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
+                      class="border-muted bg-muted/40 flex min-h-11 w-fit max-w-xl items-center gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
                     >
                       <span class="truncate">{{ file.name }}</span>
                       <span class="text-muted-foreground shrink-0 text-xs">{{
@@ -1605,7 +1606,7 @@ onMounted(() => {
                       }}</span>
                       <button
                         type="button"
-                        class="hover:text-destructive text-muted-foreground rounded p-0.5 cursor-pointer"
+                        class="hover:text-destructive text-muted-foreground cursor-pointer rounded p-0.5"
                         @click="removeFile('abroad-doc', i, field.onChange)"
                       >
                         <X class="h-3.5 w-3.5" />
@@ -1753,7 +1754,7 @@ onMounted(() => {
                       }}</span>
                       <button
                         type="button"
-                        class="hover:text-destructive text-muted-foreground rounded p-0.5 cursor-pointer"
+                        class="hover:text-destructive text-muted-foreground cursor-pointer rounded p-0.5"
                         @click="removeFile('reason-doc', i, field.onChange)"
                       >
                         <X class="h-3.5 w-3.5" />
@@ -1896,7 +1897,7 @@ onMounted(() => {
                       }}</span>
                       <button
                         type="button"
-                        class="hover:text-destructive text-muted-foreground rounded p-0.5 cursor-pointer"
+                        class="hover:text-destructive text-muted-foreground cursor-pointer rounded p-0.5"
                         @click="removeFile('letter-doc', i, field.onChange)"
                       >
                         <X class="h-3.5 w-3.5" />
@@ -2162,7 +2163,7 @@ onMounted(() => {
                     }}</span>
                     <button
                       type="button"
-                      class="hover:text-destructive text-muted-foreground rounded p-0.5 cursor-pointer"
+                      class="hover:text-destructive text-muted-foreground cursor-pointer rounded p-0.5"
                       @click="removeFile('education-request-doc', i, field.onChange)"
                     >
                       <X class="h-3.5 w-3.5" />

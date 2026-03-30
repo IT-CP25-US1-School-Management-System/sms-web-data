@@ -21,6 +21,7 @@ import type {
   ProfessionalLicenseCreateDTO,
 } from '@/types/teacher'
 import type { PersonAddress } from '@/types/address'
+import type { DailyAttendanceRecord } from '@/types/attendance'
 
 // TODO: Replace with the correct dataset IDs once configured in the DMS backend
 const ADDRESS_DATASET_ID = 'data_manage'
@@ -31,6 +32,8 @@ const EDUCATION_DATASET_ID = DATASET_ID
 const EDUCATION_DATASET_VERSION = 'v4.0.0'
 const LICENSE_DATASET_ID = DATASET_ID
 const LICENSE_DATASET_VERSION = 'v5.0.0'
+const ATTENDANCE_DATASET_ID = 'data_get_view'
+const ATTENDANCE_DATASET_VERSION = 'v2.6.0'
 
 /**
  * Get list of teachers with pagination and filters
@@ -41,6 +44,18 @@ export async function getTeachers(
   return getDatasetRows<PersonData>(DATASET_ID, DATASET_VERSION, {
     ...params,
     view: 'personal_detail',
+  })
+}
+
+/**
+ * Get daily attendance / leave records with pagination and filters
+ */
+export async function getDailyAttendance(
+  params?: DatasetQueryParams,
+): Promise<DatasetListResponse<DailyAttendanceRecord>> {
+  return getDatasetRows<DailyAttendanceRecord>(ATTENDANCE_DATASET_ID, ATTENDANCE_DATASET_VERSION, {
+    ...params,
+    view: 'daily_attendance',
   })
 }
 

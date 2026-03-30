@@ -12,7 +12,6 @@ export interface DocumentRequest {
   created_at: string
   updated_at?: string | null
 
-
   // Joined data from person_data table
   person_data?: PersonData[]
   // Joined data from logs and links

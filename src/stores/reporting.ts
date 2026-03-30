@@ -65,11 +65,7 @@ export async function getReportImportJobStatus(jobId: string): Promise<ImportJob
     `/v1/reporting/import/job/${jobId}`,
   )
 
-  if (
-    typeof response.data === 'object' &&
-    response.data !== null &&
-    'data' in response.data
-  ) {
+  if (typeof response.data === 'object' && response.data !== null && 'data' in response.data) {
     return response.data.data
   }
 

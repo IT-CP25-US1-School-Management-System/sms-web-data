@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import MainLayout from '@/layouts/manage/MainLayout.vue'
 import { Button } from '@/components/ui/button'
 import { ROUTE_NAMES } from '@/lib/constants'
 import { Input } from '@/components/ui/input'
+import { formatDate, getPrefixName } from '@/lib/helpers'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,16 +27,16 @@ import { usePagination } from '@/composables/usePagination'
 import type { PaginationData } from '@/composables/usePagination'
 import { toast } from 'vue-sonner'
 import type { PersonData } from '@/types/teacher'
-import { getTeachers, deleteTeacher, useTeacherStore } from '@/stores/teachers'
+import type { AttendanceStatus, DailyAttendanceRecord } from '@/types/attendance'
+import { deleteTeacher, getDailyAttendance, getTeachers, useTeacherStore } from '@/stores/teachers'
 import { deleteUser } from '@/stores/api'
 
-// Tab types
-type TabType = 'all' | 'government' | 'contract'
+type TabType = 'all' | 'government' | 'contract' | 'leave'
 
 const router = useRouter()
 
-// State
 const teachers = ref<PersonData[]>([])
+const leaveRecords = ref<DailyAttendanceRecord[]>([])
 const loading = ref(false)
 const activeTab = ref<TabType>('all')
 const searchQuery = ref('')
@@ -43,7 +44,6 @@ const showDeleteDialog = ref(false)
 const teacherToDelete = ref<PersonData | null>(null)
 const deleting = ref(false)
 
-// Pagination state
 const pagination = ref<PaginationData>({
   page: 1,
   per_page: 15,
@@ -51,17 +51,17 @@ const pagination = ref<PaginationData>({
   total_rows: 0,
 })
 
-// Use pagination composable
 const { canPreviousPage, canNextPage, getVisiblePages } = usePagination(pagination)
 
-// Fetch teachers from API
+const isLeaveTab = computed(() => activeTab.value === 'leave')
+const searchPlaceholder = computed(() => (isLeaveTab.value ? 'ค้นหาชื่อผู้ลา' : 'ค้นหาชื่อคุณครู'))
+const tableTitle = computed(() => (isLeaveTab.value ? 'ข้อมูลการลา' : 'รายชื่อคุณครู'))
+
 const fetchTeachers = async () => {
   loading.value = true
   try {
-    // Build where array for API (is_government + search)
     const where: any[][] = []
 
-    // Add tab filter for is_government (server-side)
     if (activeTab.value === 'government') {
       where.push([
         {
@@ -82,11 +82,15 @@ const fetchTeachers = async () => {
       ])
     }
 
-    // Add search filter if query exists
     if (searchQuery.value.trim()) {
       const query = searchQuery.value.trim()
       where.push([
-        { table_name: 'person_data', field: 'first_name_th', operator: 'like', value: `%${query}%` },
+        {
+          table_name: 'person_data',
+          field: 'first_name_th',
+          operator: 'like',
+          value: `%${query}%`,
+        },
         { table_name: 'person_data', field: 'last_name_th', operator: 'like', value: `%${query}%` },
       ])
     }
@@ -112,52 +116,94 @@ const fetchTeachers = async () => {
   }
 }
 
-// Tab change handler
-const changeTab = (tab: TabType) => {
-  activeTab.value = tab
-  pagination.value.page = 1 // Reset to first page when changing tab
+const fetchDailyAttendance = async () => {
+  loading.value = true
+  try {
+    const where: any[][] = []
+
+    if (searchQuery.value.trim()) {
+      const query = searchQuery.value.trim()
+      where.push([
+        {
+          table_name: 'person_data',
+          field: 'first_name_th',
+          operator: 'like',
+          value: `%${query}%`,
+        },
+        { table_name: 'person_data', field: 'last_name_th', operator: 'like', value: `%${query}%` },
+      ])
+    }
+
+    const response = await getDailyAttendance({
+      page: pagination.value.page,
+      per_page: pagination.value.per_page,
+      where: where.length > 0 ? where : undefined,
+      sort_by: 'date',
+      sort_order: 'desc',
+    })
+
+    leaveRecords.value = response.data
+    pagination.value.total_rows = response.total_rows
+    pagination.value.total_pages = response.total_pages
+  } catch (error: any) {
+    console.error('Failed to fetch daily attendance:', error)
+    toast.error('เกิดข้อผิดพลาด', {
+      description: error.message || 'ไม่สามารถโหลดข้อมูลการลาได้',
+    })
+  } finally {
+    loading.value = false
+  }
 }
 
-// Watch for tab and pagination changes
+const fetchCurrentTabData = async () => {
+  if (isLeaveTab.value) {
+    teachers.value = []
+    await fetchDailyAttendance()
+    return
+  }
+
+  leaveRecords.value = []
+  await fetchTeachers()
+}
+
+const changeTab = (tab: TabType) => {
+  activeTab.value = tab
+  pagination.value.page = 1
+}
+
 watch([() => activeTab.value, () => pagination.value.page], () => {
-  fetchTeachers()
+  void fetchCurrentTabData()
 })
 
-// Watch for search query changes (debounced)
 let searchTimeout: number
 watch(searchQuery, () => {
   clearTimeout(searchTimeout)
   searchTimeout = setTimeout(() => {
-    pagination.value.page = 1 // Reset to first page on search
-    fetchTeachers()
-  }, 500) as unknown as number // 500ms debounce
+    pagination.value.page = 1
+    void fetchCurrentTabData()
+  }, 500) as unknown as number
 })
 
-// Load data on mount
 onMounted(() => {
-  fetchTeachers()
+  void fetchCurrentTabData()
 })
 
-// Page change handler
 const goToPage = (page: number) => {
   pagination.value.page = page
 }
 
-// Previous page handler
 const previousPage = () => {
   if (canPreviousPage.value) {
     pagination.value.page--
   }
 }
 
-// Next page handler
 const nextPage = () => {
   if (canNextPage.value) {
     pagination.value.page++
   }
 }
 
-// Action handlers
 const handleEdit = (teacher: PersonData) => {
   router.push({ name: ROUTE_NAMES.ADD_TEACHER_PERSONAL, query: { id: teacher.id } })
 }
@@ -182,7 +228,7 @@ const confirmDelete = async () => {
 
     await deleteTeacher(teacherToDelete.value.id)
     if (userDeleteFailed) {
-      toast.warning('ลบข้อมูลบางส่วนสำเร็จ', {
+      toast.warning('ลบบางส่วนสำเร็จ', {
         description: 'ลบข้อมูลคุณครูแล้ว แต่ลบบัญชีผู้ใช้ไม่สำเร็จ',
       })
     } else {
@@ -190,7 +236,8 @@ const confirmDelete = async () => {
         description: 'ลบข้อมูลคุณครูและบัญชีผู้ใช้เรียบร้อยแล้ว',
       })
     }
-    fetchTeachers() // Reload data
+
+    await fetchCurrentTabData()
   } catch (error: any) {
     console.error('Failed to delete teacher:', error)
     toast.error('เกิดข้อผิดพลาด', {
@@ -214,209 +261,282 @@ const handleAddTeacher = () => {
   router.push({ name: ROUTE_NAMES.ADD_TEACHER_PERSONAL })
 }
 
-// Get teacher type label - เช็คจาก is_government field (handle boolean or string "true"/"false")
 const getTeacherType = (teacher: PersonData) => {
   const isGov = (teacher.is_government as any) === true || (teacher.is_government as any) === 'true'
   return isGov ? 'ข้าราชการ' : 'ครูอัตราจ้าง'
+}
+
+const getAttendanceStatusLabel = (status: AttendanceStatus) => {
+  const statusMap: Record<AttendanceStatus, string> = {
+    present: 'มาปฏิบัติราชการปกติ',
+    business_trip: 'ไปราชการ',
+    sick_leave: 'ลาป่วย',
+    personal_leave: 'ลากิจ',
+    late: 'มาสาย',
+    official_help: 'ไปช่วยราชการ',
+    other: 'อื่นๆ',
+  }
+
+  return statusMap[status] || status
+}
+
+const formatAttendanceTime = (time?: string | null) => {
+  if (!time) return '-'
+  return time.slice(0, 5)
+}
+
+const getPersonDisplayName = (record: DailyAttendanceRecord) => {
+  const person = record.person_data
+  if (!person) return '-'
+
+  return `${getPrefixName(person.prefix_id)}${person.first_name_th} ${person.last_name_th}`
 }
 </script>
 
 <template>
   <MainLayout>
     <div class="flex h-full flex-col gap-3 py-3">
-      <!-- Header with tabs, search, and add button -->
       <div class="shrink-0 space-y-2">
-      <!-- Tabs -->
-      <div class="inline-flex items-center gap-1 rounded-lg bg-muted p-1">
-        <Button
-          :variant="activeTab === 'all' ? 'default' : 'ghost'"
-          size="sm"
-          :class="activeTab !== 'all' && 'hover:bg-transparent text-muted-foreground'"
-          @click="changeTab('all')"
-        >
-          ทั้งหมด
-        </Button>
-        <Button
-          :variant="activeTab === 'government' ? 'default' : 'ghost'"
-          size="sm"
-          :class="activeTab !== 'government' && 'hover:bg-transparent text-muted-foreground'"
-          @click="changeTab('government')"
-        >
-          ข้าราชการ
-        </Button>
-        <Button
-          :variant="activeTab === 'contract' ? 'default' : 'ghost'"
-          size="sm"
-          :class="activeTab !== 'contract' && 'hover:bg-transparent text-muted-foreground'"
-          @click="changeTab('contract')"
-        >
-          ครูอัตราจ้าง
-        </Button>
-      </div>
+        <div class="bg-muted inline-flex items-center gap-1 rounded-lg p-1">
+          <Button
+            :variant="activeTab === 'all' ? 'default' : 'ghost'"
+            size="sm"
+            :class="activeTab !== 'all' && 'text-muted-foreground hover:bg-transparent'"
+            @click="changeTab('all')"
+          >
+            ทั้งหมด
+          </Button>
+          <Button
+            :variant="activeTab === 'government' ? 'default' : 'ghost'"
+            size="sm"
+            :class="activeTab !== 'government' && 'text-muted-foreground hover:bg-transparent'"
+            @click="changeTab('government')"
+          >
+            ข้าราชการ
+          </Button>
+          <Button
+            :variant="activeTab === 'contract' ? 'default' : 'ghost'"
+            size="sm"
+            :class="activeTab !== 'contract' && 'text-muted-foreground hover:bg-transparent'"
+            @click="changeTab('contract')"
+          >
+            ครูอัตราจ้าง
+          </Button>
+          <Button
+            :variant="activeTab === 'leave' ? 'default' : 'ghost'"
+            size="sm"
+            :class="activeTab !== 'leave' && 'text-muted-foreground hover:bg-transparent'"
+            @click="changeTab('leave')"
+          >
+            ข้อมูลการลา
+          </Button>
+        </div>
 
-      <!-- Search and Add button -->
-      <div class="flex gap-4 justify-between items-center">
-        <div class="relative flex-1 max-w-md">
-          <Search class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            v-model="searchQuery"
-            type="text"
-            placeholder="ค้นหาชื่อคุณครู"
-            class="pl-10"
+        <div class="flex items-center justify-between gap-4">
+          <div class="relative max-w-md flex-1">
+            <Search
+              class="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform"
+            />
+            <Input
+              v-model="searchQuery"
+              type="text"
+              :placeholder="searchPlaceholder"
+              class="pl-10"
+              :disabled="loading"
+            />
+          </div>
+
+          <Button
+            v-if="!isLeaveTab"
+            class="bg-green-600 hover:bg-green-700"
             :disabled="loading"
-          />
+            @click="handleAddTeacher"
+          >
+            <Plus class="mr-2 h-4 w-4" />
+            เพิ่มรายชื่อ
+          </Button>
         </div>
-        <Button
-          class="bg-green-600 hover:bg-green-700"
-          @click="handleAddTeacher"
-          :disabled="loading"
-        >
-          <Plus class="h-4 w-4 mr-2" />
-          เพิ่มรายชื่อ
-        </Button>
-      </div>
-    </div>
-
-    <!-- Table Card -->
-    <div class="flex min-h-0 flex-1 flex-col">
-      <div class="shrink-0 bg-primary text-primary-foreground rounded-lg px-4 py-2 mb-3">
-        <h2 class="text-base font-semibold">รายชื่อคุณครู</h2>
       </div>
 
-      <div class="flex min-h-0 flex-1 flex-col border rounded-lg px-4">
-        <!-- Table header (fixed, not scrollable) -->
-        <table class="w-full" style="table-layout: fixed">
-          <thead class="bg-muted/50">
-            <tr>
-              <th class="text-left py-2 font-medium">ชื่อ</th>
-              <th class="text-left py-2 font-medium">นามสกุล</th>
-              <th class="text-center py-2 font-medium">ประเภท</th>
-              <th class="text-center py-2 font-medium">การดำเนินการ</th>
-            </tr>
-          </thead>
-        </table>
+      <div class="flex min-h-0 flex-1 flex-col">
+        <div class="bg-primary text-primary-foreground mb-3 shrink-0 rounded-lg px-4 py-2">
+          <h2 class="text-base font-semibold">{{ tableTitle }}</h2>
+        </div>
 
-        <!-- Table body (scrollable) -->
-        <div class="min-h-0 flex-1 overflow-auto">
-          <table class="w-full" style="table-layout: fixed">
-            <tbody>
-              <!-- Loading state -->
-              <tr v-if="loading">
-                <td colspan="4" class="py-8 text-center">
-                  <div class="flex justify-center items-center gap-2">
-                    <Loader2 class="h-5 w-5 animate-spin" />
-                    <span class="text-muted-foreground">กำลังโหลดข้อมูล...</span>
-                  </div>
-                </td>
+        <div class="flex min-h-0 flex-1 flex-col rounded-lg border px-4">
+          <table v-if="!isLeaveTab" class="w-full" style="table-layout: fixed">
+            <thead class="bg-muted/50">
+              <tr>
+                <th class="py-2 text-left font-medium">ชื่อ</th>
+                <th class="py-2 text-left font-medium">นามสกุล</th>
+                <th class="py-2 text-center font-medium">ประเภท</th>
+                <th class="py-2 text-center font-medium">การดำเนินการ</th>
               </tr>
-              <!-- Empty state -->
-              <tr v-else-if="teachers.length === 0">
-                <td colspan="4" class="py-8 text-center text-muted-foreground">
-                  ไม่พบข้อมูลคุณครู
-                </td>
-              </tr>
-              <!-- Data rows -->
-              <tr
-                v-else
-                v-for="teacher in teachers"
-                :key="teacher.id"
-                class="border-t hover:bg-muted/30 transition-colors"
-              >
-                <td class="py-2 align-middle">{{teacher.prefixes?.prefixes_name_th || ''}}{{ teacher.first_name_th }}</td>
-
-                <td class="py-2 align-middle">{{ teacher.last_name_th }}</td>
-                <td class="py-2 text-center align-middle">{{ getTeacherType(teacher) }}</td>
-                <td class="py-2 align-middle">
-                  <div class="flex justify-center">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger as-child>
-                        <Button variant="ghost" size="sm">
-                          <MoreHorizontal class="h-5 w-5" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" class="flex flex-row gap-1 p-1">
-                        <DropdownMenuItem @click="handleEdit(teacher)" class="cursor-pointer">
-                          <Pencil class="h-4 w-4 mr-2" />
-                          แก้ไข
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          @click="handleDelete(teacher)"
-                          class="text-red-600 cursor-pointer"
-                        >
-                          <Trash2 class="h-4 w-4 mr-2" />
-                          ลบ
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
+            </thead>
           </table>
-        </div>
 
-        <!-- Pagination - fixed at bottom -->
-        <div v-if="!loading && teachers.length > 0" class="shrink-0 flex items-center justify-end gap-2 border-t py-2">
-          <span class="mr-auto text-sm text-muted-foreground">
-            แสดง {{ teachers.length }} รายการจาก {{ pagination.total_rows }} รายการทั้งหมด
-          </span>
+          <table v-else class="w-full" style="table-layout: fixed">
+            <thead class="bg-muted/50">
+              <tr>
+                <th class="py-2 text-left font-medium">ชื่อ - นามสกุล</th>
+                <th class="py-2 text-center font-medium">วันที่</th>
+                <th class="py-2 text-center font-medium">สถานะ</th>
+                <th class="py-2 text-center font-medium">เวลาเข้า</th>
+                <th class="py-2 text-left font-medium">หมายเหตุ</th>
+              </tr>
+            </thead>
+          </table>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            :disabled="!canPreviousPage"
-            @click="previousPage"
+          <div class="min-h-0 flex-1 overflow-auto">
+            <table v-if="!isLeaveTab" class="w-full" style="table-layout: fixed">
+              <tbody>
+                <tr v-if="loading">
+                  <td colspan="4" class="py-8 text-center">
+                    <div class="flex items-center justify-center gap-2">
+                      <Loader2 class="h-5 w-5 animate-spin" />
+                      <span class="text-muted-foreground">กำลังโหลดข้อมูล...</span>
+                    </div>
+                  </td>
+                </tr>
+
+                <tr v-else-if="teachers.length === 0">
+                  <td colspan="4" class="text-muted-foreground py-8 text-center">
+                    ไม่พบข้อมูลคุณครู
+                  </td>
+                </tr>
+
+                <tr
+                  v-for="teacher in teachers"
+                  v-else
+                  :key="teacher.id"
+                  class="hover:bg-muted/30 border-t transition-colors"
+                >
+                  <td class="py-2 align-middle">
+                    {{ teacher.prefixes?.prefixes_name_th || '' }}{{ teacher.first_name_th }}
+                  </td>
+                  <td class="py-2 align-middle">{{ teacher.last_name_th }}</td>
+                  <td class="py-2 text-center align-middle">{{ getTeacherType(teacher) }}</td>
+                  <td class="py-2 align-middle">
+                    <div class="flex justify-center">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger as-child>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal class="h-5 w-5" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" class="flex flex-row gap-1 p-1">
+                          <DropdownMenuItem class="cursor-pointer" @click="handleEdit(teacher)">
+                            <Pencil class="mr-2 h-4 w-4" />
+                            แก้ไข
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            class="cursor-pointer text-red-600"
+                            @click="handleDelete(teacher)"
+                          >
+                            <Trash2 class="mr-2 h-4 w-4" />
+                            ลบ
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <table v-else class="w-full" style="table-layout: fixed">
+              <tbody>
+                <tr v-if="loading">
+                  <td colspan="5" class="py-8 text-center">
+                    <div class="flex items-center justify-center gap-2">
+                      <Loader2 class="h-5 w-5 animate-spin" />
+                      <span class="text-muted-foreground">กำลังโหลดข้อมูล...</span>
+                    </div>
+                  </td>
+                </tr>
+
+                <tr v-else-if="leaveRecords.length === 0">
+                  <td colspan="5" class="text-muted-foreground py-8 text-center">
+                    ไม่พบข้อมูลการลา
+                  </td>
+                </tr>
+
+                <tr
+                  v-for="record in leaveRecords"
+                  v-else
+                  :key="record.id"
+                  class="hover:bg-muted/30 border-t transition-colors"
+                >
+                  <td class="py-2 align-middle">{{ getPersonDisplayName(record) }}</td>
+                  <td class="py-2 text-center align-middle">{{ formatDate(record.date) }}</td>
+                  <td class="py-2 text-center align-middle">
+                    {{ getAttendanceStatusLabel(record.status) }}
+                  </td>
+                  <td class="py-2 text-center align-middle">
+                    {{ formatAttendanceTime(record.check_in_time) }}
+                  </td>
+                  <td class="py-2 align-middle">{{ record.remark || '-' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div
+            v-if="!loading && (isLeaveTab ? leaveRecords.length > 0 : teachers.length > 0)"
+            class="flex shrink-0 items-center justify-end gap-2 border-t py-2"
           >
-            ← ก่อนหน้า
-          </Button>
+            <span class="text-muted-foreground mr-auto text-sm">
+              แสดง {{ isLeaveTab ? leaveRecords.length : teachers.length }} รายการจาก
+              {{ pagination.total_rows }} รายการทั้งหมด
+            </span>
 
-          <template v-for="(pageNum, index) in getVisiblePages" :key="index">
-            <Button
-              v-if="typeof pageNum === 'number'"
-              :variant="pageNum === pagination.page ? 'default' : 'ghost'"
-              size="sm"
-              @click="goToPage(pageNum)"
-            >
-              {{ pageNum }}
+            <Button variant="ghost" size="sm" :disabled="!canPreviousPage" @click="previousPage">
+              ← ก่อนหน้า
             </Button>
-            <span v-else class="px-2">...</span>
-          </template>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            :disabled="!canNextPage"
-            @click="nextPage"
-          >
-            ถัดไป →
-          </Button>
+            <template v-for="(pageNum, index) in getVisiblePages" :key="index">
+              <Button
+                v-if="typeof pageNum === 'number'"
+                :variant="pageNum === pagination.page ? 'default' : 'ghost'"
+                size="sm"
+                @click="goToPage(pageNum)"
+              >
+                {{ pageNum }}
+              </Button>
+              <span v-else class="px-2">...</span>
+            </template>
+
+            <Button variant="ghost" size="sm" :disabled="!canNextPage" @click="nextPage">
+              ถัดไป →
+            </Button>
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- Delete Confirmation Dialog -->
-  <AlertDialog :open="showDeleteDialog" @update:open="showDeleteDialog = $event">
-    <AlertDialogContent>
-      <AlertDialogHeader>
-        <AlertDialogTitle>ยืนยันการลบ</AlertDialogTitle>
-        <AlertDialogDescription>
-          คุณต้องการลบคุณครู
-          <span class="font-semibold">{{ teacherToDelete?.first_name_th }} {{ teacherToDelete?.last_name_th }}</span>
-          ใช่หรือไม่?
-        </AlertDialogDescription>
-      </AlertDialogHeader>
-      <AlertDialogFooter>
-        <AlertDialogCancel @click="cancelDelete">ยกเลิก</AlertDialogCancel>
-        <AlertDialogAction
-          @click="confirmDelete"
-          :disabled="deleting"
-          class="bg-red-600 hover:bg-red-700"
-        >
-          {{ deleting ? 'กำลังลบ...' : 'ลบ' }}
-        </AlertDialogAction>
-      </AlertDialogFooter>
-    </AlertDialogContent>
-  </AlertDialog>
+    <AlertDialog :open="showDeleteDialog" @update:open="showDeleteDialog = $event">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>ยืนยันการลบ</AlertDialogTitle>
+          <AlertDialogDescription>
+            คุณต้องการลบคุณครู
+            <span class="font-semibold">
+              {{ teacherToDelete?.first_name_th }} {{ teacherToDelete?.last_name_th }}
+            </span>
+            ใช่หรือไม่?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel @click="cancelDelete">ยกเลิก</AlertDialogCancel>
+          <AlertDialogAction
+            class="bg-red-600 hover:bg-red-700"
+            :disabled="deleting"
+            @click="confirmDelete"
+          >
+            {{ deleting ? 'กำลังลบ...' : 'ลบ' }}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </MainLayout>
 </template>

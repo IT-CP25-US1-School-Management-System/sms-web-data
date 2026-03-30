@@ -21,7 +21,7 @@ export const ROUTE_NAMES = {
   TRAINING: 'ข้อมูลการอบรม / ข้อมูลผลงาน',
   ACHIEVEMENTS_INNOVATIONS: 'ข้อมูลผลงาน / นวัตกรรม',
   SUBMIT_DOCUMENTS: 'ยื่นคำร้อง',
-  PA_DOCUMENT:'การส่งเอกสาร PA',
+  PA_DOCUMENT: 'การส่งเอกสาร PA',
   EVALUATION_PA: 'การประเมิน PA',
   TRACK_DOCUMENTS: 'ติดตามคำร้อง',
   EDUCATION: 'ข้อมูลการศึกษา',
@@ -64,13 +64,12 @@ export const DATASET_GET = {
   DATASET_VERSION_TRAINING: 'v2.5.0',
 } as const
 
-
 export const DATASET_EDIT = {
   DATASET_ID: 'data_update_view',
   DATASET_VERSION_PERSONAL_DETAIL: 'v1.0.0',
   DATASET_VERSION_LICENSE: 'v1.3.2',
   DATASET_VERSION_FAMILY: 'v1.2.0',
-  DATASET_VERSION_ADDRESS:'v1.1.0',
+  DATASET_VERSION_ADDRESS: 'v1.1.0',
   DATASET_VERSION_POSITION_HISTORY: 'v1.4.0',
   DATASET_VERSION_ACADEMIC_RANK: 'v1.5.0',
   DATASET_VERSION_CONTRACT_POSITION: 'v1.6.0',
@@ -89,7 +88,6 @@ export const DATASET_DELETE = {
   DATASET_VERSION_TRAINING: 'v1.8.0',
 } as const
 
-
 // export const DOCUMENT_GET = {
 //   DATASET_ID: 'document_get',
 // } as const
@@ -103,15 +101,13 @@ export const DOCUMENT_EDIT = {
 export const DOCUMENT_DELETE = {
   DATASET_ID: 'document_delete',
   DATASET_VERSION: 'v1.0.2',
-
 } as const
 
-export const  FILE_KEY_TEMPLATES = {
+export const FILE_KEY_TEMPLATES = {
   DOCUMENT_TYPE_2: '3a68b6bf-4631-4835-a77f-eff8da31a796',
   DOCUMENT_TYPE_3: '074053f7-0e7a-4870-9091-84f0cd945aed',
   DOCUMENT_TYPE_4_1: 'cc01791c-658e-44ed-aa4a-ccb7be9418fe',
   DOCUMENT_TYPE_4_2: '99261424-7b09-48e9-820d-ffcb6115729c',
-
 } as const
 
 export type DatasetSensitivity = (typeof DATASET_SENSITIVITY)[keyof typeof DATASET_SENSITIVITY]

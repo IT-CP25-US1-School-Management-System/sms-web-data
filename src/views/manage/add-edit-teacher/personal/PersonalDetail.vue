@@ -90,7 +90,9 @@ const hasRequiredFieldsCompleted = computed(
 )
 
 const hasAnyChanges = computed(() =>
-  [generalForm.value, sensitiveForm.value, contactForm.value].some((form) => Boolean(form?.isDirty)),
+  [generalForm.value, sensitiveForm.value, contactForm.value].some((form) =>
+    Boolean(form?.isDirty),
+  ),
 )
 
 const canSave = computed(() => hasAnyChanges.value && hasRequiredFieldsCompleted.value)
@@ -139,11 +141,11 @@ async function fetchPrefixOptions() {
       per_page: 100,
     })
 
-    const mappedOptions = mapDropdownOptions(response.data || [], ['id', 'prefix_id', 'prefixes_id'], [
-      'prefixes_name_th',
-      'name_th',
-      'name',
-    ])
+    const mappedOptions = mapDropdownOptions(
+      response.data || [],
+      ['id', 'prefix_id', 'prefixes_id'],
+      ['prefixes_name_th', 'name_th', 'name'],
+    )
 
     if (mappedOptions.length > 0) {
       prefixOptions.value = mappedOptions
@@ -162,12 +164,11 @@ async function fetchRoleOptions() {
         per_page: 100,
       })
 
-      const mappedOptions = mapDropdownOptions(response.data || [], ['id', 'role_id', 'roles_id'], [
-        'role_name_th',
-        'roles_name_th',
-        'name_th',
-        'name',
-      ])
+      const mappedOptions = mapDropdownOptions(
+        response.data || [],
+        ['id', 'role_id', 'roles_id'],
+        ['role_name_th', 'roles_name_th', 'name_th', 'name'],
+      )
 
       if (mappedOptions.length > 0) {
         roleOptions.value = mappedOptions
@@ -179,7 +180,7 @@ async function fetchRoleOptions() {
   }
 }
 
-watch( 
+watch(
   () => route.query.id,
   async (idQuery) => {
     const idFromUrl = idQuery as string | undefined
@@ -246,7 +247,7 @@ fetchRoleOptions()
 
 const handleSave = async () => {
   if (isSubmitting.value) return // Prevent multiple submissions
-  
+
   const forms = [generalForm, sensitiveForm, contactForm]
   const isAllValid: boolean[] = []
 
@@ -319,7 +320,7 @@ const handleSave = async () => {
       line_id: currentValues.line_id || undefined,
       marital_status: maritalStatusMap[currentValues['marital-status']] || undefined,
       spouse_name: currentValues['spouse-name'] || undefined,
-      created_at: isEditing.value ? (teacherStore.currentTeacher?.created_at || now) : now,
+      created_at: isEditing.value ? teacherStore.currentTeacher?.created_at || now : now,
       updated_at: now,
     }
 
@@ -378,7 +379,6 @@ const handleSave = async () => {
       @save="handleFormSave"
       @change="handleFormChange"
       :fields="[
-
         {
           name: 'prefix_id',
           label: 'คำนำหน้า',
@@ -387,9 +387,26 @@ const handleSave = async () => {
           placeholder: 'เลือกคำนำหน้า',
           options: prefixOptions,
         },
-        { name: 'first_name_th', label: 'ชื่อ', type: 'text', required: true, placeholder: 'กรุณาระบุชื่อ' },
-        { name: 'middle_name_th', label: 'ชื่อกลาง', type: 'text', placeholder: 'กรุณาระบุชื่อกลาง' },
-        { name: 'last_name_th', label: 'นามสกุล', type: 'text', required: true, placeholder: 'กรุณาระบุนามสกุล' },
+        {
+          name: 'first_name_th',
+          label: 'ชื่อ',
+          type: 'text',
+          required: true,
+          placeholder: 'กรุณาระบุชื่อ',
+        },
+        {
+          name: 'middle_name_th',
+          label: 'ชื่อกลาง',
+          type: 'text',
+          placeholder: 'กรุณาระบุชื่อกลาง',
+        },
+        {
+          name: 'last_name_th',
+          label: 'นามสกุล',
+          type: 'text',
+          required: true,
+          placeholder: 'กรุณาระบุนามสกุล',
+        },
         {
           name: 'prefix_en',
           label: 'Prefix',
@@ -401,10 +418,20 @@ const handleSave = async () => {
             { label: 'Miss', value: 'Miss' },
           ],
         },
-        { name: 'middle_name_en', label: 'Middlename', type: 'text', placeholder: 'Enter middlename' },
+        {
+          name: 'middle_name_en',
+          label: 'Middlename',
+          type: 'text',
+          placeholder: 'Enter middlename',
+        },
         { name: 'first_name_en', label: 'Name', type: 'text', placeholder: 'Enter name' },
         { name: 'last_name_en', label: 'Lastname', type: 'text', placeholder: 'Enter lastname' },
-        { name: 'birth_date', label: 'วัน / เดือน / ปี เกิด', type: 'date', placeholder: 'วว / ดด / ปปปป' },
+        {
+          name: 'birth_date',
+          label: 'วัน / เดือน / ปี เกิด',
+          type: 'date',
+          placeholder: 'วว / ดด / ปปปป',
+        },
         { name: 'age', label: 'อายุ (ปี)', type: 'number', placeholder: 'อายุ' },
         {
           name: 'marital-status',
@@ -418,7 +445,12 @@ const handleSave = async () => {
             { label: 'หย่า', value: 'divorced' },
           ],
         },
-        { name: 'spouse-name', label: 'คู่สมรส', type: 'text', placeholder: 'กรุณาระบุชื่อคู่สมรส' },
+        {
+          name: 'spouse-name',
+          label: 'คู่สมรส',
+          type: 'text',
+          placeholder: 'กรุณาระบุชื่อคู่สมรส',
+        },
         {
           name: 'id-card',
           label: 'เลขบัตรประจำตัวประชาชน',
@@ -549,7 +581,9 @@ const handleSave = async () => {
     />
   </div>
 
-  <div class="sticky bottom-0 right-0 z-40 flex w-full justify-end border-t border-gray-200 bg-white p-3">
+  <div
+    class="sticky right-0 bottom-0 z-40 flex w-full justify-end border-t border-gray-200 bg-white p-3"
+  >
     <Button
       class="rounded-lg bg-[#16A34A] px-8 py-2 font-semibold text-white shadow-sm hover:bg-[#15803D] disabled:cursor-not-allowed disabled:opacity-50"
       :disabled="isSubmitting || !canSave"
