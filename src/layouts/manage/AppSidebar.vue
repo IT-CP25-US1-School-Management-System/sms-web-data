@@ -31,13 +31,12 @@ import {
   SidebarMenuSubItem,
 } from '@/components/ui/sidebar'
 import {
-  Settings,
   User,
   ChevronsUpDown,
   LogOut,
   ChevronRight,
   UsersRound,
-  GraduationCap,
+  // GraduationCap,
   Upload,
   FileText,
   FileClock,
@@ -79,13 +78,13 @@ const menuConfig: {
       routeName: ROUTE_NAMES.MANAGE_TEACHERS,
       children: null,
     },
-    {
-      id: 'manage-students',
-      label: 'รายชื่อนักเรียน',
-      icon: GraduationCap,
-      routeName: ROUTE_NAMES.MANAGE_STUDENTS,
-      children: null,
-    },
+    // {
+    //   id: 'manage-students',
+    //   label: 'รายชื่อนักเรียน',
+    //   icon: GraduationCap,
+    //   routeName: ROUTE_NAMES.MANAGE_STUDENTS,
+    //   children: null,
+    // },
     {
       id: 'import-data',
       label: 'นำเข้าข้อมูล',
@@ -102,13 +101,6 @@ const menuConfig: {
     },
   ],
   settings: [
-    {
-      id: 'settings',
-      label: 'ตั้งค่าระบบ',
-      icon: Settings,
-      routeName: ROUTE_NAMES.SETTINGS,
-      children: null,
-    },
     {
       id: 'profile',
       label: 'โปรไฟล์',
@@ -564,10 +556,6 @@ onMounted(async () => {
                 <DropdownMenuItem @click="router.push({ name: ROUTE_NAMES.PROFILE })">
                   <User class="mr-2 h-4 w-4" />
                   โปรไฟล์
-                </DropdownMenuItem>
-                <DropdownMenuItem @click="router.push({ name: ROUTE_NAMES.SETTINGS })">
-                  <Settings class="mr-2 h-4 w-4" />
-                  ตั้งค่า
                 </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />

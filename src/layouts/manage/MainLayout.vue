@@ -52,14 +52,7 @@ const currentBreadcrumbs = computed(() => {
     return breadcrumbs
   }
 
-  if (routeName === ROUTE_NAMES.SETTINGS) {
-    breadcrumbs.push({
-      label: breadcrumbConfig.Settings.label,
-      icon: breadcrumbConfig.Settings.icon,
-      to: { name: ROUTE_NAMES.SETTINGS },
-      isLast: true,
-    })
-  } else if (routeName === ROUTE_NAMES.PROFILE) {
+   else if (routeName === ROUTE_NAMES.PROFILE) {
     breadcrumbs.push({
       label: breadcrumbConfig.Profile.label,
       icon: breadcrumbConfig.Profile.icon,

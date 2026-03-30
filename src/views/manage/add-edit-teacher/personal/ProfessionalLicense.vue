@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import CreateForm from '@/components/form/CreateForm.vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
-import { DOCUMENT_DELETE, DOCUMENT_EDIT } from '@/lib/constants'
+import { MANAGE_DATASETS } from '@/lib/constants'
 import { formatDateInput, generateUUID } from '@/lib/helpers'
 import { useAuthStore } from '@/stores/auth'
 import {
@@ -67,19 +67,14 @@ type CreateFormSection = {
   content: CreateFormField[]
 }
 
-const DOCUMENT_LINK_CREATE_DATASET = {
-  DATASET_ID: DOCUMENT_EDIT.DATASET_ID,
-  DATASET_VERSION: DOCUMENT_EDIT.DATASET_VERSION_DOCUMENT_LINK, //'v1.1.0'
-  VIEW_NAME: 'file_view',
-} as const
-const DOCUMENT_LINK_DELETE_DATASET = {
-  DATASET_ID: DOCUMENT_DELETE.DATASET_ID,
-  DATASET_VERSION: DOCUMENT_DELETE.DATASET_VERSION, //'v1.0.2'
-  VIEW_NAME: 'document_delete',
-} as const
 
 const LICENSE_FILE_FIELD = 'license-file'
 const LICENSE_ENTITY_TABLE = 'profession-license'
+const DOCUMENT_LINK_DATASET = {
+  DATASET_ID: MANAGE_DATASETS.DATASET_ID,
+  DATASET_VERSION: MANAGE_DATASETS.DATASET_VERSION_DOCUMENT_LINK,
+  VIEW_NAME: 'document_links',
+} as const
 
 const route = useRoute()
 const teacherStore = useTeacherStore()
@@ -387,10 +382,10 @@ async function storeFile(documentIds: string[], license: ProfessionalLicenseRow)
     }
 
     const response = await createDatasetRow<DocumentLinkRow>(
-      'data_manage',
-      'v0.0.0',
+      DOCUMENT_LINK_DATASET.DATASET_ID,
+      DOCUMENT_LINK_DATASET.DATASET_VERSION,
       payload,
-      'document_links',
+      DOCUMENT_LINK_DATASET.VIEW_NAME,
     )
     createdLinks.push(response.data)
   }
@@ -403,8 +398,8 @@ async function deleteDocumentLinks(documentLinks: DocumentLinkRow[]) {
     const documentLinkKey = link.id || link.document_key
     if (!documentLinkKey) continue
     await deleteDatasetRow(
-      'data_manage',
-      'v0.0.0',
+      DOCUMENT_LINK_DATASET.DATASET_ID,
+      DOCUMENT_LINK_DATASET.DATASET_VERSION,
       documentLinkKey,
     )
   }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import CreateForm from '@/components/form/CreateForm.vue'
-import { DATASET_GET } from '@/lib/constants'
+import { MANAGE_DATASETS } from '@/lib/constants'
 import { formatDateInput, generateUUID } from '@/lib/helpers'
 import { useAuthStore } from '@/stores/auth'
 import { useTeacherStore } from '@/stores/teachers'
@@ -14,15 +14,49 @@ import { useRoute } from 'vue-router'
 import { toast } from 'vue-sonner'
 
 type DocumentLinkRow = DocumentLink & { id?: string }
-type ExistingAcademicFile = { name: string; size: number; type?: string; resource_id: string; url?: string; existing: true; document_link_id?: string }
-type AcademicFileItem = File | ExistingAcademicFile
-type AcademicRankRow = Record<string, any> & { id?: string; person_id?: string; document_links?: DocumentLinkRow[] }
-type AcademicRankFormValue = AcademicRankRow & { 'order-file'?: AcademicFileItem[] }
-type CreateFormField = { name: string; label?: string; type: 'text' | 'date' | 'date-range' | 'select' | 'number' | 'email' | 'textarea' | 'file'; placeholder?: string; required?: boolean; disabled?: boolean; isShow?: boolean; options?: { label: string; value: any }[]; accept?: string; multiple?: boolean }
-type CreateFormSection = { topic?: string; content: CreateFormField[] }
 
-const GET_VIEW = 'academic_get'
-const EDIT_VIEW = 'academic_update'
+type ExistingAcademicFile = {
+  name: string
+  size: number
+  type?: string
+  resource_id: string
+  url?: string
+  existing: true
+  document_link_id?: string
+}
+
+type AcademicFileItem = File | ExistingAcademicFile
+
+type AcademicRankRow = Record<string, any> & {
+  id?: string
+  person_id?: string
+  document_links?: DocumentLinkRow[]
+}
+
+type AcademicRankFormValue = AcademicRankRow & {
+  'order-file'?: AcademicFileItem[]
+}
+
+type CreateFormField = {
+  name: string
+  label?: string
+  type: 'text' | 'date' | 'date-range' | 'select' | 'number' | 'email' | 'textarea' | 'file'
+  placeholder?: string
+  required?: boolean
+  disabled?: boolean
+  isShow?: boolean
+  options?: { label: string; value: any }[]
+  accept?: string
+  multiple?: boolean
+}
+
+type CreateFormSection = {
+  topic?: string
+  content: CreateFormField[]
+}
+
+const GET_VIEW = 'academic_rank'
+const EDIT_VIEW = 'academic_rank'
 const ENTITY_TABLE = 'academic_rank'
 const FILE_FIELD = 'order-file'
 const ORDER_NO_FIELD = 'order-no'
@@ -30,13 +64,14 @@ const RANKING_TYPE_FIELD = 'academic-rank'
 const SPECIAL_COMPENSATION_FIELD = 'special-compensation'
 
 const ACADEMIC_DATASET_CONFIG = {
-  DATASET_ID: 'data_manage',
-  DATASET_VERSION: 'v7.0.0',
+  DATASET_ID: MANAGE_DATASETS.DATASET_ID,
+  DATASET_VERSION: MANAGE_DATASETS.DATASET_VERSION_ACADEMIC_RANK,
   VIEW_NAME: EDIT_VIEW,
 } as const
+
 const DOCUMENT_LINK_DATASET_CONFIG = {
-  DATASET_ID: 'data_manage',
-  DATASET_VERSION: 'v0.0.0',
+  DATASET_ID: MANAGE_DATASETS.DATASET_ID,
+  DATASET_VERSION: MANAGE_DATASETS.DATASET_VERSION_DOCUMENT_LINK,
   VIEW_NAME: 'file_view',
 } as const
 
@@ -71,37 +106,95 @@ function getPersonId() {
   return personId
 }
 
-const academicRankFields: CreateFormSection[][] = [[
-  {
-    topic: 'ประวัติการมีวิทยฐานะ',
-    content: [
-      { name: 'order-no', label: 'คำสั่ง', type: 'text', required: true, isShow: true, placeholder: '' },
-      { name: 'position_rank', label: 'ตำแหน่งที่ได้รับวิทยฐานะ', type: 'select', required: true, isShow: true, placeholder: 'เลือกตำแหน่ง', options: [{ label: 'ครู', value: 'ครู' }, { label: 'ผู้บริหาร', value: 'ผู้บริหาร' }] },
-      { name: 'academic-rank', label: 'วิทยฐานะ', type: 'select', required: true, placeholder: 'เลือกวิทยฐานะ', options: [
-        { label: 'ครูชำนาญการ', value: 'ครูชำนาญการ' },
-        { label: 'ครูชำนาญการพิเศษ', value: 'ครูชำนาญการพิเศษ' },
-        { label: 'ครูเชี่ยวชาญ', value: 'ครูเชี่ยวชาญ' },
-        { label: 'ครูเชี่ยวชาญพิเศษ', value: 'ครูเชี่ยวชาญพิเศษ' },
-        { label: 'รองผู้อำนวยชำนาญการพิเศษ', value: 'รองผู้อำนวยชำนาญการพิเศษ' },
-        { label: 'รองผู้อำนวยเชี่ยวชาญ', value: 'รองผู้อำนวยเชี่ยวชาญ' },
-        { label: 'ผู้อำนวยชำนาญการ', value: 'ผู้อำนวยชำนาญการ' },
-        { label: 'ผู้อำนวยชำนาญการพิเศษ', value: 'ผู้อำนวยชำนาญการพิเศษ' },
-        { label: 'ผู้อำนวยเชี่ยวชาญ', value: 'ผู้อำนวยเชี่ยวชาญ' },
-      ] },
-      { name: 'awarded_date', label: 'วันที่ได้รับวิทยฐานะ', type: 'date', required: true, placeholder: 'วว / ดด / ปปปป' },
-      { name: 'order-file', label: 'แนบคำสั่ง', type: 'file',required: true, accept: '.pdf,.jpg,.png', multiple: true },
-    ],
-  },
-  {
-    topic: 'เงินเดือน',
-    content: [
-      { name: 'reward', label: 'เงินค่าตอบแทน', type: 'number', required: true, placeholder: '' },
-      { name: 'special_reward', label: 'เงินค่าตอบแทนพิเศษรายเดือนรับ', type: 'number', required: true, placeholder: '' },
-      { name: 'position_reward', label: 'เงินประจำตำแหน่ง', type: 'number', required: true, placeholder: '' },
-      { name: 'special-compensation', label: 'เงินค่าตอบแทนพิเศษ', type: 'number', required: true, placeholder: '' },
-    ],
-  },
-]]
+const academicRankFields: CreateFormSection[][] = [
+  [
+    {
+      topic: 'ประวัติการมีวิทยฐานะ',
+      content: [
+        {
+          name: 'order-no',
+          label: 'คำสั่ง',
+          type: 'text',
+          required: true,
+          isShow: true,
+          placeholder: '',
+        },
+        {
+          name: 'position_rank',
+          label: 'ตำแหน่งที่ได้รับวิทยฐานะ',
+          type: 'select',
+          required: true,
+          isShow: true,
+          placeholder: 'เลือกตำแหน่ง',
+          options: [
+            { label: 'ครู', value: 'ครู' },
+            { label: 'ผู้บริหาร', value: 'ผู้บริหาร' },
+          ],
+        },
+        {
+          name: 'academic-rank',
+          label: 'วิทยฐานะ',
+          type: 'select',
+          required: true,
+          placeholder: 'เลือกวิทยฐานะ',
+          options: [
+            { label: 'ครูชำนาญการ', value: 'ครูชำนาญการ' },
+            { label: 'ครูชำนาญการพิเศษ', value: 'ครูชำนาญการพิเศษ' },
+            { label: 'ครูเชี่ยวชาญ', value: 'ครูเชี่ยวชาญ' },
+            { label: 'ครูเชี่ยวชาญพิเศษ', value: 'ครูเชี่ยวชาญพิเศษ' },
+            {
+              label: 'รองผู้อำนวยการชำนาญการพิเศษ',
+              value: 'รองผู้อำนวยการชำนาญการพิเศษ',
+            },
+            { label: 'รองผู้อำนวยเชี่ยวชาญ', value: 'รองผู้อำนวยเชี่ยวชาญ' },
+            { label: 'ผู้อำนวยชำนาญการ', value: 'ผู้อำนวยชำนาญการ' },
+            { label: 'ผู้อำนวยชำนาญการพิเศษ', value: 'ผู้อำนวยชำนาญการพิเศษ' },
+            { label: 'ผู้อำนวยเชี่ยวชาญ', value: 'ผู้อำนวยเชี่ยวชาญ' },
+          ],
+        },
+        {
+          name: 'awarded_date',
+          label: 'วันที่ได้รับวิทยฐานะ',
+          type: 'date',
+          required: true,
+          placeholder: 'วว / ดด / ปปปป',
+        },
+        {
+          name: 'order-file',
+          label: 'แนบคำสั่ง',
+          type: 'file',
+          required: true,
+          accept: '.pdf,.jpg,.png',
+          multiple: true,
+        },
+      ],
+    },
+    {
+      topic: 'เงินเดือน',
+      content: [
+        { name: 'reward', label: 'เงินค่าตอบแทน', type: 'number', placeholder: '' },
+        {
+          name: 'special_reward',
+          label: 'เงินค่าตอบแทนพิเศษรายเดือนรับ',
+          type: 'number',
+          placeholder: '',
+        },
+        {
+          name: 'position_reward',
+          label: 'เงินประจำตำแหน่ง',
+          type: 'number',
+          placeholder: '',
+        },
+        {
+          name: 'special-compensation',
+          label: 'เงินค่าตอบแทนพิเศษ',
+          type: 'number',
+          placeholder: '',
+        },
+      ],
+    },
+  ],
+]
 
 function getCurrentUserName() {
   return authStore.user?.name || authStore.user?.given_name || authStore.user?.email || 'current-user'
@@ -117,6 +210,19 @@ function isExistingAcademicFile(file: AcademicFileItem): file is ExistingAcademi
   return 'resource_id' in file && typeof file.resource_id === 'string'
 }
 
+function normalizeAcademicNumber(value: unknown) {
+  if (value === '' || value === undefined || value === null) {
+    return null
+  }
+
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null
+  }
+
+  const parsedValue = Number(value)
+  return Number.isFinite(parsedValue) ? parsedValue : null
+}
+
 function buildAcademicPurpose(values: Partial<AcademicRankRow>, fileField?: string) {
   const basePurpose = `${values.license_type || 'license'}_${values.license_no || 'unknown'}`
   return fileField ? `${basePurpose}_${fileField}` : basePurpose
@@ -127,26 +233,43 @@ function formatAcademicRecord(record: AcademicRankRow) {
     ...record,
     [ORDER_NO_FIELD]: record[ORDER_NO_FIELD] ?? record.order_no ?? '',
     [RANKING_TYPE_FIELD]: record[RANKING_TYPE_FIELD] ?? record.ranking_type ?? '',
+    special_reward: record.special_month_reward ?? record.special_reward ?? null,
     [SPECIAL_COMPENSATION_FIELD]:
-      record[SPECIAL_COMPENSATION_FIELD] ?? record.special_compensation ?? null,
+      record[SPECIAL_COMPENSATION_FIELD] ?? record.special_reward ?? record.special_compensation ?? null,
     awarded_date: record.awarded_date ? formatDateInput(record.awarded_date) : null,
+    approval_date: record.approval_date ? formatDateInput(record.approval_date) : null,
   }
 }
 
-function buildAcademicPayload(values: AcademicRankFormValue, currentRecord?: AcademicRankRow, personId?: string) {
+function buildAcademicPayload(
+  values: AcademicRankFormValue,
+  currentRecord?: AcademicRankRow,
+  personId?: string,
+) {
   const {
     [FILE_FIELD]: _fileField,
     [ORDER_NO_FIELD]: orderNoField,
     [RANKING_TYPE_FIELD]: rankingTypeField,
     [SPECIAL_COMPENSATION_FIELD]: specialCompensationField,
+    special_compensation: _payloadLegacySpecialCompensation,
+    special_reward: specialMonthRewardField,
+    awarded_date: awardedDateField,
+    approval_date: approvalDateField,
     ...payload
   } = values
   const {
     [ORDER_NO_FIELD]: _currentOrderNoField,
     [RANKING_TYPE_FIELD]: _currentRankingTypeField,
     [SPECIAL_COMPENSATION_FIELD]: _currentSpecialCompensationField,
+    special_compensation: _currentLegacySpecialCompensation,
+    special_reward: _currentSpecialMonthRewardField,
+    awarded_date: _currentAwardedDateField,
+    approval_date: _currentApprovalDateField,
     ...currentRecordPayload
   } = currentRecord || {}
+  const awardedDateValue = awardedDateField ?? payload.awarded_date ?? currentRecord?.awarded_date
+  const approvalDateValue =
+    approvalDateField ?? payload.approval_date ?? currentRecord?.approval_date
 
   return {
     ...currentRecordPayload,
@@ -156,85 +279,154 @@ function buildAcademicPayload(values: AcademicRankFormValue, currentRecord?: Aca
     order_no: orderNoField ?? payload.order_no ?? currentRecord?.order_no ?? '',
     ranking_type:
       rankingTypeField ?? payload.ranking_type ?? currentRecord?.ranking_type ?? '',
-    special_compensation:
-      specialCompensationField ??
-      payload.special_compensation ??
-      currentRecord?.special_compensation ??
-      null,
-    awarded_date: values.awarded_date ? formatDateInput(values.awarded_date) : null,
+    reward: normalizeAcademicNumber(values.reward ?? payload.reward ?? currentRecord?.reward),
+    special_month_reward:
+      normalizeAcademicNumber(
+        specialMonthRewardField ??
+          payload.special_month_reward ??
+          currentRecord?.special_month_reward,
+      ),
+    special_reward:
+      normalizeAcademicNumber(
+        specialCompensationField ?? payload.special_reward ?? currentRecord?.special_reward,
+      ),
+    position_reward: normalizeAcademicNumber(
+      values.position_reward ?? payload.position_reward ?? currentRecord?.position_reward,
+    ),
+    awarded_date: awardedDateValue ? formatDateInput(awardedDateValue) : null,
+    approval_date: approvalDateValue ? formatDateInput(approvalDateValue) : null,
     created_at: currentRecord?.created_at || new Date().toISOString(),
     updated_at: currentRecord?.id ? new Date().toISOString() : null,
   }
 }
 
 function resolveAcademicPersonId(values: AcademicRankFormValue, currentRecord?: AcademicRankRow) {
-  return getPersonId() || currentRecord?.person_id || values.person_id || academicRankData.value.find((record) => record.person_id)?.person_id || ''
+  return (
+    getPersonId() ||
+    currentRecord?.person_id ||
+    values.person_id ||
+    academicRankData.value.find((record) => record.person_id)?.person_id ||
+    ''
+  )
 }
 
 function extractAcademicResponse(data: unknown) {
-  if (!Array.isArray(data)) return { records: [] as AcademicRankRow[], allDocumentLinks: [] as DocumentLinkRow[] }
+  if (!Array.isArray(data)) {
+    return { records: [] as AcademicRankRow[], allDocumentLinks: [] as DocumentLinkRow[] }
+  }
+
   const source = Array.isArray(data[0]) ? data[0] : data
   const records = ((source as AcademicRankRow[]) || []).map(formatAcademicRecord)
-  const allDocumentLinks = records.flatMap((record) => (record.document_links || []) as DocumentLinkRow[])
+  const allDocumentLinks = records.flatMap(
+    (record) => (record.document_links || []) as DocumentLinkRow[],
+  )
+
   return {
     records,
-    allDocumentLinks: Array.from(new Map(allDocumentLinks.map((link) => [link.id || `${link.entity_id}-${link.document_key}-${link.created_at}`, link])).values()),
+    allDocumentLinks: Array.from(
+      new Map(
+        allDocumentLinks.map((link) => [
+          link.id || `${link.entity_id}-${link.document_key}-${link.created_at}`,
+          link,
+        ]),
+      ).values(),
+    ),
   }
 }
 
 function createExistingAcademicFile(file: FileDocument, link?: DocumentLinkRow): ExistingAcademicFile {
-  return { name: file.original_filename, size: file.size, type: file.content_type, resource_id: file.resource_id, url: file.url, existing: true, document_link_id: link?.id }
+  return {
+    name: file.original_filename,
+    size: file.size,
+    type: file.content_type,
+    resource_id: file.resource_id,
+    url: file.url,
+    existing: true,
+    document_link_id: link?.id,
+  }
 }
 
 async function getAcademicFiles(record: AcademicRankRow, documentLinks: DocumentLinkRow[]) {
-  const matchedLinks = documentLinks.filter((link) => link.entity_id === record.id && Boolean(link.document_key))
+  const matchedLinks = documentLinks.filter(
+    (link) => link.entity_id === record.id && Boolean(link.document_key),
+  )
   if (!matchedLinks.length) return []
+
   const results = await Promise.allSettled(
     matchedLinks.map(async (link) => {
       const response = await getFileDocumentRows<FileDocument>(link.document_key)
       return createExistingAcademicFile(response.data, link)
     }),
   )
+
   return results.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : []))
 }
 
 async function getAcademicRankData() {
   loading.value = true
+
   try {
     const personId = getPersonId()
     if (!personId) {
       academicRankData.value = []
       documentLinksByAcademic.value = {}
       formRenderKey.value += 1
-      toast.error('ไม่พบข้อมูลครู กรุณาบันทึกข้อมูลส่วนบุคคลก่อน', { position: 'bottom-right' })
+      toast.error('ไม่พบข้อมูลครู กรุณาบันทึกข้อมูลส่วนบุคคลก่อน', {
+        position: 'bottom-right',
+      })
       return
     }
 
-    const response = await getDatasetRows<AcademicRankRow>(DATASET_GET.DATASET_ID, DATASET_GET.DATASET_VERSION_ACADEMIC_RANK, {
-      view: GET_VIEW,
-      page: 1,
-      per_page: 50,
-      where: [[{
-        table_name: 'academic_rank',
-        field: 'person_id',
-        operator: '=',
-        value: personId,
-      }]],
-    })
+    const response = await getDatasetRows<AcademicRankRow>(
+      ACADEMIC_DATASET_CONFIG.DATASET_ID,
+      ACADEMIC_DATASET_CONFIG.DATASET_VERSION,
+      {
+        view: GET_VIEW,
+        page: 1,
+        per_page: 50,
+        where: [
+          [
+            {
+              table_name: 'academic_rank',
+              field: 'person_id',
+              operator: '=',
+              value: personId,
+            },
+          ],
+        ],
+      },
+    )
     const { records, allDocumentLinks } = extractAcademicResponse(response.data)
 
     documentLinksByAcademic.value = Object.fromEntries(
-      records.filter((record) => Boolean(record.id)).map((record) => [record.id as string, allDocumentLinks.filter((link) => link.entity_id === record.id)]),
+      records
+        .filter((record) => Boolean(record.id))
+        .map((record) => [
+          record.id as string,
+          allDocumentLinks.filter((link) => link.entity_id === record.id),
+        ]),
     )
 
     academicRankData.value = await Promise.all(
-      records.map(async (record) => ({ ...record, person_id: record.person_id || personId, 'order-file': await getAcademicFiles(record, documentLinksByAcademic.value[record.id || ''] || []) })),
+      records.map(async (record) => ({
+        ...record,
+        person_id: record.person_id || personId,
+        'order-file': await getAcademicFiles(
+          record,
+          documentLinksByAcademic.value[record.id || ''] || [],
+        ),
+      })),
     )
 
     formRenderKey.value += 1
   } catch (error: any) {
     console.error('Academic Rank API Error:', error)
-    toast.error(`โหลดข้อมูลประวัติวิทยฐานะไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, { position: 'bottom-right' })
+    toast.error(
+      `โหลดข้อมูลประวัติวิทยฐานะไม่สำเร็จ: ${error?.response?.data?.message || error.message}`,
+      {
+        position: 'bottom-right',
+      },
+    )
     academicRankData.value = []
     documentLinksByAcademic.value = {}
     formRenderKey.value += 1
@@ -245,13 +437,21 @@ async function getAcademicRankData() {
 
 async function uploadAcademicFiles(files: File[]) {
   if (!files.length) return []
-  const params: CreateFileDocumentParams = { path: 'file-req', folder: 'file', uploaded_by: getCurrentUserName(), description: 'ประวัติวิทยฐานะ' }
+
+  const params: CreateFileDocumentParams = {
+    path: 'file-req',
+    folder: 'file',
+    uploaded_by: getCurrentUserName(),
+    description: 'ประวัติวิทยฐานะ',
+  }
   const uploadedKeys: string[] = []
+
   for (const file of files) {
     const response = await createFileDocument<FileDocument>(file, params)
     if (!response.data?.resource_id) throw new Error('อัปโหลดไฟล์ไม่สำเร็จ')
     uploadedKeys.push(response.data.resource_id)
   }
+
   return uploadedKeys
 }
 
@@ -295,6 +495,7 @@ async function deleteAcademicRankData(recordId: string) {
 
 async function storeAcademicFiles(documentIds: string[], record: AcademicRankRow) {
   const createdLinks: DocumentLinkRow[] = []
+
   for (const documentId of documentIds) {
     const response = await createDatasetRow<DocumentLinkRow>(
       DOCUMENT_LINK_DATASET_CONFIG.DATASET_ID,
@@ -311,6 +512,7 @@ async function storeAcademicFiles(documentIds: string[], record: AcademicRankRow
     )
     createdLinks.push(response.data)
   }
+
   return createdLinks
 }
 
@@ -330,14 +532,19 @@ async function persistAcademicRank(index: number, values: AcademicRankFormValue)
   const currentRecord = academicRankData.value[index]
   const personId = getPersonId() || resolveAcademicPersonId(values, currentRecord)
   if (!personId) {
-    toast.error('ไม่พบข้อมูลครู กรุณาบันทึกข้อมูลส่วนบุคคลก่อน', { position: 'bottom-right' })
+    toast.error('ไม่พบข้อมูลครู กรุณาบันทึกข้อมูลส่วนบุคคลก่อน', {
+      position: 'bottom-right',
+    })
     return
   }
+
   const payload = buildAcademicPayload(values, currentRecord, personId)
   const currentFiles = normalizeAcademicFiles(values[FILE_FIELD])
   const existingFiles = currentFiles.filter(isExistingAcademicFile)
   const newFiles = currentFiles.filter((file): file is File => file instanceof File)
-  const currentLinks = currentRecord?.id ? documentLinksByAcademic.value[currentRecord.id] || [] : []
+  const currentLinks = currentRecord?.id
+    ? documentLinksByAcademic.value[currentRecord.id] || []
+    : []
   const keptDocumentKeys = new Set(existingFiles.map((file) => file.resource_id))
   const removedLinks = currentLinks.filter((link) => !keptDocumentKeys.has(link.document_key))
   const hasFileChanges = removedLinks.length > 0 || newFiles.length > 0
@@ -352,23 +559,35 @@ async function persistAcademicRank(index: number, values: AcademicRankFormValue)
       createdRecordId = createdRecord.data?.id || ''
       uploadedDocumentKeys = await uploadAcademicFiles(newFiles)
       if (uploadedDocumentKeys.length) {
-        createdDocumentLinks = await storeAcademicFiles(uploadedDocumentKeys, { ...createdRecord.data, ...payload, id: createdRecordId })
+        createdDocumentLinks = await storeAcademicFiles(uploadedDocumentKeys, {
+          ...createdRecord.data,
+          ...payload,
+          id: createdRecordId,
+        })
       }
-      toast.success('บันทึกข้อมูลประวัติวิทยฐานะสำเร็จ', { position: 'bottom-right' })
+      toast.success('บันทึกข้อมูลประวัติวิทยฐานะสำเร็จ', {
+        position: 'bottom-right',
+      })
       await getAcademicRankData()
       return
     }
 
     if (!hasFileChanges) {
       await updateAcademicRankData(currentRecord.id, payload)
-      toast.success('บันทึกข้อมูลประวัติวิทยฐานะสำเร็จ', { position: 'bottom-right' })
+      toast.success('บันทึกข้อมูลประวัติวิทยฐานะสำเร็จ', {
+        position: 'bottom-right',
+      })
       await getAcademicRankData()
       return
     }
 
     if (newFiles.length) {
       uploadedDocumentKeys = await uploadAcademicFiles(newFiles)
-      createdDocumentLinks = await storeAcademicFiles(uploadedDocumentKeys, { ...currentRecord, ...payload, id: currentRecord.id })
+      createdDocumentLinks = await storeAcademicFiles(uploadedDocumentKeys, {
+        ...currentRecord,
+        ...payload,
+        id: currentRecord.id,
+      })
     }
 
     await updateAcademicRankData(currentRecord.id, payload)
@@ -378,7 +597,9 @@ async function persistAcademicRank(index: number, values: AcademicRankFormValue)
       await deleteAcademicFiles(removedLinks.map((link) => link.document_key))
     }
 
-    toast.success('บันทึกข้อมูลประวัติวิทยฐานะสำเร็จ', { position: 'bottom-right' })
+    toast.success('บันทึกข้อมูลประวัติวิทยฐานะสำเร็จ', {
+      position: 'bottom-right',
+    })
     await getAcademicRankData()
   } catch (error: any) {
     if (createdDocumentLinks.length) {
@@ -406,7 +627,12 @@ async function persistAcademicRank(index: number, values: AcademicRankFormValue)
     }
 
     console.error('Academic Rank Save Error:', error)
-    toast.error(`บันทึกข้อมูลประวัติวิทยฐานะไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, { position: 'bottom-right' })
+    toast.error(
+      `บันทึกข้อมูลประวัติวิทยฐานะไม่สำเร็จ: ${error?.response?.data?.message || error.message}`,
+      {
+        position: 'bottom-right',
+      },
+    )
   }
 }
 
@@ -421,7 +647,9 @@ function handleSave(index: number, values: Record<string, any>) {
 async function deleteAcademicRankWithFiles(recordId?: string, currentRecord?: AcademicRankFormValue) {
   try {
     if (!recordId || !currentRecord?.id) {
-      toast.success('ลบข้อมูลประวัติวิทยฐานะสำเร็จ', { position: 'bottom-right' })
+      toast.success('ลบข้อมูลประวัติวิทยฐานะสำเร็จ', {
+        position: 'bottom-right',
+      })
       await getAcademicRankData()
       return
     }
@@ -433,11 +661,18 @@ async function deleteAcademicRankWithFiles(recordId?: string, currentRecord?: Ac
     }
 
     await deleteAcademicRankData(recordId)
-    toast.success('ลบข้อมูลประวัติวิทยฐานะสำเร็จ', { position: 'bottom-right' })
+    toast.success('ลบข้อมูลประวัติวิทยฐานะสำเร็จ', {
+      position: 'bottom-right',
+    })
     await getAcademicRankData()
   } catch (error: any) {
     console.error('Academic Rank Delete Error:', error)
-    toast.error(`ลบข้อมูลประวัติวิทยฐานะไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, { position: 'bottom-right' })
+    toast.error(
+      `ลบข้อมูลประวัติวิทยฐานะไม่สำเร็จ: ${error?.response?.data?.message || error.message}`,
+      {
+        position: 'bottom-right',
+      },
+    )
     await getAcademicRankData()
   }
 }
@@ -470,9 +705,18 @@ async function updateData(confirmed: boolean) {
 
 function handleDelete(index: number, recordId?: string) {
   if (busyEntries.value[index]) return
-  pendingAction.value = { type: 'delete', index, recordId, values: academicRankData.value[index] }
+  pendingAction.value = {
+    type: 'delete',
+    index,
+    recordId,
+    values: academicRankData.value[index],
+  }
   action.value = 'delete'
-  modalValue.value = `วิทยฐานะ ${academicRankData.value[index]?.[RANKING_TYPE_FIELD] || academicRankData.value[index]?.ranking_type || ''}`
+  modalValue.value = `วิทยฐานะ ${
+    academicRankData.value[index]?.[RANKING_TYPE_FIELD] ||
+    academicRankData.value[index]?.ranking_type ||
+    ''
+  }`
   confirmModal.value = true
 }
 
@@ -482,7 +726,7 @@ onMounted(() => {
     teacherStore.setPersonId(idFromUrl)
   }
 
-  getAcademicRankData()
+  void getAcademicRankData()
 })
 </script>
 

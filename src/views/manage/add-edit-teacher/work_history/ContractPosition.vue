@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import CreateForm from '@/components/form/CreateForm.vue'
-import { DATASET_DELETE, DATASET_EDIT, DATASET_GET, DOCUMENT_DELETE, DOCUMENT_EDIT } from '@/lib/constants'
+import { MANAGE_DATASETS, MANAGE_DROPDOWN_DATASETS } from '@/lib/constants'
 import { formatDateInput, generateUUID } from '@/lib/helpers'
 import { useAuthStore } from '@/stores/auth'
 import { useTeacherStore } from '@/stores/teachers'
 import { createFileDocument, deleteFileDocument, getFileDocumentRows } from '@/stores/document'
-import { createDatasetRow, deleteDatasetRow, getDatasetRows, updateDatasetRow } from '@/stores/dataset'
+import {
+  createDatasetRow,
+  deleteDatasetRow,
+  getDatasetRows,
+  updateDatasetRow,
+} from '@/stores/dataset'
 import type { CreateFileDocumentParams, FileDocument } from '@/types/document'
 import type { DocumentLink } from '@/types/document_request'
 import { onMounted, ref } from 'vue'
@@ -14,22 +19,58 @@ import { useRoute } from 'vue-router'
 import { toast } from 'vue-sonner'
 
 type DocumentLinkRow = DocumentLink & { id?: string }
-type ExistingContractFile = { name: string; size: number; type?: string; resource_id: string; url?: string; existing: true; document_link_id?: string }
+type ExistingContractFile = {
+  name: string
+  size: number
+  type?: string
+  resource_id: string
+  url?: string
+  existing: true
+  document_link_id?: string
+}
 type ContractFileItem = File | ExistingContractFile
-type ContractRow = Record<string, any> & { id?: string; person_id?: string; document_links?: DocumentLinkRow[] }
+type ContractRow = Record<string, any> & {
+  id?: string
+  person_id?: string
+  document_links?: DocumentLinkRow[]
+}
+type RoleRow = {
+  id?: number | string
+  role_id?: number | string
+  roles_id?: number | string
+  role_name_th?: string
+  roles_name_th?: string
+  name_th?: string
+  name?: string
+}
 type ContractFormValue = ContractRow & { file?: ContractFileItem[] }
-type CreateFormField = { name: string; label?: string; type: 'text' | 'date' | 'date-range' | 'select' | 'number' | 'email' | 'textarea' | 'file'; placeholder?: string; required?: boolean; disabled?: boolean; isShow?: boolean; options?: { label: string; value: any }[]; accept?: string; multiple?: boolean }
+type CreateFormField = {
+  name: string
+  label?: string
+  type: 'text' | 'date' | 'date-range' | 'select' | 'number' | 'email' | 'textarea' | 'file'
+  placeholder?: string
+  required?: boolean
+  disabled?: boolean
+  isShow?: boolean
+  options?: { label: string; value: any }[]
+  accept?: string
+  multiple?: boolean
+}
 type CreateFormSection = { topic?: string; content: CreateFormField[] }
 
-const GET_VIEW = 'contract_get'
-const EDIT_VIEW = 'contract_update'
 const ENTITY_TABLE = 'history_position'
 const FILE_FIELD = 'file'
 
-const DATASET_CONFIG = { DATASET_ID: DATASET_EDIT.DATASET_ID, DATASET_VERSION: DATASET_EDIT.DATASET_VERSION_CONTRACT_POSITION, VIEW_NAME: EDIT_VIEW } as const
-const DELETE_CONFIG = { DATASET_ID: DATASET_DELETE.DATASET_ID, DATASET_VERSION: DATASET_DELETE.DATASET_VERSION_CONTRACT_POSITION } as const
-const DOCUMENT_CREATE_CONFIG = { DATASET_ID: DOCUMENT_EDIT.DATASET_ID, DATASET_VERSION: DOCUMENT_EDIT.DATASET_VERSION_DOCUMENT_LINK, VIEW_NAME: 'file_view' } as const
-const DOCUMENT_DELETE_CONFIG = { DATASET_ID: DOCUMENT_DELETE.DATASET_ID, DATASET_VERSION: DOCUMENT_DELETE.DATASET_VERSION } as const
+const CONTRACT_POSITION_DATASET = {
+  DATASET_ID: MANAGE_DATASETS.DATASET_ID,
+  DATASET_VERSION: MANAGE_DATASETS.DATASET_VERSION_CONTRACT_POSITION,
+  VIEW_NAME: MANAGE_DATASETS.VIEW_CONTRACT_POSITION,
+} as const
+const DOCUMENT_LINK_DATASET = {
+  DATASET_ID: MANAGE_DATASETS.DATASET_ID,
+  DATASET_VERSION: MANAGE_DATASETS.DATASET_VERSION_DOCUMENT_LINK,
+  VIEW_NAME: 'file_view',
+} as const
 
 const route = useRoute()
 const teacherStore = useTeacherStore()
@@ -40,6 +81,7 @@ const busyEntries = ref<Record<number, 'save' | 'delete'>>({})
 const contractPositionData = ref<ContractFormValue[]>([])
 const documentLinksByContract = ref<Record<string, DocumentLinkRow[]>>({})
 const formRenderKey = ref(0)
+const positionOptions = ref<{ label: string; value: string }[]>([])
 
 const confirmModal = ref(false)
 const action = ref('update')
@@ -62,20 +104,111 @@ function getPersonId() {
   return personId
 }
 
-const contractFields: CreateFormSection[][] = [[
-  {
-    content: [
-      { name: 'date', label: 'วันเดือนปี', type: 'date', required: true, placeholder: '-', disabled: false },
-      { name: 'position', label: 'ตำแหน่ง', type: 'text', required: true, placeholder: '-', disabled: false },
-      { name: 'salary', label: 'เงินเดือน', type: 'number', required: true, placeholder: '-', disabled: false },
-      { name: 'contract_number', label: 'เลขที่คำสั่ง/สัญญาจ้าง', type: 'text', required: true, placeholder: '', disabled: false },
-      { name: 'file', label: 'ดาวน์โหลดไฟล์', type: 'file', accept: '.pdf,.jpg,.png', multiple: true ,required: true },
-    ],
-  },
-]]
+const contractFields: CreateFormSection[][] = [
+  [
+    {
+      content: [
+        {
+          name: 'date',
+          label: 'วันเดือนปี',
+          type: 'date',
+          required: true,
+          placeholder: '-',
+          disabled: false,
+        },
+        {
+          name: 'position',
+          label: 'ตำแหน่ง',
+          type: 'select',
+          required: true,
+          placeholder: 'เลือกตำแหน่ง',
+          disabled: false,
+          options: positionOptions.value,
+        },
+        {
+          name: 'salary',
+          label: 'เงินเดือน',
+          type: 'number',
+          required: true,
+          placeholder: '-',
+          disabled: false,
+        },
+        {
+          name: 'contract_number',
+          label: 'เลขที่คำสั่ง/สัญญาจ้าง',
+          type: 'text',
+          required: true,
+          placeholder: '',
+          disabled: false,
+        },
+        {
+          name: 'file',
+          label: 'ดาวน์โหลดไฟล์',
+          type: 'file',
+          accept: '.pdf,.jpg,.png',
+          multiple: true,
+          required: true,
+        },
+      ],
+    },
+  ],
+]
 
 function getCurrentUserName() {
-  return authStore.user?.name || authStore.user?.given_name || authStore.user?.email || 'current-user'
+  return (
+    authStore.user?.name || authStore.user?.given_name || authStore.user?.email || 'current-user'
+  )
+}
+
+function mapDropdownOptions<T extends Record<string, any>>(rows: T[], labelKeys: string[]) {
+  return Array.from(
+    new Map(
+      rows
+        .map((item) => {
+          const label = labelKeys.map((key) => item[key]).find((candidate) => Boolean(candidate))
+
+          if (!label) return null
+
+          return {
+            label: String(label),
+            value: String(label),
+          }
+        })
+        .filter((item): item is { label: string; value: string } => Boolean(item))
+        .map((item) => [item.value, item]),
+    ).values(),
+  )
+}
+
+async function fetchPositionOptions() {
+  try {
+    for (const viewName of ['roles', 'role']) {
+      const response = await getDatasetRows<RoleRow>(
+        MANAGE_DROPDOWN_DATASETS.DATASET_ID,
+        MANAGE_DROPDOWN_DATASETS.DATASET_VERSION_ROLES,
+        {
+          view: viewName,
+          page: 1,
+          per_page: 100,
+        },
+      )
+
+      const mappedOptions = mapDropdownOptions(response.data || [], [
+        'role_name_th',
+        'roles_name_th',
+        'name_th',
+        'name',
+      ])
+
+      if (mappedOptions.length > 0) {
+        positionOptions.value.splice(0, positionOptions.value.length, ...mappedOptions)
+        formRenderKey.value += 1
+        return
+      }
+    }
+  } catch (error) {
+    console.error('Failed to load contract position options:', error)
+  }
 }
 
 function normalizeContractFiles(value: unknown): ContractFileItem[] {
@@ -97,7 +230,11 @@ function formatContractRecord(record: ContractRow) {
   return { ...record, date: record.date ? formatDateInput(record.date) : null }
 }
 
-function buildContractPayload(values: ContractFormValue, currentRecord?: ContractRow, personId?: string) {
+function buildContractPayload(
+  values: ContractFormValue,
+  currentRecord?: ContractRow,
+  personId?: string,
+) {
   const payload = { ...values }
   delete payload[FILE_FIELD]
   return {
@@ -112,27 +249,59 @@ function buildContractPayload(values: ContractFormValue, currentRecord?: Contrac
 }
 
 function resolveContractPersonId(values: ContractFormValue, currentRecord?: ContractRow) {
-  return getPersonId() || currentRecord?.person_id || values.person_id || contractPositionData.value.find((record) => record.person_id)?.person_id || ''
+  return (
+    getPersonId() ||
+    currentRecord?.person_id ||
+    values.person_id ||
+    contractPositionData.value.find((record) => record.person_id)?.person_id ||
+    ''
+  )
 }
 
 function extractContractResponse(data: unknown) {
-  if (!Array.isArray(data)) return { records: [] as ContractRow[], allDocumentLinks: [] as DocumentLinkRow[] }
+  if (!Array.isArray(data))
+    return { records: [] as ContractRow[], allDocumentLinks: [] as DocumentLinkRow[] }
   const source = Array.isArray(data[0]) ? data[0] : data
   const root = Array.isArray(source) ? source[0] : source
-  const records = ((root?.contract_positions || root?.person_addresses || source) as ContractRow[] | undefined || []).map(formatContractRecord)
-  const allDocumentLinks = records.flatMap((record) => (record.document_links || []) as DocumentLinkRow[])
+  const records = (
+    ((root?.history_position || root?.contract_positions || source) as ContractRow[] | undefined) ||
+    []
+  ).map(formatContractRecord)
+  const allDocumentLinks = records.flatMap(
+    (record) => (record.document_links || []) as DocumentLinkRow[],
+  )
   return {
     records,
-    allDocumentLinks: Array.from(new Map(allDocumentLinks.map((link) => [link.id || `${link.entity_id}-${link.document_key}-${link.created_at}`, link])).values()),
+    allDocumentLinks: Array.from(
+      new Map(
+        allDocumentLinks.map((link) => [
+          link.id || `${link.entity_id}-${link.document_key}-${link.created_at}`,
+          link,
+        ]),
+      ).values(),
+    ),
   }
 }
 
-function createExistingContractFile(file: FileDocument, link?: DocumentLinkRow): ExistingContractFile {
-  return { name: file.original_filename, size: file.size, type: file.content_type, resource_id: file.resource_id, url: file.url, existing: true, document_link_id: link?.id }
+function createExistingContractFile(
+  file: FileDocument,
+  link?: DocumentLinkRow,
+): ExistingContractFile {
+  return {
+    name: file.original_filename,
+    size: file.size,
+    type: file.content_type,
+    resource_id: file.resource_id,
+    url: file.url,
+    existing: true,
+    document_link_id: link?.id,
+  }
 }
 
 async function getContractFiles(record: ContractRow, documentLinks: DocumentLinkRow[]) {
-  const matchedLinks = documentLinks.filter((link) => link.entity_id === record.id && Boolean(link.document_key))
+  const matchedLinks = documentLinks.filter(
+    (link) => link.entity_id === record.id && Boolean(link.document_key),
+  )
   if (!matchedLinks.length) return []
   const results = await Promise.allSettled(
     matchedLinks.map(async (link) => {
@@ -147,36 +316,55 @@ async function getContractPositionData() {
   loading.value = true
   try {
     const personId = getPersonId()
+
     if (!personId) {
       contractPositionData.value = []
       documentLinksByContract.value = {}
       formRenderKey.value += 1
-      toast.error('ไม่พบข้อมูลครู กรุณาบันทึกข้อมูลส่วนบุคคลก่อน', { position: 'bottom-right' })
+      toast.error('à¹„à¸¡à¹ˆà¸žà¸šà¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸„à¸£à¸¹ à¸à¸£à¸¸à¸“à¸²à¸šà¸±à¸™à¸—à¸¶à¸à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥à¸à¹ˆà¸­à¸™', {
+        position: 'bottom-right',
+      })
       return
     }
 
-    const response = await getDatasetRows<ContractRow>(DATASET_GET.DATASET_ID, DATASET_GET.DATASET_VERSION_CONTRACT_POSITION, {
-      view: GET_VIEW,
-      page: 1,
-      per_page: 50,
-      where: [[{
-        table_name: 'contract_positions',
-        field: 'person_id',
-        operator: '=',
-        value: personId,
-      }]],
-    })
+    const response = await getDatasetRows<ContractRow>(
+      CONTRACT_POSITION_DATASET.DATASET_ID,
+      CONTRACT_POSITION_DATASET.DATASET_VERSION,
+      {
+        view: CONTRACT_POSITION_DATASET.VIEW_NAME,
+        page: 1,
+        per_page: 50,
+        where: [[{
+          table_name: CONTRACT_POSITION_DATASET.VIEW_NAME,
+          field: 'person_id',
+          operator: '=',
+          value: personId,
+        }]],
+      },
+    )
     const { records, allDocumentLinks } = extractContractResponse(response.data)
     documentLinksByContract.value = Object.fromEntries(
-      records.filter((record) => Boolean(record.id)).map((record) => [record.id as string, allDocumentLinks.filter((link) => link.entity_id === record.id)]),
+      records
+        .filter((record) => Boolean(record.id))
+        .map((record) => [
+          record.id as string,
+          allDocumentLinks.filter((link) => link.entity_id === record.id),
+        ]),
     )
     contractPositionData.value = await Promise.all(
-      records.map(async (record) => ({ ...record, person_id: record.person_id || personId, file: await getContractFiles(record, documentLinksByContract.value[record.id || ''] || []) })),
+      records.map(async (record) => ({
+        ...record,
+        person_id: record.person_id || personId,
+        file: await getContractFiles(record, documentLinksByContract.value[record.id || ''] || []),
+      })),
     )
     formRenderKey.value += 1
   } catch (error: any) {
     console.error('Contract Position API Error:', error)
-    toast.error(`โหลดข้อมูลประวัติการดำรงตำแหน่งไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, { position: 'bottom-right' })
+    toast.error(
+      `โหลดข้อมูลประวัติการดำรงตำแหน่งไม่สำเร็จ: ${error?.response?.data?.message || error.message}`,
+      { position: 'bottom-right' },
+    )
     contractPositionData.value = []
     documentLinksByContract.value = {}
     formRenderKey.value += 1
@@ -187,7 +375,12 @@ async function getContractPositionData() {
 
 async function uploadContractFiles(files: File[]) {
   if (!files.length) return []
-  const params: CreateFileDocumentParams = { path: 'file-req', folder: 'file', uploaded_by: getCurrentUserName(), description: 'ประวัติการดำรงตำแหน่ง' }
+  const params: CreateFileDocumentParams = {
+    path: 'file-req',
+    folder: 'file',
+    uploaded_by: getCurrentUserName(),
+    description: 'ประวัติการดำรงตำแหน่ง',
+  }
   const uploadedKeys: string[] = []
   for (const file of files) {
     const response = await createFileDocument<FileDocument>(file, params)
@@ -209,23 +402,38 @@ async function deleteContractFiles(documentKeys: string[]) {
 }
 
 async function createContractData(payload: Record<string, any>) {
-  return createDatasetRow<ContractRow>(DATASET_CONFIG.DATASET_ID, DATASET_CONFIG.DATASET_VERSION, payload, DATASET_CONFIG.VIEW_NAME)
+  return createDatasetRow<ContractRow>(
+    CONTRACT_POSITION_DATASET.DATASET_ID,
+    CONTRACT_POSITION_DATASET.DATASET_VERSION,
+    payload,
+    CONTRACT_POSITION_DATASET.VIEW_NAME,
+  )
 }
 
 async function updateContractData(recordId: string, payload: Record<string, any>) {
-  return updateDatasetRow<ContractRow>(DATASET_CONFIG.DATASET_ID, DATASET_CONFIG.DATASET_VERSION, recordId, payload, DATASET_CONFIG.VIEW_NAME)
+  return updateDatasetRow<ContractRow>(
+    CONTRACT_POSITION_DATASET.DATASET_ID,
+    CONTRACT_POSITION_DATASET.DATASET_VERSION,
+    recordId,
+    payload,
+    CONTRACT_POSITION_DATASET.VIEW_NAME,
+  )
 }
 
 async function deleteContractData(recordId: string) {
-  return deleteDatasetRow(DELETE_CONFIG.DATASET_ID, DELETE_CONFIG.DATASET_VERSION, recordId)
+  return deleteDatasetRow(
+    CONTRACT_POSITION_DATASET.DATASET_ID,
+    CONTRACT_POSITION_DATASET.DATASET_VERSION,
+    recordId,
+  )
 }
 
 async function storeContractFiles(documentIds: string[], record: ContractRow) {
   const createdLinks: DocumentLinkRow[] = []
   for (const documentId of documentIds) {
     const response = await createDatasetRow<DocumentLinkRow>(
-      DOCUMENT_CREATE_CONFIG.DATASET_ID,
-      DOCUMENT_CREATE_CONFIG.DATASET_VERSION,
+      DOCUMENT_LINK_DATASET.DATASET_ID,
+      DOCUMENT_LINK_DATASET.DATASET_VERSION,
       {
         document_key: documentId,
         entity_table: ENTITY_TABLE,
@@ -234,7 +442,7 @@ async function storeContractFiles(documentIds: string[], record: ContractRow) {
         person_id: record.person_id || '',
         created_at: new Date().toISOString(),
       },
-      DOCUMENT_CREATE_CONFIG.VIEW_NAME,
+      DOCUMENT_LINK_DATASET.VIEW_NAME,
     )
     createdLinks.push(response.data)
   }
@@ -245,22 +453,32 @@ async function deleteContractDocumentLinks(documentLinks: DocumentLinkRow[]) {
   for (const link of documentLinks) {
     const documentLinkKey = link.id || link.document_key
     if (!documentLinkKey) continue
-    await deleteDatasetRow(DOCUMENT_DELETE_CONFIG.DATASET_ID, DOCUMENT_DELETE_CONFIG.DATASET_VERSION, documentLinkKey)
+    await deleteDatasetRow(
+      DOCUMENT_LINK_DATASET.DATASET_ID,
+      DOCUMENT_LINK_DATASET.DATASET_VERSION,
+      documentLinkKey,
+    )
   }
 }
 
 async function persistContract(index: number, values: ContractFormValue) {
   const currentRecord = contractPositionData.value[index]
-  const personId = getPersonId() || resolveContractPersonId(values, currentRecord)
+  const personId = resolveContractPersonId(values, currentRecord)
+
   if (!personId) {
-    toast.error('ไม่พบข้อมูลครู กรุณาบันทึกข้อมูลส่วนบุคคลก่อน', { position: 'bottom-right' })
+    toast.error('à¹„à¸¡à¹ˆà¸žà¸šà¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸„à¸£à¸¹ à¸à¸£à¸¸à¸“à¸²à¸šà¸±à¸™à¸—à¸¶à¸à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥à¸à¹ˆà¸­à¸™', {
+      position: 'bottom-right',
+    })
     return
   }
+
   const payload = buildContractPayload(values, currentRecord, personId)
   const currentFiles = normalizeContractFiles(values[FILE_FIELD])
   const existingFiles = currentFiles.filter(isExistingContractFile)
   const newFiles = currentFiles.filter((file): file is File => file instanceof File)
-  const currentLinks = currentRecord?.id ? documentLinksByContract.value[currentRecord.id] || [] : []
+  const currentLinks = currentRecord?.id
+    ? documentLinksByContract.value[currentRecord.id] || []
+    : []
   const keptDocumentKeys = new Set(existingFiles.map((file) => file.resource_id))
   const removedLinks = currentLinks.filter((link) => !keptDocumentKeys.has(link.document_key))
   const hasFileChanges = removedLinks.length > 0 || newFiles.length > 0
@@ -275,7 +493,11 @@ async function persistContract(index: number, values: ContractFormValue) {
       createdRecordId = createdRecord.data?.id || ''
       uploadedDocumentKeys = await uploadContractFiles(newFiles)
       if (uploadedDocumentKeys.length) {
-        createdDocumentLinks = await storeContractFiles(uploadedDocumentKeys, { ...createdRecord.data, ...payload, id: createdRecordId })
+        createdDocumentLinks = await storeContractFiles(uploadedDocumentKeys, {
+          ...createdRecord.data,
+          ...payload,
+          id: createdRecordId,
+        })
       }
       toast.success('บันทึกข้อมูลประวัติการดำรงตำแหน่งสำเร็จ', { position: 'bottom-right' })
       await getContractPositionData()
@@ -291,7 +513,11 @@ async function persistContract(index: number, values: ContractFormValue) {
 
     if (newFiles.length) {
       uploadedDocumentKeys = await uploadContractFiles(newFiles)
-      createdDocumentLinks = await storeContractFiles(uploadedDocumentKeys, { ...currentRecord, ...payload, id: currentRecord.id })
+      createdDocumentLinks = await storeContractFiles(uploadedDocumentKeys, {
+        ...currentRecord,
+        ...payload,
+        id: currentRecord.id,
+      })
     }
 
     await updateContractData(currentRecord.id, payload)
@@ -326,7 +552,10 @@ async function persistContract(index: number, values: ContractFormValue) {
       }
     }
     console.error('Contract Save Error:', error)
-    toast.error(`บันทึกข้อมูลประวัติการดำรงตำแหน่งไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, { position: 'bottom-right' })
+    toast.error(
+      `บันทึกข้อมูลประวัติการดำรงตำแหน่งไม่สำเร็จ: ${error?.response?.data?.message || error.message}`,
+      { position: 'bottom-right' },
+    )
   }
 }
 
@@ -355,7 +584,10 @@ async function deleteContractWithFiles(recordId?: string, currentRecord?: Contra
     await getContractPositionData()
   } catch (error: any) {
     console.error('Contract Delete Error:', error)
-    toast.error(`ลบข้อมูลประวัติการดำรงตำแหน่งไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, { position: 'bottom-right' })
+    toast.error(
+      `ลบข้อมูลประวัติการดำรงตำแหน่งไม่สำเร็จ: ${error?.response?.data?.message || error.message}`,
+      { position: 'bottom-right' },
+    )
     await getContractPositionData()
   }
 }
@@ -385,7 +617,12 @@ async function updateData(confirmed: boolean) {
 
 function handleDelete(index: number, recordId?: string) {
   if (busyEntries.value[index]) return
-  pendingAction.value = { type: 'delete', index, recordId, values: contractPositionData.value[index] }
+  pendingAction.value = {
+    type: 'delete',
+    index,
+    recordId,
+    values: contractPositionData.value[index],
+  }
   action.value = 'delete'
   modalValue.value = `สัญญาจ้าง ${contractPositionData.value[index]?.contract_number || ''}`
   confirmModal.value = true
@@ -393,11 +630,13 @@ function handleDelete(index: number, recordId?: string) {
 
 onMounted(() => {
   const idFromUrl = route.query.id as string | undefined
+
   if (idFromUrl && !teacherStore.personId) {
     teacherStore.setPersonId(idFromUrl)
   }
 
-  getContractPositionData()
+  void fetchPositionOptions()
+  void getContractPositionData()
 })
 </script>
 

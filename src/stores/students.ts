@@ -5,6 +5,7 @@ import {
   updateDatasetRow,
   deleteDatasetRow,
 } from '@/stores/dataset'
+import { MANAGE_STUDENT_DATASETS } from '@/lib/constants'
 import type { DatasetListResponse, DatasetRowResponse, DatasetQueryParams } from '@/types/dataset'
 import type {
   Student,
@@ -16,12 +17,12 @@ import type {
   Parent,
 } from '@/types/student'
 
-const STUDENT_DATASET_ID = 'data_student'
-const STUDENT_DATASET_VERSION = 'v1.0.0'
-const ADDRESS_DATASET_ID = 'data_student'
-const ADDRESS_DATASET_VERSION = 'v2.0.0'
-const PARENT_DATASET_ID = 'data_student'
-const PARENT_DATASET_VERSION = 'v3.0.0'
+const STUDENT_DATASET_ID = MANAGE_STUDENT_DATASETS.DATASET_ID
+const STUDENT_DATASET_VERSION = MANAGE_STUDENT_DATASETS.DATASET_VERSION_STUDENT
+const ADDRESS_DATASET_ID = MANAGE_STUDENT_DATASETS.DATASET_ID
+const ADDRESS_DATASET_VERSION = MANAGE_STUDENT_DATASETS.DATASET_VERSION_ADDRESS
+const PARENT_DATASET_ID = MANAGE_STUDENT_DATASETS.DATASET_ID
+const PARENT_DATASET_VERSION = MANAGE_STUDENT_DATASETS.DATASET_VERSION_PARENT
 
 /**
  * Get list of students with pagination and filters

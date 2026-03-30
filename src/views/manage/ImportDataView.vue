@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, ref, type Component } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import MainLayout from '@/layouts/manage/MainLayout.vue'
+import { MANAGE_STUDENT_DATASETS } from '@/lib/constants'
 import { formatDateTime } from '@/lib/helpers'
 import { DATASET_ID, DATASET_VERSION } from '@/stores/dataset'
 import {
@@ -40,8 +41,8 @@ const importTargets: ImportTarget[] = [
     key: 'student',
     label: 'นักเรียน',
     description: 'นำเข้าข้อมูลนักเรียน',
-    datasetId: 'data_student',
-    version: 'v1.0.0',
+    datasetId: MANAGE_STUDENT_DATASETS.DATASET_ID,
+    version: MANAGE_STUDENT_DATASETS.DATASET_VERSION_STUDENT,
     icon: GraduationCap,
   },
   // {
@@ -49,7 +50,7 @@ const importTargets: ImportTarget[] = [
   //   label: 'การลา',
   //   description: 'นำเข้าข้อมูลการลา',
   //   datasetId: 'xxxx',
-  //   version: 'v4.0.0',
+  //   version: 'TBD',
   //   icon: CalendarDays,
   // },
 ]

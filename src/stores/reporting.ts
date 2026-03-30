@@ -1,4 +1,5 @@
 import { dataApiInstance } from '@/stores/api'
+import { MANAGE_REPORTING_DATASETS } from '@/lib/constants'
 import { createDatasetRow, getDatasetRows } from '@/stores/dataset'
 import { generateUUID } from '@/lib/helpers'
 import type { DatasetListResponse, DatasetRowResponse, DatasetQueryParams } from '@/types/dataset'
@@ -21,8 +22,9 @@ import type {
   UploadReportTemplateResponse,
 } from '@/types/reporting'
 
-const REPORT_TEMPLATE_DATASET_ID = 'data_get_view'
-const REPORT_TEMPLATE_DATASET_VERSION = 'v2.7.4'
+const REPORT_TEMPLATE_DATASET_ID = MANAGE_REPORTING_DATASETS.DATASET_ID
+const REPORT_TEMPLATE_DATASET_VERSION =
+  MANAGE_REPORTING_DATASETS.DATASET_VERSION_REPORTING_TEMPLATE
 const REPORTING_TEMPLATE_VIEW = 'reporting_template'
 
 export async function getUrlFile(job_id: string): Promise<GetExportJobResponse> {

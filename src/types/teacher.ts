@@ -67,7 +67,7 @@ export interface FamilyMember {
   id: string
   person_id: string
   relation_type: string
-  prefix_id: number
+  prefix_id: number | string
   first_name_th: string
   middle_name_th?: string
   last_name_th: string

@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import DropDownForm from '@/components/form/DropDownForm.vue'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/composables/useToast'
-import { ROUTE_NAMES } from '@/lib/constants'
+import { MANAGE_DROPDOWN_DATASETS, ROUTE_NAMES } from '@/lib/constants'
 import { generateUUID } from '@/lib/helpers'
 import { createUser } from '@/stores/api'
 import { getDatasetRows } from '@/stores/dataset'
@@ -135,11 +135,15 @@ function mapDropdownOptions<T extends Record<string, any>>(
 
 async function fetchPrefixOptions() {
   try {
-    const response = await getDatasetRows<PrefixRow>('data_get_dropdown', 'v1.0.0', {
-      view: 'prefixes',
-      page: 1,
-      per_page: 100,
-    })
+    const response = await getDatasetRows<PrefixRow>(
+      MANAGE_DROPDOWN_DATASETS.DATASET_ID,
+      MANAGE_DROPDOWN_DATASETS.DATASET_VERSION_PREFIXES,
+      {
+        view: 'prefixes',
+        page: 1,
+        per_page: 100,
+      },
+    )
 
     const mappedOptions = mapDropdownOptions(
       response.data || [],
@@ -158,11 +162,15 @@ async function fetchPrefixOptions() {
 async function fetchRoleOptions() {
   try {
     for (const viewName of ['roles', 'role']) {
-      const response = await getDatasetRows<RoleRow>('data_get_dropdown', 'v2.0.0', {
-        view: viewName,
-        page: 1,
-        per_page: 100,
-      })
+      const response = await getDatasetRows<RoleRow>(
+        MANAGE_DROPDOWN_DATASETS.DATASET_ID,
+        MANAGE_DROPDOWN_DATASETS.DATASET_VERSION_ROLES,
+        {
+          view: viewName,
+          page: 1,
+          per_page: 100,
+        },
+      )
 
       const mappedOptions = mapDropdownOptions(
         response.data || [],
@@ -418,13 +426,14 @@ const handleSave = async () => {
             { label: 'Miss', value: 'Miss' },
           ],
         },
-        {
+
+        { name: 'first_name_en', label: 'Name', type: 'text', placeholder: 'Enter name' },
+                {
           name: 'middle_name_en',
           label: 'Middlename',
           type: 'text',
           placeholder: 'Enter middlename',
         },
-        { name: 'first_name_en', label: 'Name', type: 'text', placeholder: 'Enter name' },
         { name: 'last_name_en', label: 'Lastname', type: 'text', placeholder: 'Enter lastname' },
         {
           name: 'birth_date',

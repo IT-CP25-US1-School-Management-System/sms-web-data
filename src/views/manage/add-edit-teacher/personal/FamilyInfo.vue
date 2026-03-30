@@ -4,8 +4,10 @@ import ConfirmModal from '@/components/ConfirmModal.vue'
 import provincesJson from '@/assets/thai-province-data/provinces.json'
 import districtsJson from '@/assets/thai-province-data/districts.json'
 import subDistrictsJson from '@/assets/thai-province-data/sub_districts.json'
+import { PREFIX_NAME_BY_ID } from '@/lib/helpers'
 import {
   createFamilyMember,
+  deleteFamilyMember,
   getFamilyById,
   updateFamilyMember,
   useTeacherStore,
@@ -47,6 +49,7 @@ const route = useRoute()
 const teacherStore = useTeacherStore()
 
 const loading = ref(false)
+const busyEntries = ref<Record<number, 'save' | 'delete'>>({})
 const familyData = ref<Record<string, any>[]>([])
 const familyFields = ref<CreateFormSection[][]>([])
 
@@ -54,8 +57,11 @@ const action = ref('update')
 const modalTopic = ref('ข้อมูลครอบครัว')
 const modalValue = ref('')
 const confirmModal = ref(false)
-const pendingGroupIndex = ref<number | null>(null)
-const pendingValues = ref<Record<string, any>>({})
+const pendingAction = ref<
+  | { type: 'save'; index: number; values: Record<string, any> }
+  | { type: 'delete'; index: number; recordId?: string }
+  | null
+>(null)
 
 const provinceData = provincesJson as Province[]
 const districtData = districtsJson as District[]
@@ -64,6 +70,10 @@ const subDistrictData = subDistrictsJson as SubDistrict[]
 const provinceOptions = provinceData.map((province) => ({
   label: province.name_th,
   value: String(province.id),
+}))
+const prefixOptions = Object.entries(PREFIX_NAME_BY_ID).map(([value, label]) => ({
+  label,
+  value,
 }))
 
 const provinceNameMap = new Map(
@@ -143,6 +153,7 @@ function normalizeGender(value: unknown): FamilyMember['gender'] | undefined {
 function mapFamilyMemberForForm(member: Partial<FamilyMember>) {
   return {
     ...member,
+    prefix_id: member.prefix_id ? String(member.prefix_id) : '',
     is_alive:
       member.is_alive === undefined || member.is_alive === null
         ? ''
@@ -204,8 +215,9 @@ function createFamilyFields(values: Record<string, any>): CreateFormSection[] {
         {
           name: 'prefix_id',
           label: 'คำนำหน้า',
-          type: 'text',
-          placeholder: 'เช่น นาย / นาง / นางสาว',
+          type: 'select',
+          options: prefixOptions,
+          placeholder: 'เลือกคำนำหน้า',
         },
         {
           name: 'first_name_th',
@@ -484,7 +496,7 @@ function buildFamilyPayload(
     id,
     person_id: String(normalizedValues.person_id || ''),
     relation_type: String(normalizedValues.relation_type || '').trim(),
-    prefix_id: normalizedValues.prefix_id,
+    prefix_id: normalizedValues.prefix_id ? String(normalizedValues.prefix_id) : undefined,
     first_name_th: String(normalizedValues.first_name_th || '').trim(),
     middle_name_th: normalizeText(normalizedValues.middle_name_th),
     last_name_th: String(normalizedValues.last_name_th || '').trim(),
@@ -566,13 +578,68 @@ async function updateFamilyData(groupIndex: number, values?: Record<string, any>
   }
 }
 
-function updateData(confirmed: boolean) {
-  if (confirmed && pendingGroupIndex.value !== null) {
-    void updateFamilyData(pendingGroupIndex.value, pendingValues.value)
+async function deleteFamilyData(familyMemberId?: string) {
+  loading.value = true
+
+  try {
+    if (!familyMemberId) {
+      await getFamilyData()
+      toast.success('ลบข้อมูลครอบครัวสำเร็จ', {
+        position: 'bottom-right',
+      })
+      return
+    }
+
+    await deleteFamilyMember(familyMemberId)
+    await getFamilyData()
+    toast.success('ลบข้อมูลครอบครัวสำเร็จ', {
+      position: 'bottom-right',
+    })
+  } catch (error: any) {
+    console.error('Family Delete API Error:', error)
+    console.error('Error Response:', error?.response?.data)
+    toast.error(
+      `ลบข้อมูลครอบครัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`,
+      {
+        position: 'bottom-right',
+      },
+    )
+  } finally {
+    loading.value = false
   }
-  pendingGroupIndex.value = null
-  pendingValues.value = {}
+}
+
+async function updateData(confirmed: boolean) {
+  if (!confirmed) {
+    pendingAction.value = null
+    confirmModal.value = false
+    return
+  }
+
   confirmModal.value = false
+
+  if (!pendingAction.value) {
+    return
+  }
+
+  const currentAction = pendingAction.value
+  pendingAction.value = null
+  busyEntries.value = {
+    ...busyEntries.value,
+    [currentAction.index]: currentAction.type === 'save' ? 'save' : 'delete',
+  }
+
+  try {
+    if (currentAction.type === 'save') {
+      await updateFamilyData(currentAction.index, currentAction.values)
+      return
+    }
+
+    await deleteFamilyData(currentAction.recordId)
+  } finally {
+    const { [currentAction.index]: _busyEntry, ...restBusyEntries } = busyEntries.value
+    busyEntries.value = restBusyEntries
+  }
 }
 
 function handleChange(groupIndex: number, values?: Record<string, any>) {
@@ -580,10 +647,32 @@ function handleChange(groupIndex: number, values?: Record<string, any>) {
 }
 
 function handleSave(groupIndex: number, values?: Record<string, any>) {
+  if (busyEntries.value[groupIndex]) return
   syncFamilyAddress(groupIndex, values)
-  pendingGroupIndex.value = groupIndex
-  pendingValues.value = values || {}
-  action.value = familyData.value[groupIndex]?.id ? 'update' : 'create'
+  pendingAction.value = {
+    type: 'save',
+    index: groupIndex,
+    values: values || {},
+  }
+  action.value = familyData.value[groupIndex]?.id ? 'update' : 'add'
+  modalValue.value =
+    [familyData.value[groupIndex]?.first_name_th, familyData.value[groupIndex]?.last_name_th]
+      .filter(Boolean)
+      .join(' ') ||
+    familyData.value[groupIndex]?.relation_type ||
+    ''
+  confirmModal.value = true
+}
+
+function handleDelete(groupIndex: number, familyMemberId?: string) {
+  if (busyEntries.value[groupIndex]) return
+
+  pendingAction.value = {
+    type: 'delete',
+    index: groupIndex,
+    recordId: familyMemberId,
+  }
+  action.value = 'delete'
   modalValue.value =
     [familyData.value[groupIndex]?.first_name_th, familyData.value[groupIndex]?.last_name_th]
       .filter(Boolean)
@@ -605,12 +694,15 @@ onMounted(() => {
 
     <CreateForm
       :isDropdown="true"
+      :busyEntries="busyEntries"
       :deferCommitOnSave="true"
+      :deferDeleteOnConfirm="true"
       :values="familyData"
-      :canDelete="false"
+      :canDelete="true"
       :fields="familyFields"
       @change="handleChange"
       @save="handleSave"
+      @delete="handleDelete"
     />
   </div>
 

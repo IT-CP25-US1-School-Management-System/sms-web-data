@@ -105,6 +105,16 @@ export const getImgInitials = (name: string) => {
     .slice(0, 2)
 }
 
+export const PREFIX_NAME_BY_ID: Record<string, string> = {
+  '250ae8ee-9f0a-4b94-a2c4-a475752dc3e6': 'นาย',
+  '6ec2c1dd-ab31-47d3-8870-680baac1b8da': 'นาง',
+  '9b91d6d5-c414-4a92-b44a-2ad07250271c': 'นางสาว',
+}
+
+export const PREFIX_ID_BY_NAME = Object.fromEntries(
+  Object.entries(PREFIX_NAME_BY_ID).map(([id, name]) => [name, id]),
+) as Record<string, string>
+
 export const getPrefixName = (prefixId?: number | string | null): string => {
   const prefixMap: Record<number | string, string> = {
     '250ae8ee-9f0a-4b94-a2c4-a475752dc3e6': 'นาย',
@@ -113,6 +123,15 @@ export const getPrefixName = (prefixId?: number | string | null): string => {
   }
   if (!prefixId) return ''
   return prefixMap[prefixId] || ''
+}
+
+export const getPrefixId = (prefixValue?: number | string | null): string => {
+  if (!prefixValue) return ''
+
+  const normalizedValue = String(prefixValue).trim()
+  if (!normalizedValue) return ''
+
+  return PREFIX_ID_BY_NAME[normalizedValue] || normalizedValue
 }
 
 export const calAge = (birthDate: string | Date): number => {

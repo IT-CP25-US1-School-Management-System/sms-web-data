@@ -7,6 +7,7 @@ import {
   updateDatasetRow,
   deleteDatasetRow,
 } from '@/stores/dataset'
+import { MANAGE_ATTENDANCE_DATASET, MANAGE_DATASETS } from '@/lib/constants'
 import { defineStore } from 'pinia'
 import { ref, readonly } from 'vue'
 import type { DatasetListResponse, DatasetRowResponse, DatasetQueryParams } from '@/types/dataset'
@@ -25,17 +26,16 @@ import type {
 import type { PersonAddress } from '@/types/address'
 import type { DailyAttendanceCreateDTO, DailyAttendanceRecord } from '@/types/attendance'
 
-// TODO: Replace with the correct dataset IDs once configured in the DMS backend
-const ADDRESS_DATASET_ID = 'data_manage'
-const ADDRESS_DATASET_VERSION = 'v2.0.1'
-const FAMILY_DATASET_ID = 'data_manage'
-const FAMILY_DATASET_VERSION = 'v4.0.0'
-const EDUCATION_DATASET_ID = 'data_manage'
-const EDUCATION_DATASET_VERSION = 'v5.0.0'
-const LICENSE_DATASET_ID = 'data_manage'
-const LICENSE_DATASET_VERSION = 'v6.1.0'
-const ATTENDANCE_DATASET_ID = 'data_get_view'
-const ATTENDANCE_DATASET_VERSION = 'v2.6.0'
+const ADDRESS_DATASET_ID = MANAGE_DATASETS.DATASET_ID
+const ADDRESS_DATASET_VERSION = MANAGE_DATASETS.DATASET_VERSION_ADDRESS
+const FAMILY_DATASET_ID = MANAGE_DATASETS.DATASET_ID
+const FAMILY_DATASET_VERSION = MANAGE_DATASETS.DATASET_VERSION_FAMILY
+const EDUCATION_DATASET_ID = MANAGE_DATASETS.DATASET_ID
+const EDUCATION_DATASET_VERSION = MANAGE_DATASETS.DATASET_VERSION_EDUCATION
+const LICENSE_DATASET_ID = MANAGE_DATASETS.DATASET_ID
+const LICENSE_DATASET_VERSION = MANAGE_DATASETS.DATASET_VERSION_LICENSE
+const ATTENDANCE_DATASET_ID = MANAGE_ATTENDANCE_DATASET.DATASET_ID
+const ATTENDANCE_DATASET_VERSION = MANAGE_ATTENDANCE_DATASET.DATASET_VERSION
 
 /**
  * Get list of teachers with pagination and filters
@@ -286,10 +286,17 @@ export async function updateProfessionalLicense(
 ): Promise<DatasetRowResponse<ProfessionalLicense>> {
   return updateDatasetRow<ProfessionalLicense>(
     LICENSE_DATASET_ID,
-    'v6.1.0',
+    LICENSE_DATASET_VERSION,
     licenseId,
     data,
   )
+}
+
+/**
+ * Delete a family member by row ID
+ */
+export async function deleteFamilyMember(familyMemberId: string): Promise<void> {
+  return deleteDatasetRow(FAMILY_DATASET_ID, FAMILY_DATASET_VERSION, familyMemberId)
 }
 
 /**

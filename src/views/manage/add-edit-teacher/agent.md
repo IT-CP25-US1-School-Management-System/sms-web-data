@@ -194,3 +194,52 @@
 ## March 30, 2026 - FamilyInfo update keeps created_at
 
 - `src/views/manage/add-edit-teacher/personal/FamilyInfo.vue` now preserves and resends the existing `created_at` value when updating a family member row.
+- Manage-side dataset IDs and versions are now centralized in `src/lib/constants.ts`, and the related admin stores/views reuse those constants instead of hardcoded literals.
+- `src/views/manage/add-edit-teacher/work_history/ContractPosition.vue` now uses `data_manage / v8.0.0 / history_position` for fetch/create/update/delete, filters by the selected admin `personId`, and uses `MANAGE_DATASETS` for its document-link dataset config.
+- The `position` field in `src/views/manage/add-edit-teacher/work_history/ContractPosition.vue` now loads its select options from `data_get_dropdown` using the same role-source pattern as `PersonalDetail.vue`, while saving the selected role name back into `position`.
+
+## March 30, 2026 - FamilyInfo delete flow and AcademicRank schema alignment
+
+- `src/stores/teachers.ts` now exposes `deleteFamilyMember()` so the manage add-edit-teacher flow can delete family rows through the teacher store like the other admin pages.
+- `src/views/manage/add-edit-teacher/personal/FamilyInfo.vue` now enables the `CreateForm` delete button, defers delete confirmation through `ConfirmModal`, and supports both:
+  - deleting persisted family rows via `deleteFamilyMember()`
+  - removing unsaved local rows by reloading the current family dataset after confirmation
+- `src/views/manage/add-edit-teacher/work_history/AcademicRankHistory.vue` now uses the academic schema field names directly in the form and payload:
+  - `order_no`
+  - `ranking_type`
+  - `position_rank`
+  - `criteria`
+  - `field_of_expertise`
+  - `reward`
+  - `special_month_reward`
+  - `special_reward`
+  - `position_reward`
+  - `awarded_date`
+  - `approval_date`
+- The academic manage page no longer sends the old copied field `special_compensation`, and its modal/save flow now reads `ranking_type` directly instead of the older alias fields.
+- Family `prefix_id` handling now uses helpers from `src/lib/helpers.ts`:
+  - the form displays `prefix_name` from `getPrefixName(prefix_id)`
+  - save/update converts the displayed prefix back with `getPrefixId(...)`
+  - helper-only fields such as `prefix_name` and `prefix_id_raw` are stripped before sending the payload to the backend
+
+## March 30, 2026 - FamilyInfo prefix dropdown and AcademicRank revert
+
+- `src/views/manage/add-edit-teacher/personal/FamilyInfo.vue` now changes the manage-only `prefix_id` field to a dropdown.
+- The manage family prefix options are derived from prefix helper data in `src/lib/helpers.ts` instead of free text entry.
+- The web family page was left unchanged for this dropdown request.
+- `src/views/manage/add-edit-teacher/work_history/AcademicRankHistory.vue` was reverted back to the prior alias-based form version that uses:
+  - `order-no`
+  - `academic-rank`
+  - `special-compensation`
+- The reverted academic form again follows the previous copied flow instead of the newer schema-aligned field set.
+- The reverted academic form now maps its existing alias fields back to DB column names during save without adding new form fields:
+  - `order-no` -> `order_no`
+  - `academic-rank` -> `ranking_type`
+  - `special_reward` -> `special_month_reward`
+  - `special-compensation` -> `special_reward`
+- Existing DB dates such as `approval_date` are normalized with `formatDateInput(...)` before update so the payload stays in `YYYY-MM-DD` format.
+- Academic salary fields on this reverted form are now normalized to numbers before save/update:
+  - `reward`
+  - `special_month_reward` (from form field `special_reward`)
+  - `special_reward` (from form field `special-compensation`)
+  - `position_reward`

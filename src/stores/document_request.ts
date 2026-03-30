@@ -5,17 +5,17 @@ import {
   updateDatasetRow,
   deleteDatasetRow,
 } from '@/stores/dataset'
+import { MANAGE_APPROVAL_LOGS_DATASET, MANAGE_DATASETS } from '@/lib/constants'
 import { defineStore } from 'pinia'
 import { ref, readonly } from 'vue'
 import { generateUUID } from '@/lib/helpers'
 import type { DatasetListResponse, DatasetRowResponse, DatasetQueryParams } from '@/types/dataset'
 import type { DocumentRequest, ApprovalLog } from '@/types/document_request'
 
-const DOCUMENT_REQUESTS_DATASET_ID = 'data_manage'
-const DOCUMENT_REQUESTS_DATASET_VERSION = 'v3.0.2'
-// Approval logs dataset version for view approval_logs
-const APPROVAL_LOGS_DATASET_ID = 'capstone'
-const APPROVAL_LOGS_VERSION = 'v2.0.3'
+const DOCUMENT_REQUESTS_DATASET_ID = MANAGE_DATASETS.DATASET_ID
+const DOCUMENT_REQUESTS_DATASET_VERSION = MANAGE_DATASETS.DATASET_VERSION_DOCUMENT_REQUEST
+const APPROVAL_LOGS_DATASET_ID = MANAGE_APPROVAL_LOGS_DATASET.DATASET_ID
+const APPROVAL_LOGS_VERSION = MANAGE_APPROVAL_LOGS_DATASET.DATASET_VERSION
 /**
  * Get approval logs (view: approval_logs, version: 2.0.3)
  */

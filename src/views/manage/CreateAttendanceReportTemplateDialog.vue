@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { MANAGE_REPORTING_DATASETS } from '@/lib/constants'
 import { Loader2, Minus, Plus, Trash2, Upload } from 'lucide-vue-next'
 import { createReportingTemplateFromUpload, uploadReportTemplate } from '@/stores/reporting'
 import type {
@@ -26,8 +27,8 @@ type TemplateMarker = ReportTemplatePosition
 type ColumnOption = { value: string; label: string }
 
 const VIEW_TABLE_NAME = 'view_attendance_pdf_report'
-const REPORT_DATASET_ID = 'data_get_view'
-const REPORT_VERSION = 'v2.7.5'
+const REPORT_DATASET_ID = MANAGE_REPORTING_DATASETS.DATASET_ID
+const REPORT_VERSION = MANAGE_REPORTING_DATASETS.DATASET_VERSION_ATTENDANCE_REPORT_TEMPLATE
 const MIN_ZOOM = 0.5
 const MAX_ZOOM = 3
 const ZOOM_STEP = 0.25
