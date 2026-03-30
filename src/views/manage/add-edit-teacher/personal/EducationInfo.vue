@@ -366,9 +366,9 @@ onMounted(() => {
   <div class="flex flex-col gap-4">
     <div v-if="loading" class="px-4 text-sm text-muted-foreground sm:px-6">กำลังโหลดข้อมูล...</div>
 
-    <div v-for="(form, index) in educationForms" :key="form.id" class="px-4 sm:px-6">
+    <div v-for="(form) in educationForms" :key="form.id" class="px-4 sm:px-6">
       <NormalForm
-        :topic="`ข้อมูลการศึกษา #${index + 1}`"
+        :topic="`ข้อมูลการศึกษา`"
         :fields="form.fields"
         :values="form.initialValues"
         :ref="(instance) => setFormRef(form.id, instance as NormalFormInstance | null)"

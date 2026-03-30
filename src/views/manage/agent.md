@@ -1330,3 +1330,21 @@ Add a new teacher with minimal data:
   - `special-compensation` -> `special_reward`
 - Existing DB dates such as `approval_date` are normalized to `YYYY-MM-DD` before update payloads are sent.
 - The reverted academic salary fields are also normalized to numbers before save/update for `reward`, `special_month_reward`, `special_reward`, and `position_reward`.
+
+### Add Teacher - ContractPosition maps contract_number to order_no
+
+- `src/views/manage/add-edit-teacher/work_history/ContractPosition.vue` now loads DB `order_no` into the existing `contract_number` field for the form.
+- The manage contract-position save/update flow now sends `order_no` back from that same `contract_number` field, so the dataset receives the expected column without adding a new form field.
+- The same manage contract-position payload now also includes `role_id`, derived from the selected position dropdown (or an existing stored `role_id` on the record).
+
+### Add Teacher - PositionHistory fetch uses manage dataset constants
+
+- `src/views/manage/add-edit-teacher/work_history/PositionHistory.vue` now reads its fetch/export dataset configuration from `MANAGE_DATASETS` instead of the older `DATASET_GET` constants.
+- The manage position-history page now uses `data_manage / v9.0.0 / governments` through shared constants in `src/lib/constants.ts`.
+- That same manage position-history flow now also creates a `governments` row when none exists yet and updates existing rows through the same `data_manage / v9.0.0 / governments` configuration.
+- Its create/update payloads now always include `id` and `created_at`, reusing the generated local form ID for first-time creates.
+- The manage position-history fetch also now supports plain row-list responses and maps DB fields such as `government_entry_date`, `position_date`, and `retirement_date` back into the existing form aliases for display.
+- The same page now also loads `role_id`, `department_id`, and `appointment_type_id` dropdown options from `MANAGE_DROPDOWN_DATASETS`, with `appointment_type_id` coming from `data_get_dropdown / v4.0.0 / appointment_types`.
+- Its `work_status` field now uses a fixed dropdown for `ทำงาน`, `ย้าย`, `เกษียณอายุราชการ`, `ช่วยราชการ`, `ลาออก`, and `เสียชีวิต`.
+- It now treats manage position-history as a single-record form and, if the backend returns multiple `governments` rows, shows only the latest row in the UI.
+- The same manage position-history save flow now submits directly without `ConfirmModal`, because the page no longer exposes a delete action.

@@ -465,9 +465,9 @@ async function onSaveAll() {
 
 <template>
   <div class="flex flex-col gap-4">
-    <div v-for="(form, index) in addressForms" :key="form.id" class="px-4 sm:px-6">
+    <div v-for="(form) in addressForms" :key="form.id" class="px-4 sm:px-6">
       <NormalForm
-        :topic="`ข้อมูลที่อยู่ #${index + 1}`"
+        :topic="`ข้อมูลที่อยู่`"
         :fields="form.fields"
         :values="form.initialValues"
         :ref="(instance) => setFormRef(form.id, instance as NormalFormInstance | null)"

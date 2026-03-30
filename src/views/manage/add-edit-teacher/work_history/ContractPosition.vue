@@ -82,6 +82,8 @@ const contractPositionData = ref<ContractFormValue[]>([])
 const documentLinksByContract = ref<Record<string, DocumentLinkRow[]>>({})
 const formRenderKey = ref(0)
 const positionOptions = ref<{ label: string; value: string }[]>([])
+const roleIdByPosition = new Map<string, string>()
+const positionLabelByRoleId = new Map<string, string>()
 
 const confirmModal = ref(false)
 const action = ref('update')
@@ -180,6 +182,11 @@ function mapDropdownOptions<T extends Record<string, any>>(rows: T[], labelKeys:
   )
 }
 
+function resolveRoleIdFromRow(row: RoleRow) {
+  const roleId = row.id ?? row.role_id ?? row.roles_id
+  return roleId === undefined || roleId === null ? '' : String(roleId)
+}
+
 async function fetchPositionOptions() {
   try {
     for (const viewName of ['roles', 'role']) {
@@ -199,6 +206,20 @@ async function fetchPositionOptions() {
         'name_th',
         'name',
       ])
+
+      roleIdByPosition.clear()
+      positionLabelByRoleId.clear()
+      ;(response.data || []).forEach((row) => {
+        const label = [row.role_name_th, row.roles_name_th, row.name_th, row.name].find(
+          (candidate) => Boolean(candidate),
+        )
+        const roleId = resolveRoleIdFromRow(row)
+
+        if (!label || !roleId) return
+
+        roleIdByPosition.set(String(label), roleId)
+        positionLabelByRoleId.set(roleId, String(label))
+      })
 
       if (mappedOptions.length > 0) {
         positionOptions.value.splice(0, positionOptions.value.length, ...mappedOptions)
@@ -227,7 +248,17 @@ function buildContractPurpose(values: Partial<ContractRow>, fileField?: string) 
 }
 
 function formatContractRecord(record: ContractRow) {
-  return { ...record, date: record.date ? formatDateInput(record.date) : null }
+  const resolvedRoleId = record.role_id ? String(record.role_id) : ''
+  return {
+    ...record,
+    position:
+      record.position ||
+      (resolvedRoleId ? positionLabelByRoleId.get(resolvedRoleId) || record.position : '') ||
+      '',
+    role_id: resolvedRoleId || undefined,
+    contract_number: record.contract_number ?? record.order_no ?? '',
+    date: record.date ? formatDateInput(record.date) : null,
+  }
 }
 
 function buildContractPayload(
@@ -237,11 +268,25 @@ function buildContractPayload(
 ) {
   const payload = { ...values }
   delete payload[FILE_FIELD]
+  const resolvedPosition = String(values.position ?? currentRecord?.position ?? '').trim()
+  const resolvedRoleId =
+    String(values.role_id ?? currentRecord?.role_id ?? '').trim() ||
+    roleIdByPosition.get(resolvedPosition) ||
+    undefined
+
   return {
     ...currentRecord,
     ...payload,
     id: currentRecord?.id || values.id || generateUUID(),
     person_id: personId || currentRecord?.person_id || values.person_id || '',
+    position: resolvedPosition,
+    role_id: resolvedRoleId,
+    order_no:
+      values.contract_number ??
+      payload.order_no ??
+      currentRecord?.order_no ??
+      currentRecord?.contract_number ??
+      '',
     date: values.date ? formatDateInput(values.date) : null,
     created_at: currentRecord?.created_at || new Date().toISOString(),
     updated_at: currentRecord?.id ? new Date().toISOString() : null,
@@ -321,7 +366,7 @@ async function getContractPositionData() {
       contractPositionData.value = []
       documentLinksByContract.value = {}
       formRenderKey.value += 1
-      toast.error('à¹„à¸¡à¹ˆà¸žà¸šà¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸„à¸£à¸¹ à¸à¸£à¸¸à¸“à¸²à¸šà¸±à¸™à¸—à¸¶à¸à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥à¸à¹ˆà¸­à¸™', {
+      toast.error('ไม่พบข้อมูลบุคลากร', {
         position: 'bottom-right',
       })
       return
@@ -466,7 +511,7 @@ async function persistContract(index: number, values: ContractFormValue) {
   const personId = resolveContractPersonId(values, currentRecord)
 
   if (!personId) {
-    toast.error('à¹„à¸¡à¹ˆà¸žà¸šà¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸„à¸£à¸¹ à¸à¸£à¸¸à¸“à¸²à¸šà¸±à¸™à¸—à¸¶à¸à¸‚à¹‰à¸­à¸¡à¸¹à¸¥à¸ªà¹ˆà¸§à¸™à¸šà¸¸à¸„à¸„à¸¥à¸à¹ˆà¸­à¸™', {
+    toast.error('ไม่พบข้อมูลบุคลากร', {
       position: 'bottom-right',
     })
     return

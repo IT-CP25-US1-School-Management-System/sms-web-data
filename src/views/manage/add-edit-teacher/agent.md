@@ -243,3 +243,27 @@
   - `special_month_reward` (from form field `special_reward`)
   - `special_reward` (from form field `special-compensation`)
   - `position_reward`
+
+## March 31, 2026 - ContractPosition now maps contract_number to order_no
+
+- `src/views/manage/add-edit-teacher/work_history/ContractPosition.vue` now maps DB `order_no` into the existing form field `contract_number` when loading records.
+- Save/update on the same page now sends `order_no` back to the dataset from the existing `contract_number` field, without adding a new form field.
+- The same manage contract-position payload now also sends `role_id` alongside the selected `position`, resolving the role ID from the loaded dropdown options when needed.
+
+## March 31, 2026 - PositionHistory fetch now uses manage dataset constants
+
+- `src/views/manage/add-edit-teacher/work_history/PositionHistory.vue` now reads its fetch/export dataset config from `MANAGE_DATASETS` instead of `DATASET_GET`.
+- The manage position-history page now uses:
+  - dataset id `data_manage`
+  - dataset version `v9.0.0`
+  - view `governments`
+- The same manage position-history page now uses that same dataset/view for create and update as well, and it creates a row when the selected teacher does not yet have an existing `governments` record.
+- Position-history payloads now always include both `id` and `created_at` on create/update, with new rows using the generated form ID as the record ID.
+- Position-history fetch now accepts the manage response shape where `response.data` is a plain row list, and it maps DB fields like `government_entry_date`, `position_date`, and `retirement_date` back into the existing form field names before rendering.
+- The manage position-history page now also:
+  - fetches `role_id` options from `MANAGE_DROPDOWN_DATASETS.DATASET_VERSION_ROLES`
+  - fetches `department_id` options from `MANAGE_DROPDOWN_DATASETS.DATASET_VERSION_DEPARTMENTS` (`data_get_dropdown / v3.0.0`)
+  - fetches `appointment_type_id` options from `MANAGE_DROPDOWN_DATASETS.DATASET_VERSION_APPOINTMENT_TYPES` using view `appointment_types`
+  - renders `work_status` as a fixed dropdown with: `ทำงาน`, `ย้าย`, `เกษียณอายุราชการ`, `ช่วยราชการ`, `ลาออก`, `เสียชีวิต`
+  - keeps the manage UI to a single `governments` record, even if the backend returns multiple rows, by showing only the latest row
+  - saves directly from the page without a `ConfirmModal`, because the position-history manage form no longer has a delete flow
