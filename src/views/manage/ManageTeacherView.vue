@@ -3,6 +3,8 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import MainLayout from '@/layouts/manage/MainLayout.vue'
 import CreateAttendanceDialog from '@/views/manage/CreateAttendanceDialog.vue'
+import CreateAttendanceReportTemplateDialog from '@/views/manage/CreateAttendanceReportTemplateDialog.vue'
+import ExportAttendanceReportDialog from '@/views/manage/ExportAttendanceReportDialog.vue'
 import { Button } from '@/components/ui/button'
 import { ROUTE_NAMES } from '@/lib/constants'
 import { Input } from '@/components/ui/input'
@@ -43,6 +45,8 @@ const activeTab = ref<TabType>('all')
 const searchQuery = ref('')
 const showDeleteDialog = ref(false)
 const showAttendanceDialog = ref(false)
+const showReportTemplateDialog = ref(false)
+const showExportReportDialog = ref(false)
 const teacherToDelete = ref<PersonData | null>(null)
 const deleting = ref(false)
 
@@ -267,6 +271,10 @@ const handleAttendanceSuccess = async () => {
   await fetchCurrentTabData()
 }
 
+const handleReportTemplateSuccess = () => {
+  showReportTemplateDialog.value = false
+}
+
 const getTeacherType = (teacher: PersonData) => {
   const isGov = (teacher.is_government as any) === true || (teacher.is_government as any) === 'true'
   return isGov ? 'ข้าราชการ' : 'ครูอัตราจ้าง'
@@ -352,25 +360,38 @@ const getPersonDisplayName = (record: DailyAttendanceRecord) => {
             />
           </div>
 
-          <Button
-            v-if="!isLeaveTab"
-            class="bg-green-600 hover:bg-green-700"
-            :disabled="loading"
-            @click="handleAddTeacher"
-          >
-            <Plus class="mr-2 h-4 w-4" />
-            เพิ่มรายชื่อ
-          </Button>
+          <div class="flex items-center gap-2">
+            <Button
+              v-if="!isLeaveTab"
+              class="bg-green-600 hover:bg-green-700"
+              :disabled="loading"
+              @click="handleAddTeacher"
+            >
+              <Plus class="mr-2 h-4 w-4" />
+              เพิ่มรายชื่อ
+            </Button>
 
-          <Button
-            v-else
-            class="bg-green-600 hover:bg-green-700"
-            :disabled="loading"
-            @click="showAttendanceDialog = true"
-          >
-            <Plus class="mr-2 h-4 w-4" />
-            เพิ่มข้อมูลการลา
-          </Button>
+            <template v-else>
+              <Button variant="outline" :disabled="loading" @click="showExportReportDialog = true">
+                ออกรายงานการลา
+              </Button>
+              <Button
+                variant="outline"
+                :disabled="loading"
+                @click="showReportTemplateDialog = true"
+              >
+                กำหนด templates รายงาน
+              </Button>
+              <Button
+                class="bg-green-600 hover:bg-green-700"
+                :disabled="loading"
+                @click="showAttendanceDialog = true"
+              >
+                <Plus class="mr-2 h-4 w-4" />
+                เพิ่มข้อมูลการลา
+              </Button>
+            </template>
+          </div>
         </div>
       </div>
 
@@ -559,6 +580,15 @@ const getPersonDisplayName = (record: DailyAttendanceRecord) => {
       :open="showAttendanceDialog"
       @close="showAttendanceDialog = false"
       @success="handleAttendanceSuccess"
+    />
+    <CreateAttendanceReportTemplateDialog
+      :open="showReportTemplateDialog"
+      @close="showReportTemplateDialog = false"
+      @success="handleReportTemplateSuccess"
+    />
+    <ExportAttendanceReportDialog
+      :open="showExportReportDialog"
+      @close="showExportReportDialog = false"
     />
   </MainLayout>
 </template>
