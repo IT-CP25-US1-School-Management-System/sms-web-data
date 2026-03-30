@@ -21,7 +21,7 @@ import type {
   ProfessionalLicenseCreateDTO,
 } from '@/types/teacher'
 import type { PersonAddress } from '@/types/address'
-import type { DailyAttendanceRecord } from '@/types/attendance'
+import type { DailyAttendanceCreateDTO, DailyAttendanceRecord } from '@/types/attendance'
 
 // TODO: Replace with the correct dataset IDs once configured in the DMS backend
 const ADDRESS_DATASET_ID = 'data_manage'
@@ -57,6 +57,20 @@ export async function getDailyAttendance(
     ...params,
     view: 'daily_attendance',
   })
+}
+
+/**
+ * Create a daily attendance row
+ */
+export async function createDailyAttendance(
+  data: DailyAttendanceCreateDTO,
+): Promise<DatasetRowResponse<DailyAttendanceRecord>> {
+  return createDatasetRow<DailyAttendanceRecord>(
+    ATTENDANCE_DATASET_ID,
+    ATTENDANCE_DATASET_VERSION,
+    data,
+    'daily_attendance',
+  )
 }
 
 /**

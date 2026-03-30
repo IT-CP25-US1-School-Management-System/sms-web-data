@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import MainLayout from '@/layouts/manage/MainLayout.vue'
+import CreateAttendanceDialog from '@/views/manage/CreateAttendanceDialog.vue'
 import { Button } from '@/components/ui/button'
 import { ROUTE_NAMES } from '@/lib/constants'
 import { Input } from '@/components/ui/input'
@@ -41,6 +42,7 @@ const loading = ref(false)
 const activeTab = ref<TabType>('all')
 const searchQuery = ref('')
 const showDeleteDialog = ref(false)
+const showAttendanceDialog = ref(false)
 const teacherToDelete = ref<PersonData | null>(null)
 const deleting = ref(false)
 
@@ -261,6 +263,10 @@ const handleAddTeacher = () => {
   router.push({ name: ROUTE_NAMES.ADD_TEACHER_PERSONAL })
 }
 
+const handleAttendanceSuccess = async () => {
+  await fetchCurrentTabData()
+}
+
 const getTeacherType = (teacher: PersonData) => {
   const isGov = (teacher.is_government as any) === true || (teacher.is_government as any) === 'true'
   return isGov ? 'ข้าราชการ' : 'ครูอัตราจ้าง'
@@ -354,6 +360,16 @@ const getPersonDisplayName = (record: DailyAttendanceRecord) => {
           >
             <Plus class="mr-2 h-4 w-4" />
             เพิ่มรายชื่อ
+          </Button>
+
+          <Button
+            v-else
+            class="bg-green-600 hover:bg-green-700"
+            :disabled="loading"
+            @click="showAttendanceDialog = true"
+          >
+            <Plus class="mr-2 h-4 w-4" />
+            เพิ่มข้อมูลการลา
           </Button>
         </div>
       </div>
@@ -538,5 +554,11 @@ const getPersonDisplayName = (record: DailyAttendanceRecord) => {
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+
+    <CreateAttendanceDialog
+      :open="showAttendanceDialog"
+      @close="showAttendanceDialog = false"
+      @success="handleAttendanceSuccess"
+    />
   </MainLayout>
 </template>
