@@ -5,7 +5,6 @@ import DropDownForm from '@/components/form/DropDownForm.vue'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/composables/useToast'
 import { MANAGE_DROPDOWN_DATASETS, ROUTE_NAMES } from '@/lib/constants'
-import { generateUUID } from '@/lib/helpers'
 import { createUser } from '@/stores/api'
 import { getDatasetRows } from '@/stores/dataset'
 import { createTeacher, getTeacherById, updateTeacher, useTeacherStore } from '@/stores/teachers'
@@ -290,7 +289,6 @@ const handleSave = async () => {
   try {
     isSubmitting.value = true
     const now = new Date().toISOString()
-    const personId = isEditing.value ? teacherStore.personId! : generateUUID()
     const prefixId = String(currentValues.prefix_id ?? '').trim()
     const roleId = String(currentValues.role_id ?? '').trim()
 
@@ -302,6 +300,23 @@ const handleSave = async () => {
     if (!roleId) {
       showError('กรุณาเลือกตำแหน่ง')
       return
+    }
+
+    let personId = teacherStore.personId ?? undefined
+
+    if (!isEditing.value) {
+      if (!currentValues.personal_email) {
+        showError('กรุณากรอก E-mail')
+        return
+      }
+
+      const userResponse = await createUser({
+        email: currentValues.personal_email,
+        first_name: firstName,
+        last_name: lastName,
+      })
+
+      personId = userResponse.data.keycloak_id
     }
 
     const payload: TeacherCreateDTO = {
@@ -333,39 +348,23 @@ const handleSave = async () => {
     }
 
     if (isEditing.value) {
-      await updateTeacher(personId, payload)
+      await updateTeacher(personId!, payload)
       showSuccess('แก้ไขข้อมูลส่วนบุคคลสำเร็จ', { description: 'กรุณากรอกข้อมูลที่อยู่ต่อไป' })
     } else {
       await createTeacher(payload)
-
-      if (currentValues.personal_email) {
-        try {
-          await createUser({
-            email: currentValues.personal_email,
-            first_name: firstName,
-            last_name: lastName,
-          })
-        } catch (userError: any) {
-          console.error('Failed to create user account:', userError)
-          showError('สร้างบัญชีผู้ใช้ไม่สำเร็จ', {
-            description:
-              userError?.response?.data?.message || 'อาจจำเป็นต้องสร้างบัญชีผู้ใช้ด้วยตนเองต่อมา',
-          })
-        }
-      }
 
       showSuccess('เพิ่มข้อมูลส่วนบุคคลสำเร็จ', { description: 'กรุณากรอกข้อมูลที่อยู่ต่อไป' })
     }
 
     teacherStore.setCurrentTeacher({
-      id: personId,
+      id: personId!,
       first_name_th: firstName,
       last_name_th: lastName,
       prefix_id: prefixId,
       role_id: roleId,
     })
 
-    await router.push({ name: ROUTE_NAMES.ADD_TEACHER_ADDRESS, query: { id: personId } })
+    await router.push({ name: ROUTE_NAMES.ADD_TEACHER_ADDRESS, query: { id: personId! } })
   } catch (error: any) {
     const action = isEditing.value ? 'แก้ไข' : 'เพิ่ม'
     showError(`ไม่สามารถ${action}ข้อมูลคุณครูได้`, {
