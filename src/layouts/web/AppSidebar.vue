@@ -202,13 +202,13 @@ const menuConfig: {
           icon: null,
           routeName: ROUTE_NAMES.TRAINING,
         },
-        {
-          id: 'achievements-innovations',
-          label: 'ข้อมูลผลงาน/นวัตกรรม',
-          icon: null,
-          routeName: ROUTE_NAMES.ACHIEVEMENTS_INNOVATIONS,
-          showCondition: () => true, // optional condition
-        },
+        // {
+        //   id: 'achievements-innovations',
+        //   label: 'ข้อมูลผลงาน/นวัตกรรม',
+        //   icon: null,
+        //   routeName: ROUTE_NAMES.ACHIEVEMENTS_INNOVATIONS,
+        //   showCondition: () => true, // optional condition
+        // },
       ],
     },
     {
