@@ -77,6 +77,42 @@ function getDefaultValue(field: NormalFormField) {
   return ''
 }
 
+function buildNumberValidator(label: string, required?: boolean) {
+  const requiredMessage = `${label} จำเป็นต้องกรอก`
+  const invalidMessage = `${label} ต้องเป็นตัวเลข`
+  const normalizeNumberValue = (value: unknown) => {
+    if (value == null) return undefined
+    if (typeof value === 'number') return Number.isFinite(value) ? value : value
+    if (typeof value === 'string') {
+      const trimmed = value.trim()
+      if (!trimmed) return undefined
+      const normalized = trimmed.replace(/,/g, '')
+      const parsed = Number(normalized)
+      return Number.isFinite(parsed) ? parsed : value
+    }
+    return value
+  }
+
+  if (required) {
+    return z.preprocess(
+      normalizeNumberValue,
+      z.number({
+        required_error: requiredMessage,
+        invalid_type_error: invalidMessage,
+      }),
+    )
+  }
+
+  return z.preprocess(
+    normalizeNumberValue,
+    z
+      .number({
+        invalid_type_error: invalidMessage,
+      })
+      .optional(),
+  )
+}
+
 function buildInitialValues() {
   const vals: Record<string, any> = {}
   ;(props.fields || []).forEach((field) => {
@@ -172,6 +208,11 @@ const schema = computed(() => {
         return
       }
 
+      if (field.type === 'number') {
+        shape[field.name] = buildNumberValidator(label, field.required)
+        return
+      }
+
       let validator = z.string()
       if (field.type === 'email') {
         validator = validator.email('รูปแบบอีเมลไม่ถูกต้อง')
@@ -231,8 +272,7 @@ async function submitForm() {
   const result = await formRef.value.validate()
   const filesValid = validateFileFields()
   if (result.valid && filesValid) {
-    onSubmit(formRef.value.values)
-   // return result.valid
+    onSubmit((result.values as Record<string, any>) || formRef.value.values)
   }
   return result.valid && filesValid
 }
@@ -659,7 +699,7 @@ function handleCheckboxGroupUpdate(
                 <div
                   v-for="(file, fileIdx) in getFiles(fieldItem.name)"
                   :key="fileIdx"
-                  class="border-muted bg-muted/40 flex min-h-11  w-fit max-w-xl items-center justify-between gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
+                  class="border-muted bg-muted/40 flex min-h-11 w-fit max-w-xl items-center justify-between gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
                 >
                   <span class="truncate">{{ file.name }}</span>
                   <span class="text-muted-foreground shrink-0 text-xs">
@@ -668,7 +708,7 @@ function handleCheckboxGroupUpdate(
                   <button
                     v-if="!fieldItem.disabled"
                     type="button"
-                    class="hover:text-destructive text-muted-foreground rounded p-0.5 transition-colors cursor-pointer"
+                    class="hover:text-destructive text-muted-foreground cursor-pointer rounded p-0.5 transition-colors"
                     @click.stop="removeFile(fieldItem.name, fileIdx)"
                   >
                     <X class="h-3.5 w-3.5" />

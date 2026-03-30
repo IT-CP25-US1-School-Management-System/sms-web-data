@@ -2,17 +2,27 @@
 export interface DocumentRequest {
   id: string
   person_id: string
-  document_type: 'คำร้องขอเอกสาร' | 'คำขอบัตรประจำตัว' | 'คำร้องขออนุญาตไปต่างประเทศ' | 'แบบรายงานเปลี่ยนแปลงหรือเพิ่มเติมรายการลงในสมุดประวัติ' | 'คำร้องขอเพิ่มวุติการศึกษา'| 'การส่งเอกสารPA' | 'การประเมินPA'  | null
+  title?: string
+  document_type: string | null
+  description?: string
+  start_date?: string | null
+  end_date?: string | null
+  quantity?: number | null
   status?: 'กำลังดำเนินการ' | 'อนุมัติ' | 'ไม่อนุมัติ' | null
   created_at: string
   updated_at?: string | null
-
 
   // Joined data from person_data table
   person_data?: PersonData[]
   // Joined data from logs and links
   approval_logs?: ApprovalLog[]
   document_links?: DocumentLink[]
+  request_general?: RequestGeneral[]
+  request_general_documents?: RequestGeneral[]
+  request_history?: RequestHistory[]
+  request_history_changes?: RequestHistory[]
+  request_education_records?: RequestEducationRecords[]
+  request_education_records_changes?: RequestEducationRecords[]
 }
 
 export interface PersonData {
@@ -26,7 +36,7 @@ export interface PersonData {
   gender?: string
   personal_email?: string
   phone?: string
-  prefix_id?: number
+  prefix_id?: string | number
   role_id?: string
   is_government?: boolean
   [key: string]: any

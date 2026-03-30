@@ -59,7 +59,9 @@ const provinceOptions = provinceData.map((province) => ({
   value: String(province.id),
 }))
 
-const provinceNameMap = new Map(provinceOptions.map((option) => [String(option.value), option.label]))
+const provinceNameMap = new Map(
+  provinceOptions.map((option) => [String(option.value), option.label]),
+)
 const districtOptionsByProvince = new Map<string, { label: string; value: string }[]>()
 const districtNameMap = new Map<string, string>()
 const subDistrictOptionsByDistrict = new Map<string, { label: string; value: string }[]>()
@@ -350,7 +352,8 @@ function syncFamilyAddress(index: number, incomingValues?: Record<string, any>) 
   values.subdistrict = subDistrictNameMap.get(resolvedSubDistrictCode) || ''
 
   if (resolvedSubDistrictCode) {
-    values.postal_code = postalCodeBySubDistrict.get(resolvedSubDistrictCode) || values.postal_code || ''
+    values.postal_code =
+      postalCodeBySubDistrict.get(resolvedSubDistrictCode) || values.postal_code || ''
   }
 
   const nextFamilyData = [...familyData.value]
@@ -382,7 +385,8 @@ function normalizeFamilyPayload(currentMember: Record<string, any>, values?: Rec
     province: provinceNameMap.get(provinceCode) || mergedValues.province || undefined,
     district: districtNameMap.get(districtCode) || mergedValues.district || undefined,
     subdistrict: subDistrictNameMap.get(subDistrictCode) || mergedValues.subdistrict || undefined,
-    postal_code: mergedValues.postal_code || postalCodeBySubDistrict.get(subDistrictCode) || undefined,
+    postal_code:
+      mergedValues.postal_code || postalCodeBySubDistrict.get(subDistrictCode) || undefined,
   }
 }
 
@@ -427,8 +431,10 @@ async function updateFamilyData(groupIndex: number, values?: Record<string, any>
   loading.value = true
 
   try {
-    const normalizedValues = normalizeFamilyPayload(currentMember, values) as Partial<FamilyMember> &
-      Record<string, any>
+    const normalizedValues = normalizeFamilyPayload(
+      currentMember,
+      values,
+    ) as Partial<FamilyMember> & Record<string, any>
     const payload: Partial<FamilyMember> = {
       ...currentMember,
       ...normalizedValues,

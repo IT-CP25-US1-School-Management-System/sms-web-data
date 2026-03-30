@@ -1,20 +1,28 @@
 import {
-  DATASET_ID,
-  DATASET_VERSION,
   getDatasetRows,
   getDatasetRowByKey,
   createDatasetRow,
   updateDatasetRow,
   deleteDatasetRow,
 } from '@/stores/dataset'
+import { MANAGE_STUDENT_DATASETS } from '@/lib/constants'
 import type { DatasetListResponse, DatasetRowResponse, DatasetQueryParams } from '@/types/dataset'
-import type { Student, StudentCreateDTO, StudentUpdateDTO, AddressCreateDTO, ParentCreateDTO, Address, Parent } from '@/types/student'
+import type {
+  Student,
+  StudentCreateDTO,
+  StudentUpdateDTO,
+  AddressCreateDTO,
+  ParentCreateDTO,
+  Address,
+  Parent,
+} from '@/types/student'
 
-// TODO: Replace with correct dataset IDs once configured in DMS backend
-const ADDRESS_DATASET_ID = DATASET_ID
-const ADDRESS_DATASET_VERSION = DATASET_VERSION
-const PARENT_DATASET_ID = DATASET_ID
-const PARENT_DATASET_VERSION = DATASET_VERSION
+const STUDENT_DATASET_ID = MANAGE_STUDENT_DATASETS.DATASET_ID
+const STUDENT_DATASET_VERSION = MANAGE_STUDENT_DATASETS.DATASET_VERSION_STUDENT
+const ADDRESS_DATASET_ID = MANAGE_STUDENT_DATASETS.DATASET_ID
+const ADDRESS_DATASET_VERSION = MANAGE_STUDENT_DATASETS.DATASET_VERSION_ADDRESS
+const PARENT_DATASET_ID = MANAGE_STUDENT_DATASETS.DATASET_ID
+const PARENT_DATASET_VERSION = MANAGE_STUDENT_DATASETS.DATASET_VERSION_PARENT
 
 /**
  * Get list of students with pagination and filters
@@ -22,9 +30,9 @@ const PARENT_DATASET_VERSION = DATASET_VERSION
 export async function getStudents(
   params?: DatasetQueryParams,
 ): Promise<DatasetListResponse<Student>> {
-  return getDatasetRows<Student>(DATASET_ID, DATASET_VERSION, {
+  return getDatasetRows<Student>(STUDENT_DATASET_ID, STUDENT_DATASET_VERSION, {
     ...params,
-    view: 'Student',
+    view: 'Students',
   })
 }
 
@@ -32,16 +40,19 @@ export async function getStudents(
  * Get a single student by ID
  */
 export async function getStudentById(studentId: string): Promise<DatasetRowResponse<Student>> {
-  return getDatasetRowByKey<Student>(DATASET_ID, DATASET_VERSION, studentId, 'Student')
+  return getDatasetRowByKey<Student>(
+    STUDENT_DATASET_ID,
+    STUDENT_DATASET_VERSION,
+    studentId,
+    'Students',
+  )
 }
 
 /**
  * Create a new student
  */
-export async function createStudent(
-  data: StudentCreateDTO,
-): Promise<DatasetRowResponse<Student>> {
-  return createDatasetRow<Student>(DATASET_ID, DATASET_VERSION, data)
+export async function createStudent(data: StudentCreateDTO): Promise<DatasetRowResponse<Student>> {
+  return createDatasetRow<Student>(STUDENT_DATASET_ID, STUDENT_DATASET_VERSION, data)
 }
 
 /**
@@ -51,14 +62,14 @@ export async function updateStudent(
   studentId: string,
   data: StudentUpdateDTO,
 ): Promise<DatasetRowResponse<Student>> {
-  return updateDatasetRow<Student>(DATASET_ID, DATASET_VERSION, studentId, data)
+  return updateDatasetRow<Student>(STUDENT_DATASET_ID, STUDENT_DATASET_VERSION, studentId, data)
 }
 
 /**
  * Delete a student by ID (soft delete)
  */
 export async function deleteStudent(studentId: string): Promise<void> {
-  return deleteDatasetRow(DATASET_ID, DATASET_VERSION, studentId)
+  return deleteDatasetRow(STUDENT_DATASET_ID, STUDENT_DATASET_VERSION, studentId)
 }
 
 /**

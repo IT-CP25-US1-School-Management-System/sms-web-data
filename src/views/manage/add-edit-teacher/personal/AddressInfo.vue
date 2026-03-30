@@ -5,13 +5,13 @@ import NormalForm, {
   type NormalFormOption,
 } from '@/components/form/NormalForm.vue'
 import { Button } from '@/components/ui/button'
-import { createPersonAddress, getAddressById, updatePersonAddress, useTeacherStore } from '@/stores/teachers'
-import type {
-  PersonAddress,
-  Province,
-  District,
-  SubDistrict,
-} from '@/types/address'
+import {
+  createPersonAddress,
+  getAddressById,
+  updatePersonAddress,
+  useTeacherStore,
+} from '@/stores/teachers'
+import type { PersonAddress, Province, District, SubDistrict } from '@/types/address'
 import type { PersonAddressCreateDTO } from '@/types/teacher'
 import provincesJson from '@/assets/thai-province-data/provinces.json'
 import districtsJson from '@/assets/thai-province-data/districts.json'
@@ -317,8 +317,7 @@ function handleFormChange(formId: string, payload: NormalFormChangePayload) {
   const target = addressForms.value.find((entry) => entry.id === formId)
   if (!target) return
   target.currentValues = cloneFormValues(payload.values)
-  target.hasChanges =
-    JSON.stringify(target.currentValues) !== JSON.stringify(target.initialValues)
+  target.hasChanges = JSON.stringify(target.currentValues) !== JSON.stringify(target.initialValues)
   syncCascade(target, payload.values)
 }
 
@@ -393,8 +392,7 @@ const hasAnyInvalidRequired = computed(() =>
   addressForms.value.some((entry) => Boolean(entry.formRef?.hasMissingRequiredFields)),
 )
 const isSaveDisabled = computed(
-  () =>
-    loading.value || isSubmitting.value || !hasAnyChanges.value || hasAnyInvalidRequired.value,
+  () => loading.value || isSubmitting.value || !hasAnyChanges.value || hasAnyInvalidRequired.value,
 )
 
 async function onSaveAll() {
@@ -463,15 +461,13 @@ async function onSaveAll() {
     isSubmitting.value = false
   }
 }
-
-
 </script>
 
 <template>
   <div class="flex flex-col gap-4">
-    <div v-for="(form, index) in addressForms" :key="form.id" class="px-4 sm:px-6">
+    <div v-for="(form) in addressForms" :key="form.id" class="px-4 sm:px-6">
       <NormalForm
-        :topic="`ข้อมูลที่อยู่ #${index + 1}`"
+        :topic="`ข้อมูลที่อยู่`"
         :fields="form.fields"
         :values="form.initialValues"
         :ref="(instance) => setFormRef(form.id, instance as NormalFormInstance | null)"

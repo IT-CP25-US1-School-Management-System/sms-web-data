@@ -31,13 +31,12 @@ import {
   SidebarMenuSubItem,
 } from '@/components/ui/sidebar'
 import {
-  Settings,
   User,
   ChevronsUpDown,
   LogOut,
   ChevronRight,
   UsersRound,
-  GraduationCap,
+  // GraduationCap,
   Upload,
   FileText,
   FileClock,
@@ -79,13 +78,13 @@ const menuConfig: {
       routeName: ROUTE_NAMES.MANAGE_TEACHERS,
       children: null,
     },
-    {
-      id: 'manage-students',
-      label: 'รายชื่อนักเรียน',
-      icon: GraduationCap,
-      routeName: ROUTE_NAMES.MANAGE_STUDENTS,
-      children: null,
-    },
+    // {
+    //   id: 'manage-students',
+    //   label: 'รายชื่อนักเรียน',
+    //   icon: GraduationCap,
+    //   routeName: ROUTE_NAMES.MANAGE_STUDENTS,
+    //   children: null,
+    // },
     {
       id: 'import-data',
       label: 'นำเข้าข้อมูล',
@@ -102,13 +101,6 @@ const menuConfig: {
     },
   ],
   settings: [
-    {
-      id: 'settings',
-      label: 'ตั้งค่าระบบ',
-      icon: Settings,
-      routeName: ROUTE_NAMES.SETTINGS,
-      children: null,
-    },
     {
       id: 'profile',
       label: 'โปรไฟล์',
@@ -156,11 +148,40 @@ const addTeacherMenu: MenuItem[] = [
     icon: User,
     routeName: null,
     children: [
-      { id: 'add-personal-details', label: 'ข้อมูลส่วนบุคคล', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_PERSONAL },
-      { id: 'add-address', label: 'ข้อมูลที่อยู่', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_ADDRESS, showCondition: isPersonIdAvailable },
-      { id: 'add-family', label: 'ข้อมูลครอบครัว', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_FAMILY, showCondition: isPersonIdAvailable },
-      { id: 'add-education', label: 'ข้อมูลการศึกษา', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_EDUCATION, showCondition: isPersonIdAvailable },
-      { id: 'add-professional-license', label: 'ใบประกอบวิชาชีพ', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_PROFESSIONAL_LICENSE, showCondition: isPersonIdAvailable },
+      {
+        id: 'add-personal-details',
+        label: 'ข้อมูลส่วนบุคคล',
+        icon: null,
+        routeName: ROUTE_NAMES.ADD_TEACHER_PERSONAL,
+      },
+      {
+        id: 'add-address',
+        label: 'ข้อมูลที่อยู่',
+        icon: null,
+        routeName: ROUTE_NAMES.ADD_TEACHER_ADDRESS,
+        showCondition: isPersonIdAvailable,
+      },
+      {
+        id: 'add-family',
+        label: 'ข้อมูลครอบครัว',
+        icon: null,
+        routeName: ROUTE_NAMES.ADD_TEACHER_FAMILY,
+        showCondition: isPersonIdAvailable,
+      },
+      {
+        id: 'add-education',
+        label: 'ข้อมูลการศึกษา',
+        icon: null,
+        routeName: ROUTE_NAMES.ADD_TEACHER_EDUCATION,
+        showCondition: isPersonIdAvailable,
+      },
+      {
+        id: 'add-professional-license',
+        label: 'ใบประกอบวิชาชีพ',
+        icon: null,
+        routeName: ROUTE_NAMES.ADD_TEACHER_PROFESSIONAL_LICENSE,
+        showCondition: isPersonIdAvailable,
+      },
     ],
   },
   {
@@ -169,11 +190,41 @@ const addTeacherMenu: MenuItem[] = [
     icon: FileClock,
     routeName: null,
     children: [
-      { id: 'add-position-history', label: 'ข้อมูลการดำรงตำแหน่ง', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_POSITION_HISTORY, showCondition: isPersonIdAvailable },
-      { id: 'add-royal-decorations', label: 'เครื่องราชอิสริยาภรณ์', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_ROYAL_DECORATIONS, showCondition: isPersonIdAvailable },
-      { id: 'add-academic-rank', label: 'ประวัติวิทยฐานะ', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_ACADEMIC_RANK, showCondition: isPersonIdAvailable },
-      { id: 'add-employment', label: 'ข้อมูลการจ้างงาน', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_EMPLOYMENT, showCondition: isPersonIdAvailable },
-      { id: 'add-contract-position', label: 'ประวัติการดำรงตำแหน่ง', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_CONTRACT_POSITION, showCondition: isPersonIdAvailable },
+      {
+        id: 'add-position-history',
+        label: 'ข้อมูลการดำรงตำแหน่ง',
+        icon: null,
+        routeName: ROUTE_NAMES.ADD_TEACHER_POSITION_HISTORY,
+        showCondition: isPersonIdAvailable,
+      },
+      {
+        id: 'add-royal-decorations',
+        label: 'เครื่องราชอิสริยาภรณ์',
+        icon: null,
+        routeName: ROUTE_NAMES.ADD_TEACHER_ROYAL_DECORATIONS,
+        showCondition: isPersonIdAvailable,
+      },
+      {
+        id: 'add-academic-rank',
+        label: 'ประวัติวิทยฐานะ',
+        icon: null,
+        routeName: ROUTE_NAMES.ADD_TEACHER_ACADEMIC_RANK,
+        showCondition: isPersonIdAvailable,
+      },
+      {
+        id: 'add-employment',
+        label: 'ข้อมูลการจ้างงาน',
+        icon: null,
+        routeName: ROUTE_NAMES.ADD_TEACHER_EMPLOYMENT,
+        showCondition: isPersonIdAvailable,
+      },
+      {
+        id: 'add-contract-position',
+        label: 'ประวัติการดำรงตำแหน่ง',
+        icon: null,
+        routeName: ROUTE_NAMES.ADD_TEACHER_CONTRACT_POSITION,
+        showCondition: isPersonIdAvailable,
+      },
     ],
   },
   {
@@ -182,8 +233,20 @@ const addTeacherMenu: MenuItem[] = [
     icon: Notebook,
     routeName: null,
     children: [
-      { id: 'add-training', label: 'ข้อมูลการอบรม/ศึกษาดูงาน', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_TRAINING, showCondition: isPersonIdAvailable },
-      { id: 'add-innovations', label: 'ข้อมูลผลงานและนวัตกรรม', icon: null, routeName: ROUTE_NAMES.ADD_TEACHER_INNOVATIONS, showCondition: isPersonIdAvailable },
+      {
+        id: 'add-training',
+        label: 'ข้อมูลการอบรม/ศึกษาดูงาน',
+        icon: null,
+        routeName: ROUTE_NAMES.ADD_TEACHER_TRAINING,
+        showCondition: isPersonIdAvailable,
+      },
+      {
+        id: 'add-innovations',
+        label: 'ข้อมูลผลงานและนวัตกรรม',
+        icon: null,
+        routeName: ROUTE_NAMES.ADD_TEACHER_INNOVATIONS,
+        showCondition: isPersonIdAvailable,
+      },
     ],
   },
 ]
@@ -197,8 +260,7 @@ const initializeCollapsibleStates = () => {
       const hasActiveChild = item.children.some(
         (child: MenuChild) =>
           child.routeName &&
-          (route.name === child.routeName ||
-            route.name?.toString().startsWith(child.routeName)),
+          (route.name === child.routeName || route.name?.toString().startsWith(child.routeName)),
       )
       states[item.id] = hasActiveChild
     }
@@ -228,8 +290,6 @@ const getTeacherIdForNavigation = () => {
   const idFromUrl = route.query.id as string
   return idFromUrl || teacherStore.personId || ''
 }
-
-
 
 const isActiveMenuItem = (menuItem: MenuItem) => {
   if (menuItem.children && Array.isArray(menuItem.children) && menuItem.children.length > 0) {
@@ -266,7 +326,7 @@ onMounted(async () => {
           <SidebarMenuButton size="lg" as-child>
             <div class="flex items-center gap-2">
               <div
-                class="flex aspect-square h-10 items-center justify-center rounded-lg bg-background"
+                class="bg-background flex aspect-square h-10 items-center justify-center rounded-lg"
               >
                 <!-- <img src="/" alt="Logo" class="h-9" /> -->
               </div>
@@ -359,7 +419,9 @@ onMounted(async () => {
 
       <!-- Add/Edit Teacher sub-menu -->
       <SidebarGroup v-if="showTeacherSubMenu">
-        <SidebarGroupLabel class="text-[#1C509F] text-xs font-medium tracking-[0.015em]">{{ teacherSubMenuLabel }}</SidebarGroupLabel>
+        <SidebarGroupLabel class="text-xs font-medium tracking-[0.015em] text-[#1C509F]">{{
+          teacherSubMenuLabel
+        }}</SidebarGroupLabel>
         <SidebarMenu>
           <template v-for="menuItem in addTeacherMenu" :key="menuItem.id">
             <SidebarMenuItem
@@ -374,7 +436,12 @@ onMounted(async () => {
                 as-child
                 v-if="menuItem.routeName"
               >
-                <RouterLink :to="{ name: menuItem.routeName, query: getTeacherIdForNavigation() ? { id: getTeacherIdForNavigation() } : {} }">
+                <RouterLink
+                  :to="{
+                    name: menuItem.routeName,
+                    query: getTeacherIdForNavigation() ? { id: getTeacherIdForNavigation() } : {},
+                  }"
+                >
                   <component :is="menuItem.icon" class="size-4" />
                   <span>{{ menuItem.label }}</span>
                 </RouterLink>
@@ -400,7 +467,10 @@ onMounted(async () => {
                   <SidebarMenuSubItem
                     v-for="child in menuItem.children"
                     :key="child.id"
-                    :class="{ 'opacity-50 cursor-not-allowed': child.showCondition && !child.showCondition() }"
+                    :class="{
+                      'cursor-not-allowed opacity-50':
+                        child.showCondition && !child.showCondition(),
+                    }"
                   >
                     <SidebarMenuSubButton
                       v-if="child.routeName"
@@ -408,9 +478,14 @@ onMounted(async () => {
                       as-child
                       :disabled="child.showCondition && !child.showCondition()"
                     >
-                      <RouterLink 
+                      <RouterLink
                         v-if="!child.showCondition || child.showCondition()"
-                        :to="{ name: child.routeName, query: getTeacherIdForNavigation() ? { id: getTeacherIdForNavigation() } : {} }"
+                        :to="{
+                          name: child.routeName,
+                          query: getTeacherIdForNavigation()
+                            ? { id: getTeacherIdForNavigation() }
+                            : {},
+                        }"
                       >
                         <span>{{ child.label }}</span>
                       </RouterLink>
@@ -481,10 +556,6 @@ onMounted(async () => {
                 <DropdownMenuItem @click="router.push({ name: ROUTE_NAMES.PROFILE })">
                   <User class="mr-2 h-4 w-4" />
                   โปรไฟล์
-                </DropdownMenuItem>
-                <DropdownMenuItem @click="router.push({ name: ROUTE_NAMES.SETTINGS })">
-                  <Settings class="mr-2 h-4 w-4" />
-                  ตั้งค่า
                 </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />

@@ -1,9 +1,5 @@
 import { dataApiInstance } from '@/stores/api'
-import type {
-  DatasetListResponse,
-  DatasetRowResponse,
-  DatasetQueryParams,
-} from '@/types/dataset'
+import type { DatasetListResponse, DatasetRowResponse, DatasetQueryParams } from '@/types/dataset'
 export const DATASET_ID = import.meta.env.VITE_DATASET_ID
 export const DATASET_VERSION = import.meta.env.VITE_DATASET_VERSION
 /**
@@ -20,7 +16,8 @@ export async function getDatasetRows<T = Record<string, any>>(
   }
 
   if (params?.view) queryParams.view = params.view
-  if (params?.where_logical_operator) queryParams.where_logical_operator = params.where_logical_operator
+  if (params?.where_logical_operator)
+    queryParams.where_logical_operator = params.where_logical_operator
   if (params?.where) queryParams.where = JSON.stringify(params.where)
   if (params?.sort_by) queryParams.sort_by = params.sort_by
   if (params?.sort_order) queryParams.sort_order = params.sort_order

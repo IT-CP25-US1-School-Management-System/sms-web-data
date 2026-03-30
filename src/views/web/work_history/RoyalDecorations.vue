@@ -2,11 +2,22 @@
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import SkeletonCard from '@/components/SkeletonCard.vue'
 import CreateForm from '@/components/form/CreateForm.vue'
-import { DATASET_DELETE, DATASET_EDIT, DATASET_GET, DOCUMENT_DELETE, DOCUMENT_EDIT } from '@/lib/constants'
+import {
+  DATASET_DELETE,
+  DATASET_EDIT,
+  DATASET_GET,
+  DOCUMENT_DELETE,
+  DOCUMENT_EDIT,
+} from '@/lib/constants'
 import { formatDateInput, generateUUID } from '@/lib/helpers'
 import { useAuthStore } from '@/stores/auth'
 import { createFileDocument, deleteFileDocument, getFileDocumentRows } from '@/stores/document'
-import { createDatasetRow, deleteDatasetRow, getDatasetRows, updateDatasetRow } from '@/stores/dataset'
+import {
+  createDatasetRow,
+  deleteDatasetRow,
+  getDatasetRows,
+  updateDatasetRow,
+} from '@/stores/dataset'
 import type { CreateFileDocumentParams, FileDocument } from '@/types/document'
 import type { DocumentLink } from '@/types/document_request'
 import { useTeacherStore } from '@/stores/teachers'
@@ -14,11 +25,34 @@ import { onMounted, ref } from 'vue'
 import { toast } from 'vue-sonner'
 
 type DocumentLinkRow = DocumentLink & { id?: string }
-type ExistingRoyalFile = { name: string; size: number; type?: string; resource_id: string; url?: string; existing: true; document_link_id?: string }
+type ExistingRoyalFile = {
+  name: string
+  size: number
+  type?: string
+  resource_id: string
+  url?: string
+  existing: true
+  document_link_id?: string
+}
 type RoyalFileItem = File | ExistingRoyalFile
-type RoyalDecorationRow = Record<string, any> & { id?: string; person_id?: string; document_links?: DocumentLinkRow[] }
+type RoyalDecorationRow = Record<string, any> & {
+  id?: string
+  person_id?: string
+  document_links?: DocumentLinkRow[]
+}
 type RoyalDecorationFormValue = RoyalDecorationRow & { 'announcement-file'?: RoyalFileItem[] }
-type CreateFormField = { name: string; label?: string; type: 'text' | 'date' | 'date-range' | 'select' | 'number' | 'email' | 'textarea' | 'file'; placeholder?: string; required?: boolean; disabled?: boolean; isShow?: boolean; options?: { label: string; value: any }[]; accept?: string; multiple?: boolean }
+type CreateFormField = {
+  name: string
+  label?: string
+  type: 'text' | 'date' | 'date-range' | 'select' | 'number' | 'email' | 'textarea' | 'file'
+  placeholder?: string
+  required?: boolean
+  disabled?: boolean
+  isShow?: boolean
+  options?: { label: string; value: any }[]
+  accept?: string
+  multiple?: boolean
+}
 type CreateFormSection = { topic?: string; content: CreateFormField[] }
 
 const GET_VIEW = 'decorations_get'
@@ -67,7 +101,9 @@ const royalDecorationFields: CreateFormSection[][] = [[
 ]]
 
 function getCurrentUserName() {
-  return authStore.user?.name || authStore.user?.given_name || authStore.user?.email || 'current-user'
+  return (
+    authStore.user?.name || authStore.user?.given_name || authStore.user?.email || 'current-user'
+  )
 }
 
 function normalizeRoyalFiles(value: unknown): RoyalFileItem[] {
@@ -94,7 +130,11 @@ function formatRoyalRecord(record: RoyalDecorationRow) {
   }
 }
 
-function buildRoyalPayload(values: RoyalDecorationFormValue, currentRecord?: RoyalDecorationRow, personId?: string) {
+function buildRoyalPayload(
+  values: RoyalDecorationFormValue,
+  currentRecord?: RoyalDecorationRow,
+  personId?: string,
+) {
   const payload = { ...values }
   delete payload[FILE_FIELD]
   return {
@@ -115,22 +155,42 @@ function resolveRoyalPersonId(values: RoyalDecorationFormValue, currentRecord?: 
 }
 
 function extractRoyalResponse(data: unknown) {
-  if (!Array.isArray(data)) return { records: [] as RoyalDecorationRow[], allDocumentLinks: [] as DocumentLinkRow[] }
+  if (!Array.isArray(data))
+    return { records: [] as RoyalDecorationRow[], allDocumentLinks: [] as DocumentLinkRow[] }
   const source = Array.isArray(data[0]) ? data[0] : data
   const records = ((source as RoyalDecorationRow[]) || []).map(formatRoyalRecord)
-  const allDocumentLinks = records.flatMap((record) => (record.document_links || []) as DocumentLinkRow[])
+  const allDocumentLinks = records.flatMap(
+    (record) => (record.document_links || []) as DocumentLinkRow[],
+  )
   return {
     records,
-    allDocumentLinks: Array.from(new Map(allDocumentLinks.map((link) => [link.id || `${link.entity_id}-${link.document_key}-${link.created_at}`, link])).values()),
+    allDocumentLinks: Array.from(
+      new Map(
+        allDocumentLinks.map((link) => [
+          link.id || `${link.entity_id}-${link.document_key}-${link.created_at}`,
+          link,
+        ]),
+      ).values(),
+    ),
   }
 }
 
 function createExistingRoyalFile(file: FileDocument, link?: DocumentLinkRow): ExistingRoyalFile {
-  return { name: file.original_filename, size: file.size, type: file.content_type, resource_id: file.resource_id, url: file.url, existing: true, document_link_id: link?.id }
+  return {
+    name: file.original_filename,
+    size: file.size,
+    type: file.content_type,
+    resource_id: file.resource_id,
+    url: file.url,
+    existing: true,
+    document_link_id: link?.id,
+  }
 }
 
 async function getRoyalFiles(record: RoyalDecorationRow, documentLinks: DocumentLinkRow[]) {
-  const matchedLinks = documentLinks.filter((link) => link.entity_id === record.id && Boolean(link.document_key))
+  const matchedLinks = documentLinks.filter(
+    (link) => link.entity_id === record.id && Boolean(link.document_key),
+  )
   if (!matchedLinks.length) return []
   const results = await Promise.allSettled(
     matchedLinks.map(async (link) => {
@@ -147,15 +207,29 @@ async function getRoyalDecorationData() {
     const response = await getDatasetRows<RoyalDecorationRow>(DATASET_GET.DATASET_ID, DATASET_GET.DATASET_VERSION_ROYAL_DECORATIONS, { view: GET_VIEW, page: 1, per_page: 50 })
     const { records, allDocumentLinks } = extractRoyalResponse(response.data)
     documentLinksByDecoration.value = Object.fromEntries(
-      records.filter((record) => Boolean(record.id)).map((record) => [record.id as string, allDocumentLinks.filter((link) => link.entity_id === record.id)]),
+      records
+        .filter((record) => Boolean(record.id))
+        .map((record) => [
+          record.id as string,
+          allDocumentLinks.filter((link) => link.entity_id === record.id),
+        ]),
     )
     royalDecorationData.value = await Promise.all(
-      records.map(async (record) => ({ ...record, 'announcement-file': await getRoyalFiles(record, documentLinksByDecoration.value[record.id || ''] || []) })),
+      records.map(async (record) => ({
+        ...record,
+        'announcement-file': await getRoyalFiles(
+          record,
+          documentLinksByDecoration.value[record.id || ''] || [],
+        ),
+      })),
     )
     formRenderKey.value += 1
   } catch (error: any) {
     console.error('Royal Decoration API Error:', error)
-    toast.error(`โหลดข้อมูลเครื่องราชอิสริยาภรณ์ไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, { position: 'bottom-right' })
+    toast.error(
+      `โหลดข้อมูลเครื่องราชอิสริยาภรณ์ไม่สำเร็จ: ${error?.response?.data?.message || error.message}`,
+      { position: 'bottom-right' },
+    )
     royalDecorationData.value = []
     documentLinksByDecoration.value = {}
     formRenderKey.value += 1
@@ -166,7 +240,12 @@ async function getRoyalDecorationData() {
 
 async function uploadRoyalFiles(files: File[]) {
   if (!files.length) return []
-  const params: CreateFileDocumentParams = { path: 'file-req', folder: 'file', uploaded_by: getCurrentUserName(), description: 'เครื่องราชอิสริยาภรณ์' }
+  const params: CreateFileDocumentParams = {
+    path: 'file-req',
+    folder: 'file',
+    uploaded_by: getCurrentUserName(),
+    description: 'เครื่องราชอิสริยาภรณ์',
+  }
   const uploadedKeys: string[] = []
   for (const file of files) {
     const response = await createFileDocument<FileDocument>(file, params)
@@ -188,11 +267,22 @@ async function deleteRoyalFiles(documentKeys: string[]) {
 }
 
 async function createRoyalDecorationData(payload: Record<string, any>) {
-  return createDatasetRow<RoyalDecorationRow>(DATASET_CONFIG.DATASET_ID, DATASET_CONFIG.DATASET_VERSION, payload, DATASET_CONFIG.VIEW_NAME)
+  return createDatasetRow<RoyalDecorationRow>(
+    DATASET_CONFIG.DATASET_ID,
+    DATASET_CONFIG.DATASET_VERSION,
+    payload,
+    DATASET_CONFIG.VIEW_NAME,
+  )
 }
 
 async function updateRoyalDecorationData(recordId: string, payload: Record<string, any>) {
-  return updateDatasetRow<RoyalDecorationRow>(DATASET_CONFIG.DATASET_ID, DATASET_CONFIG.DATASET_VERSION, recordId, payload, DATASET_CONFIG.VIEW_NAME)
+  return updateDatasetRow<RoyalDecorationRow>(
+    DATASET_CONFIG.DATASET_ID,
+    DATASET_CONFIG.DATASET_VERSION,
+    recordId,
+    payload,
+    DATASET_CONFIG.VIEW_NAME,
+  )
 }
 
 async function deleteRoyalDecorationData(recordId: string) {
@@ -224,7 +314,11 @@ async function deleteRoyalDocumentLinks(documentLinks: DocumentLinkRow[]) {
   for (const link of documentLinks) {
     const documentLinkKey = link.id || link.document_key
     if (!documentLinkKey) continue
-    await deleteDatasetRow(DOCUMENT_DELETE_CONFIG.DATASET_ID, DOCUMENT_DELETE_CONFIG.DATASET_VERSION, documentLinkKey)
+    await deleteDatasetRow(
+      DOCUMENT_DELETE_CONFIG.DATASET_ID,
+      DOCUMENT_DELETE_CONFIG.DATASET_VERSION,
+      documentLinkKey,
+    )
   }
 }
 
@@ -235,7 +329,9 @@ async function persistRoyalDecoration(index: number, values: RoyalDecorationForm
   const currentFiles = normalizeRoyalFiles(values[FILE_FIELD])
   const existingFiles = currentFiles.filter(isExistingRoyalFile)
   const newFiles = currentFiles.filter((file): file is File => file instanceof File)
-  const currentLinks = currentRecord?.id ? documentLinksByDecoration.value[currentRecord.id] || [] : []
+  const currentLinks = currentRecord?.id
+    ? documentLinksByDecoration.value[currentRecord.id] || []
+    : []
   const keptDocumentKeys = new Set(existingFiles.map((file) => file.resource_id))
   const removedLinks = currentLinks.filter((link) => !keptDocumentKeys.has(link.document_key))
   const hasFileChanges = removedLinks.length > 0 || newFiles.length > 0
@@ -250,7 +346,11 @@ async function persistRoyalDecoration(index: number, values: RoyalDecorationForm
       createdRecordId = createdRecord.data?.id || ''
       uploadedDocumentKeys = await uploadRoyalFiles(newFiles)
       if (uploadedDocumentKeys.length) {
-        createdDocumentLinks = await storeRoyalFiles(uploadedDocumentKeys, { ...createdRecord.data, ...payload, id: createdRecordId })
+        createdDocumentLinks = await storeRoyalFiles(uploadedDocumentKeys, {
+          ...createdRecord.data,
+          ...payload,
+          id: createdRecordId,
+        })
       }
       toast.success('บันทึกข้อมูลเครื่องราชอิสริยาภรณ์สำเร็จ', { position: 'bottom-right' })
       await getRoyalDecorationData()
@@ -266,7 +366,11 @@ async function persistRoyalDecoration(index: number, values: RoyalDecorationForm
 
     if (newFiles.length) {
       uploadedDocumentKeys = await uploadRoyalFiles(newFiles)
-      createdDocumentLinks = await storeRoyalFiles(uploadedDocumentKeys, { ...currentRecord, ...payload, id: currentRecord.id })
+      createdDocumentLinks = await storeRoyalFiles(uploadedDocumentKeys, {
+        ...currentRecord,
+        ...payload,
+        id: currentRecord.id,
+      })
     }
 
     await updateRoyalDecorationData(currentRecord.id, payload)
@@ -300,7 +404,10 @@ async function persistRoyalDecoration(index: number, values: RoyalDecorationForm
       }
     }
     console.error('Royal Decoration Save Error:', error)
-    toast.error(`บันทึกข้อมูลเครื่องราชอิสริยาภรณ์ไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, { position: 'bottom-right' })
+    toast.error(
+      `บันทึกข้อมูลเครื่องราชอิสริยาภรณ์ไม่สำเร็จ: ${error?.response?.data?.message || error.message}`,
+      { position: 'bottom-right' },
+    )
   }
 }
 
@@ -312,7 +419,10 @@ function handleSave(index: number, values: Record<string, any>) {
   confirmModal.value = true
 }
 
-async function deleteRoyalDecorationWithFiles(recordId?: string, currentRecord?: RoyalDecorationFormValue) {
+async function deleteRoyalDecorationWithFiles(
+  recordId?: string,
+  currentRecord?: RoyalDecorationFormValue,
+) {
   try {
     if (!recordId || !currentRecord?.id) {
       toast.success('ลบข้อมูลเครื่องราชอิสริยาภรณ์สำเร็จ', { position: 'bottom-right' })
@@ -329,7 +439,10 @@ async function deleteRoyalDecorationWithFiles(recordId?: string, currentRecord?:
     await getRoyalDecorationData()
   } catch (error: any) {
     console.error('Royal Decoration Delete Error:', error)
-    toast.error(`ลบข้อมูลเครื่องราชอิสริยาภรณ์ไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, { position: 'bottom-right' })
+    toast.error(
+      `ลบข้อมูลเครื่องราชอิสริยาภรณ์ไม่สำเร็จ: ${error?.response?.data?.message || error.message}`,
+      { position: 'bottom-right' },
+    )
     await getRoyalDecorationData()
   }
 }
@@ -359,7 +472,12 @@ async function updateData(confirmed: boolean) {
 
 function handleDelete(index: number, recordId?: string) {
   if (busyEntries.value[index]) return
-  pendingAction.value = { type: 'delete', index, recordId, values: royalDecorationData.value[index] }
+  pendingAction.value = {
+    type: 'delete',
+    index,
+    recordId,
+    values: royalDecorationData.value[index],
+  }
   action.value = 'delete'
   modalValue.value = `เครื่องราชฯ ${royalDecorationData.value[index]?.class || ''} ปี ${royalDecorationData.value[index]?.year || ''}`
   confirmModal.value = true

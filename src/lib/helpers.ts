@@ -1,70 +1,70 @@
 export const formatDate = (date: string | Date): string => {
-  const d = new Date(date);
-  return d.toLocaleDateString("th-TH", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-};
+  const d = new Date(date)
+  return d.toLocaleDateString('th-TH', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+}
 
 export const formatDateTime = (date: string | Date): string => {
-  const d = new Date(date);
-  return d.toLocaleDateString("th-TH", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-};
+  const d = new Date(date)
+  return d.toLocaleDateString('th-TH', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
 
 export const formatDateInput = (date?: string | Date | null): string => {
-  if (!date) return "";
-  if (typeof date === "string") {
-    return date.split("T")[0] || "";
+  if (!date) return ''
+  if (typeof date === 'string') {
+    return date.split('T')[0] || ''
   }
 
-  const isoString = date.toISOString();
-  return isoString.split("T")[0] || "";
-};
+  const isoString = date.toISOString()
+  return isoString.split('T')[0] || ''
+}
 
 export const formatTime = (date: string | Date): string => {
-  const d = new Date(date);
-  return d.toLocaleTimeString("th-TH", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-};
+  const d = new Date(date)
+  return d.toLocaleTimeString('th-TH', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
 
 export const formatDateThaiInput = (date?: string | Date | null): string => {
-  if (!date) return "";
+  if (!date) return ''
 
   const formatDateParts = (value: string) => {
-    const [year, month, day] = value.split("-");
-    if (!year || !month || !day) return "";
-    return `${day}-${month}-${year}`;
-  };
-
-  if (typeof date === "string") {
-    return formatDateParts(date.split("T")[0] || "");
+    const [year, month, day] = value.split('-')
+    if (!year || !month || !day) return ''
+    return `${day}-${month}-${year}`
   }
 
-  const isoString = date.toISOString();
-  return formatDateParts(isoString.split("T")[0] || "");
-};
+  if (typeof date === 'string') {
+    return formatDateParts(date.split('T')[0] || '')
+  }
+
+  const isoString = date.toISOString()
+  return formatDateParts(isoString.split('T')[0] || '')
+}
 
 export const formatPrice = (price: number) => {
-  return new Intl.NumberFormat("th-TH").format(price);
-};
+  return new Intl.NumberFormat('th-TH').format(price)
+}
 
 export const isValidEmail = (email: string): boolean => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-};
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
+}
 
 export const generateId = (): string => {
-  return Math.random().toString(36).substring(2) + Date.now().toString(36);
-};
+  return Math.random().toString(36).substring(2) + Date.now().toString(36)
+}
 
 export const generateUUID = (): string => {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
@@ -81,48 +81,66 @@ export const toDateInputFormat = (date: string | Date | undefined | null): strin
   const month = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
-};
+}
 
 export const debounce = <T extends (...args: any[]) => any>(
   func: T,
-  wait: number
+  wait: number,
 ): ((...args: Parameters<T>) => void) => {
-  let timeout: number | null = null;
+  let timeout: number | null = null
 
   return (...args: Parameters<T>) => {
-    if (timeout) clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
-  };
-};
+    if (timeout) clearTimeout(timeout)
+    timeout = setTimeout(() => func(...args), wait)
+  }
+}
 
 export const getImgInitials = (name: string) => {
-  if (!name) return "U";
+  if (!name) return 'U'
   return name
-    .split(" ")
+    .split(' ')
     .map((word) => word.charAt(0))
-    .join("")
+    .join('')
     .toUpperCase()
-    .slice(0, 2);
-};
+    .slice(0, 2)
+}
 
-export const getPrefixName = (prefixId?: number | string | null): string => {
-  const prefixMap: Record<number | string, string> = {
+export const PREFIX_NAME_BY_ID: Record<string, string> = {
   '250ae8ee-9f0a-4b94-a2c4-a475752dc3e6': 'นาย',
   '6ec2c1dd-ab31-47d3-8870-680baac1b8da': 'นาง',
   '9b91d6d5-c414-4a92-b44a-2ad07250271c': 'นางสาว',
+}
+
+export const PREFIX_ID_BY_NAME = Object.fromEntries(
+  Object.entries(PREFIX_NAME_BY_ID).map(([id, name]) => [name, id]),
+) as Record<string, string>
+
+export const getPrefixName = (prefixId?: number | string | null): string => {
+  const prefixMap: Record<number | string, string> = {
+    '250ae8ee-9f0a-4b94-a2c4-a475752dc3e6': 'นาย',
+    '6ec2c1dd-ab31-47d3-8870-680baac1b8da': 'นาง',
+    '9b91d6d5-c414-4a92-b44a-2ad07250271c': 'นางสาว',
   }
   if (!prefixId) return ''
   return prefixMap[prefixId] || ''
-};
+}
+
+export const getPrefixId = (prefixValue?: number | string | null): string => {
+  if (!prefixValue) return ''
+
+  const normalizedValue = String(prefixValue).trim()
+  if (!normalizedValue) return ''
+
+  return PREFIX_ID_BY_NAME[normalizedValue] || normalizedValue
+}
 
 export const calAge = (birthDate: string | Date): number => {
-  const today = new Date();
-  const birth = new Date(birthDate);
-  let age = today.getFullYear() - birth.getFullYear();
-  const monthDiff = today.getMonth() - birth.getMonth();
+  const today = new Date()
+  const birth = new Date(birthDate)
+  let age = today.getFullYear() - birth.getFullYear()
+  const monthDiff = today.getMonth() - birth.getMonth()
   if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-    age--;
+    age--
   }
-  return age;
-};
-
+  return age
+}

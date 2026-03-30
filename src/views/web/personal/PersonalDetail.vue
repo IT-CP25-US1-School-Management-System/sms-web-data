@@ -2,12 +2,12 @@
 import DropDownForm from '@/components/form/DropDownForm.vue'
 import SkeletonCard from '@/components/SkeletonCard.vue'
 import { Button } from '@/components/ui/button'
-import { getDatasetRows ,updateDatasetRow } from '@/stores/dataset'
-import { onMounted, ref ,computed } from 'vue'
+import { getDatasetRows, updateDatasetRow } from '@/stores/dataset'
+import { onMounted, ref, computed } from 'vue'
 import { toast } from 'vue-sonner'
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import type { PersonData } from '@/types/teacher'
-import {calAge ,formatDateInput} from '@/lib/helpers.ts'
+import { calAge, formatDateInput } from '@/lib/helpers.ts'
 import { DATASET_EDIT, DATASET_GET } from '@/lib/constants'
 
 const loading = ref(false)
@@ -20,11 +20,11 @@ const personalDataUpdate = ref<PersonData>({
   is_government: false,
   first_name_th: '',
   last_name_th: '',
-  created_at: ''
+  created_at: '',
 })
 
 const confirmModal = ref(false)
-const action = ref('update') 
+const action = ref('update')
 const modalTopic = ref('ข้อมูลส่วนตัว')
 const modalValue = ref('')
 
@@ -32,8 +32,6 @@ const modalValue = ref('')
 const generalForm = ref<any>(null)
 const sensitiveForm = ref<any>(null)
 const contactForm = ref<any>(null)
-
-
 
 async function getPersonalDetailData() {
   loadData.value = true
@@ -45,12 +43,11 @@ async function getPersonalDetailData() {
     })
     personalData.value = response.data[0] || {}
     personalData.value.birth_date = formatDateInput(personalData.value.birth_date)
-    personalDataUpdate.value = {...personalData.value} as PersonData
+    personalDataUpdate.value = { ...personalData.value } as PersonData
     personalData.value.prefix_id = response.data[0]?.prefixes?.prefixes_name_th || ''
     personalData.value.prefix_en = response.data[0]?.prefixes?.prefixes_name_en || ''
     personalData.value.age = calAge(personalData.value.birth_date)
   } catch (error: any) {
-   
     toast.error(`โหลดข้อมูลส่วนตัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
       position: 'bottom-right',
     })
@@ -67,12 +64,12 @@ async function updateDataPersonalDetail() {
 
   try {
     const response = await updateDatasetRow(
-      datasetId, 
+      datasetId,
       version,
       personalData.value.id,
-      personalDataUpdate.value, 
+      personalDataUpdate.value,
     )
-      if ((response as { message?: string }).message === 'success') {
+    if ((response as { message?: string }).message === 'success') {
       toast.success(`อัพเดตข้อมูลส่วนตัวสำเร็จ`, {
         position: 'bottom-right',
       })
@@ -89,23 +86,22 @@ async function updateDataPersonalDetail() {
   loading.value = false
 }
 
-
 onMounted(() => {
   getPersonalDetailData()
 })
 
-function updateData(action:boolean) {
+function updateData(action: boolean) {
   // Implementation for updating personal detail data
   if (action) {
     contactForm.value?.submitForm?.()
     const now = new Date().toISOString()
     personalDataUpdate.value = {
-    ...personalDataUpdate.value,
-    department_id: +personalData.value.department_id?.toString() || null,
-    updated_at: now,
+      ...personalDataUpdate.value,
+      department_id: +personalData.value.department_id?.toString() || null,
+      updated_at: now,
+    }
+    updateDataPersonalDetail()
   }
-   updateDataPersonalDetail()
-  } 
   confirmModal.value = false
 }
 
@@ -122,7 +118,7 @@ async function onSaveAll() {
     }
   }
   // If any form is false, do not proceed and close the modal if it was open
-  if (isAllValid.some((valid) => valid=== false)) {
+  if (isAllValid.some((valid) => valid === false)) {
     confirmModal.value = false
     return
   }
@@ -131,8 +127,8 @@ async function onSaveAll() {
 }
 
 //value จาก emit
-async function handleSave(data: Record<string, any> , formType: string) {
- if (formType === 'contactForm') {
+async function handleSave(data: Record<string, any>, formType: string) {
+  if (formType === 'contactForm') {
     personalDataUpdate.value = {
       ...personalDataUpdate.value,
       ...data,
@@ -141,9 +137,11 @@ async function handleSave(data: Record<string, any> , formType: string) {
 }
 
 const hasAnyChanges = computed(() =>
-  [generalForm.value, sensitiveForm.value, contactForm.value].some((form) => Boolean(form?.isDirty)),
+  [generalForm.value, sensitiveForm.value, contactForm.value].some((form) =>
+    Boolean(form?.isDirty),
+  ),
 )
-const isSaveDisabled = computed(() => loading.value|| !hasAnyChanges.value )
+const isSaveDisabled = computed(() => loading.value || !hasAnyChanges.value)
 </script>
 
 <template>
@@ -250,7 +248,6 @@ const isSaveDisabled = computed(() => loading.value|| !hasAnyChanges.value )
           disabled: true,
           placeholder: '-',
         },
-
       ]"
     />
 
@@ -267,7 +264,6 @@ const isSaveDisabled = computed(() => loading.value|| !hasAnyChanges.value )
           type: 'text',
           disabled: true,
           placeholder: '-',
-         
         },
         {
           name: 'religion',
@@ -275,7 +271,6 @@ const isSaveDisabled = computed(() => loading.value|| !hasAnyChanges.value )
           type: 'text',
           disabled: true,
           placeholder: '-',
-         
         },
         {
           name: 'nationality',
@@ -283,7 +278,6 @@ const isSaveDisabled = computed(() => loading.value|| !hasAnyChanges.value )
           type: 'text',
           disabled: true,
           placeholder: '-',
-         
         },
         {
           name: 'ethnicity',
@@ -291,7 +285,6 @@ const isSaveDisabled = computed(() => loading.value|| !hasAnyChanges.value )
           type: 'text',
           disabled: true,
           placeholder: '-',
-        
         },
         {
           name: 'blood_type',
@@ -306,7 +299,6 @@ const isSaveDisabled = computed(() => loading.value|| !hasAnyChanges.value )
           type: 'text',
           disabled: true,
           placeholder: '-',
-         
         },
       ]"
     />
@@ -345,20 +337,19 @@ const isSaveDisabled = computed(() => loading.value|| !hasAnyChanges.value )
       ]"
     />
   </div>
- 
-  
-   <!-- ปุ่มบันทึก -->
-    <div
-      class="sticky bottom-0 right-0 z-40 flex justify-end border-t border-gray-200 bg-white p-3 w-full dark:bg-black dark:border-neutral-700"
+
+  <!-- ปุ่มบันทึก -->
+  <div
+    class="sticky right-0 bottom-0 z-40 flex w-full justify-end border-t border-gray-200 bg-white p-3 dark:border-neutral-700 dark:bg-black"
+  >
+    <Button
+      class="cursor-pointer rounded-lg bg-[#16A34A] px-8 py-2 font-semibold text-white shadow-sm hover:bg-[#15803D]"
+      :disabled="isSaveDisabled"
+      @click="onSaveAll()"
     >
-      <Button
-        class="cursor-pointer bg-[#16A34A] hover:bg-[#15803D] text-white px-8 py-2 rounded-lg font-semibold shadow-sm"
-        :disabled="isSaveDisabled"
-        @click="onSaveAll()"
-      >
-        บันทึก
-      </Button>
-    </div>
+      บันทึก
+    </Button>
+  </div>
 
   <!-- modal -->
   <ConfirmModal
@@ -369,5 +360,4 @@ const isSaveDisabled = computed(() => loading.value|| !hasAnyChanges.value )
     :disabled="isSaveDisabled"
     @confirm="updateData"
   />
-
 </template>

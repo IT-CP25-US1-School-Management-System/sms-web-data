@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 import { ChevronUp, CalendarIcon, X } from 'lucide-vue-next'
 
+import { Checkbox } from '@/components/ui/checkbox'
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -26,7 +27,7 @@ import { ref, computed, watch } from 'vue'
 type FieldItem = {
   name: string
   label?: string
-  type: 'text' | 'date' | 'select' | 'number' | 'email' | 'textarea' | 'file'
+  type: 'text' | 'date' | 'select' | 'number' | 'email' | 'textarea' | 'file' | 'checkbox'
   placeholder?: string
   required?: boolean
   disabled?: boolean
@@ -47,6 +48,42 @@ const props = defineProps<{
   values?: Record<string, any>
 }>()
 
+function buildNumberValidator(label: string, required?: boolean) {
+  const requiredMessage = `${label} จำเป็นต้องกรอก`
+  const invalidMessage = `${label} ต้องเป็นตัวเลข`
+  const normalizeNumberValue = (value: unknown) => {
+    if (value == null) return undefined
+    if (typeof value === 'number') return Number.isFinite(value) ? value : value
+    if (typeof value === 'string') {
+      const trimmed = value.trim()
+      if (!trimmed) return undefined
+      const normalized = trimmed.replace(/,/g, '')
+      const parsed = Number(normalized)
+      return Number.isFinite(parsed) ? parsed : value
+    }
+    return value
+  }
+
+  if (required) {
+    return z.preprocess(
+      normalizeNumberValue,
+      z.number({
+        required_error: requiredMessage,
+        invalid_type_error: invalidMessage,
+      }),
+    )
+  }
+
+  return z.preprocess(
+    normalizeNumberValue,
+    z
+      .number({
+        invalid_type_error: invalidMessage,
+      })
+      .optional(),
+  )
+}
+
 const schema = computed(() => {
   const shape: Record<string, any> = {}
 
@@ -57,8 +94,22 @@ const schema = computed(() => {
       const label = field.label || field.name
       const baseRequiredMessage = `${label} จำเป็นต้องกรอก`
 
+      if (field.type === 'checkbox') {
+        shape[field.name] = field.required
+          ? z.boolean().refine((value) => value === true, {
+              message: `${label} จำเป็นต้องเลือก`,
+            })
+          : z.boolean().optional()
+        return
+      }
+
       const allowEmptyString = <T extends z.ZodTypeAny>(validator: T) =>
         validator.optional().or(z.literal(''))
+
+      if (field.type === 'number') {
+        shape[field.name] = buildNumberValidator(label, field.required)
+        return
+      }
 
       if (field.required) {
         let validator = z.string().min(1, baseRequiredMessage)
@@ -99,6 +150,12 @@ function buildValuesFromProps() {
   const result: Record<string, any> = {}
   ;(props.fields || []).forEach((field) => {
     const incoming = props.values?.[field.name]
+
+    if (field.type === 'checkbox') {
+      result[field.name] = incoming === true || incoming === 'true'
+      return
+    }
+
     result[field.name] = incoming ?? ''
   })
   return result
@@ -164,7 +221,7 @@ async function submitForm() {
     // formRef.value.$el?.dispatchEvent(
     //   new Event('submit', { cancelable: true, bubbles: true })
     // )
-    onSubmit(formRef.value.values)
+    onSubmit((result.values as Record<string, any>) || formRef.value.values)
   }
 
   return result.valid && filesValid
@@ -180,7 +237,6 @@ async function validateForm() {
 }
 
 defineExpose({ submitForm, validateForm, isDirty })
-
 
 const isOpen = ref(true)
 
@@ -406,6 +462,28 @@ function formatDisplayDate(str: string | undefined): string {
                     </SelectContent>
                   </Select>
 
+                  <div
+                    v-else-if="fieldItem.type === 'checkbox'"
+                    class="flex min-h-9 items-center gap-3 px-3"
+                  >
+                    <Checkbox
+                      :id="`form-field-${fieldItem.name}`"
+                      :model-value="Boolean(field.value)"
+                      :disabled="fieldItem.disabled"
+                      @update:model-value="
+                        (val: boolean | 'indeterminate') =>
+                          field['onUpdate:modelValue']?.(val === true)
+                      "
+                    />
+                    <label
+                      :for="`form-field-${fieldItem.name}`"
+                      class="text-muted-foreground cursor-pointer text-sm"
+                      :class="{ 'cursor-not-allowed opacity-50': fieldItem.disabled }"
+                    >
+                      {{ fieldItem.placeholder || fieldItem.label || fieldItem.name }}
+                    </label>
+                  </div>
+
                   <!-- textarea -->
                   <Textarea
                     v-else-if="fieldItem.type === 'textarea'"
@@ -479,7 +557,7 @@ function formatDisplayDate(str: string | undefined): string {
                 <div
                   v-for="(file, fileIdx) in getFiles(fieldItem.name)"
                   :key="fileIdx"
-                  class="border-muted bg-muted/40 flex c min-h-11 w-fit max-w-xl items-center justify-between gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
+                  class="border-muted bg-muted/40 c flex min-h-11 w-fit max-w-xl items-center justify-between gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
                 >
                   <span class="truncate">{{ file.name }}</span>
                   <span class="text-muted-foreground shrink-0 text-xs">
@@ -488,7 +566,7 @@ function formatDisplayDate(str: string | undefined): string {
                   <button
                     v-if="!fieldItem.disabled"
                     type="button"
-                    class="hover:text-destructive text-muted-foreground rounded p-0.5 transition-colors ursor-pointer"
+                    class="hover:text-destructive text-muted-foreground ursor-pointer rounded p-0.5 transition-colors"
                     @click.stop="removeFile(fieldItem.name, fileIdx)"
                   >
                     <X class="h-3.5 w-3.5" />

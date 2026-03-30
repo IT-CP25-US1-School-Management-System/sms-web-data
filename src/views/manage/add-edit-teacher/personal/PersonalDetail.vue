@@ -4,11 +4,11 @@ import { useRoute, useRouter } from 'vue-router'
 import DropDownForm from '@/components/form/DropDownForm.vue'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/composables/useToast'
-import { ROUTE_NAMES } from '@/lib/constants'
+import { MANAGE_DROPDOWN_DATASETS, ROUTE_NAMES } from '@/lib/constants'
 import { generateUUID } from '@/lib/helpers'
 import { createUser } from '@/stores/api'
 import { getDatasetRows } from '@/stores/dataset'
-import { createTeacher, getTeacherById, getTeachers, updateTeacher, useTeacherStore } from '@/stores/teachers'
+import { createTeacher, getTeacherById, updateTeacher, useTeacherStore } from '@/stores/teachers'
 import type { TeacherCreateDTO } from '@/types/teacher'
 
 const router = useRouter()
@@ -18,7 +18,6 @@ const teacherStore = useTeacherStore()
 
 const isSubmitting = ref(false)
 const isEditing = ref(false)
-const defaultRoleId = ref<string | null>(null)
 const prefixOptions = ref<{ label: string; value: string }[]>([
   { label: 'นาย', value: '1' },
   { label: 'นาง', value: '2' },
@@ -34,11 +33,27 @@ type PrefixRow = {
   name?: string
 }
 
+const roleOptions = ref<{ label: string; value: string }[]>([])
+
+type RoleRow = {
+  id?: number | string
+  role_id?: number | string
+  roles_id?: number | string
+  role_name_th?: string
+  roles_name_th?: string
+  name_th?: string
+  name?: string
+}
+
 const formValues = ref<Record<string, any>>({
   is_government: true,
+  role_id: '',
+  line_id: '',
 })
 const formValuesUpdate = ref<Record<string, any>>({
   is_government: true,
+  role_id: '',
+  line_id: '',
 })
 
 const generalForm = ref<any>(null)
@@ -54,13 +69,14 @@ const handleFormChange = (payload: { values: Record<string, any>; isDirty: boole
 }
 
 const requiredFields = [
+  { key: 'role_id', label: 'ตำแหน่ง' },
   { key: 'prefix_id', label: 'คำนำหน้า' },
   { key: 'first_name_th', label: 'ชื่อ' },
   { key: 'last_name_th', label: 'นามสกุล' },
   { key: 'id-card', label: 'เลขบัตรประชาชน' },
   { key: 'phone', label: 'เบอร์โทรศัพท์' },
   { key: 'personal_email', label: 'E-mail' },
-  { key: 'line-id', label: 'Line ID' },
+  { key: 'line_id', label: 'Line ID' },
 ]
 
 const getMissingRequiredFieldLabels = (values: Record<string, any>) => {
@@ -74,7 +90,9 @@ const hasRequiredFieldsCompleted = computed(
 )
 
 const hasAnyChanges = computed(() =>
-  [generalForm.value, sensitiveForm.value, contactForm.value].some((form) => Boolean(form?.isDirty)),
+  [generalForm.value, sensitiveForm.value, contactForm.value].some((form) =>
+    Boolean(form?.isDirty),
+  ),
 )
 
 const canSave = computed(() => hasAnyChanges.value && hasRequiredFieldsCompleted.value)
@@ -91,22 +109,47 @@ const maritalStatusMap: Record<string, string> = {
   divorced: 'หย่า',
 }
 
+function normalizeBoolean(value: unknown) {
+  return value === true || value === 'true'
+}
+
+function mapDropdownOptions<T extends Record<string, any>>(
+  rows: T[],
+  valueKeys: string[],
+  labelKeys: string[],
+) {
+  return rows
+    .map((item) => {
+      const value = valueKeys.map((key) => item[key]).find((candidate) => candidate !== undefined)
+      const label = labelKeys.map((key) => item[key]).find((candidate) => Boolean(candidate))
+
+      if (value === undefined || !label) return null
+
+      return {
+        label: String(label),
+        value: String(value),
+      }
+    })
+    .filter((item): item is { label: string; value: string } => Boolean(item))
+}
+
 async function fetchPrefixOptions() {
   try {
-    const response = await getDatasetRows<PrefixRow>('data_get_dropdown', 'v1.0.0', {
-      view: 'prefixes',
-      page: 1,
-      per_page: 100,
-    })
+    const response = await getDatasetRows<PrefixRow>(
+      MANAGE_DROPDOWN_DATASETS.DATASET_ID,
+      MANAGE_DROPDOWN_DATASETS.DATASET_VERSION_PREFIXES,
+      {
+        view: 'prefixes',
+        page: 1,
+        per_page: 100,
+      },
+    )
 
-    const mappedOptions = (response.data || [])
-      .map((item) => {
-        const value = item.id ?? item.prefix_id ?? item.prefixes_id
-        const label = item.prefixes_name_th || item.name_th || item.name
-        if (value === undefined || !label) return null
-        return { label, value: String(value) }
-      })
-      .filter((item): item is { label: string; value: string } => Boolean(item))
+    const mappedOptions = mapDropdownOptions(
+      response.data || [],
+      ['id', 'prefix_id', 'prefixes_id'],
+      ['prefixes_name_th', 'name_th', 'name'],
+    )
 
     if (mappedOptions.length > 0) {
       prefixOptions.value = mappedOptions
@@ -116,22 +159,45 @@ async function fetchPrefixOptions() {
   }
 }
 
-watch( 
+async function fetchRoleOptions() {
+  try {
+    for (const viewName of ['roles', 'role']) {
+      const response = await getDatasetRows<RoleRow>(
+        MANAGE_DROPDOWN_DATASETS.DATASET_ID,
+        MANAGE_DROPDOWN_DATASETS.DATASET_VERSION_ROLES,
+        {
+          view: viewName,
+          page: 1,
+          per_page: 100,
+        },
+      )
+
+      const mappedOptions = mapDropdownOptions(
+        response.data || [],
+        ['id', 'role_id', 'roles_id'],
+        ['role_name_th', 'roles_name_th', 'name_th', 'name'],
+      )
+
+      if (mappedOptions.length > 0) {
+        roleOptions.value = mappedOptions
+        return
+      }
+    }
+  } catch (error) {
+    console.error('Failed to load role options:', error)
+  }
+}
+
+watch(
   () => route.query.id,
   async (idQuery) => {
     const idFromUrl = idQuery as string | undefined
     isEditing.value = Boolean(idFromUrl)
 
     if (!idFromUrl) {
-      formValues.value = { is_government: true }
-      formValuesUpdate.value = { is_government: true }
+      formValues.value = { is_government: true, role_id: '', line_id: '' }
+      formValuesUpdate.value = { is_government: true, role_id: '', line_id: '' }
       teacherStore.clearCurrentTeacher()
-      try {
-        const response = await getTeachers({ page: 1, per_page: 1 })
-        defaultRoleId.value = response.data?.[0]?.role_id || null
-      } catch (error) {
-        defaultRoleId.value = null
-      }
       return
     }
 
@@ -142,7 +208,9 @@ watch(
 
       const teacher = response.data
       formValues.value = {
+        is_government: normalizeBoolean(teacher.is_government),
         prefix_id: teacher.prefix_id ? String(teacher.prefix_id) : '',
+        role_id: teacher.role_id ? String(teacher.role_id) : '',
         first_name_th: teacher.first_name_th,
         middle_name_th: teacher.middle_name_th,
         last_name_th: teacher.last_name_th,
@@ -159,6 +227,7 @@ watch(
         'physical-status': teacher.physical_status,
         phone: teacher.phone,
         personal_email: teacher.personal_email,
+        line_id: teacher.line_id,
         'marital-status':
           teacher.marital_status === 'โสด'
             ? 'single'
@@ -170,7 +239,6 @@ watch(
                   ? 'divorced'
                   : '',
         'spouse-name': teacher.spouse_name,
-        is_government: teacher.is_government,
       }
       formValuesUpdate.value = { ...formValues.value }
       teacherStore.setCurrentTeacher(teacher)
@@ -183,20 +251,11 @@ watch(
 )
 
 fetchPrefixOptions()
-
-async function getRoleId(): Promise<string> {
-  if (isEditing.value && teacherStore.currentTeacher?.role_id) {
-    return teacherStore.currentTeacher.role_id
-  }
-  if (!isEditing.value && defaultRoleId.value) {
-    return defaultRoleId.value
-  }
-  throw new Error('Missing role_id for creating teacher')
-}
+fetchRoleOptions()
 
 const handleSave = async () => {
   if (isSubmitting.value) return // Prevent multiple submissions
-  
+
   const forms = [generalForm, sensitiveForm, contactForm]
   const isAllValid: boolean[] = []
 
@@ -230,13 +289,18 @@ const handleSave = async () => {
 
   try {
     isSubmitting.value = true
-    const roleId = await getRoleId()
     const now = new Date().toISOString()
     const personId = isEditing.value ? teacherStore.personId! : generateUUID()
     const prefixId = String(currentValues.prefix_id ?? '').trim()
+    const roleId = String(currentValues.role_id ?? '').trim()
 
     if (!prefixId) {
       showError('กรุณาเลือกคำนำหน้า')
+      return
+    }
+
+    if (!roleId) {
+      showError('กรุณาเลือกตำแหน่ง')
       return
     }
 
@@ -261,9 +325,10 @@ const handleSave = async () => {
       physical_status: currentValues['physical-status'] || undefined,
       phone: currentValues.phone || undefined,
       personal_email: currentValues.personal_email || undefined,
+      line_id: currentValues.line_id || undefined,
       marital_status: maritalStatusMap[currentValues['marital-status']] || undefined,
       spouse_name: currentValues['spouse-name'] || undefined,
-      created_at: isEditing.value ? (teacherStore.currentTeacher?.created_at || now) : now,
+      created_at: isEditing.value ? teacherStore.currentTeacher?.created_at || now : now,
       updated_at: now,
     }
 
@@ -297,6 +362,7 @@ const handleSave = async () => {
       first_name_th: firstName,
       last_name_th: lastName,
       prefix_id: prefixId,
+      role_id: roleId,
     })
 
     await router.push({ name: ROUTE_NAMES.ADD_TEACHER_ADDRESS, query: { id: personId } })
@@ -329,9 +395,26 @@ const handleSave = async () => {
           placeholder: 'เลือกคำนำหน้า',
           options: prefixOptions,
         },
-        { name: 'first_name_th', label: 'ชื่อ', type: 'text', required: true, placeholder: 'กรุณาระบุชื่อ' },
-        { name: 'middle_name_th', label: 'ชื่อกลาง', type: 'text', placeholder: 'กรุณาระบุชื่อกลาง' },
-        { name: 'last_name_th', label: 'นามสกุล', type: 'text', required: true, placeholder: 'กรุณาระบุนามสกุล' },
+        {
+          name: 'first_name_th',
+          label: 'ชื่อ',
+          type: 'text',
+          required: true,
+          placeholder: 'กรุณาระบุชื่อ',
+        },
+        {
+          name: 'middle_name_th',
+          label: 'ชื่อกลาง',
+          type: 'text',
+          placeholder: 'กรุณาระบุชื่อกลาง',
+        },
+        {
+          name: 'last_name_th',
+          label: 'นามสกุล',
+          type: 'text',
+          required: true,
+          placeholder: 'กรุณาระบุนามสกุล',
+        },
         {
           name: 'prefix_en',
           label: 'Prefix',
@@ -343,10 +426,21 @@ const handleSave = async () => {
             { label: 'Miss', value: 'Miss' },
           ],
         },
-        { name: 'middle_name_en', label: 'Middlename', type: 'text', placeholder: 'Enter middlename' },
+
         { name: 'first_name_en', label: 'Name', type: 'text', placeholder: 'Enter name' },
+                {
+          name: 'middle_name_en',
+          label: 'Middlename',
+          type: 'text',
+          placeholder: 'Enter middlename',
+        },
         { name: 'last_name_en', label: 'Lastname', type: 'text', placeholder: 'Enter lastname' },
-        { name: 'birth_date', label: 'วัน / เดือน / ปี เกิด', type: 'date', placeholder: 'วว / ดด / ปปปป' },
+        {
+          name: 'birth_date',
+          label: 'วัน / เดือน / ปี เกิด',
+          type: 'date',
+          placeholder: 'วว / ดด / ปปปป',
+        },
         { name: 'age', label: 'อายุ (ปี)', type: 'number', placeholder: 'อายุ' },
         {
           name: 'marital-status',
@@ -360,13 +454,32 @@ const handleSave = async () => {
             { label: 'หย่า', value: 'divorced' },
           ],
         },
-        { name: 'spouse-name', label: 'คู่สมรส', type: 'text', placeholder: 'กรุณาระบุชื่อคู่สมรส' },
+        {
+          name: 'spouse-name',
+          label: 'คู่สมรส',
+          type: 'text',
+          placeholder: 'กรุณาระบุชื่อคู่สมรส',
+        },
         {
           name: 'id-card',
           label: 'เลขบัตรประจำตัวประชาชน',
           type: 'text',
           required: true,
           placeholder: 'กรุณาระบุเลขบัตรประชาชน',
+        },
+        {
+          name: 'role_id',
+          label: 'ตำแหน่ง',
+          type: 'select',
+          required: true,
+          placeholder: 'กรุณาเลือกตำแหน่ง',
+          options: roleOptions,
+        },
+        {
+          name: 'is_government',
+          label: 'ประเภทบุคลากร',
+          type: 'checkbox',
+          placeholder: 'เป็นข้าราชการ',
         },
       ]"
     />
@@ -466,18 +579,26 @@ const handleSave = async () => {
           required: true,
           placeholder: 'example@email.com',
         },
-        { name: 'line-id', label: 'Line ID', type: 'text', required: true, placeholder: 'กรุณาระบุ Line ID' },
+        {
+          name: 'line_id',
+          label: 'Line ID',
+          type: 'text',
+          required: true,
+          placeholder: 'กรุณาระบุ Line ID',
+        },
       ]"
     />
   </div>
 
-  <div class="sticky bottom-0 right-0 z-40 flex w-full justify-end border-t border-gray-200 bg-white p-3">
+  <div
+    class="sticky right-0 bottom-0 z-40 flex w-full justify-end border-t border-gray-200 bg-white p-3"
+  >
     <Button
       class="rounded-lg bg-[#16A34A] px-8 py-2 font-semibold text-white shadow-sm hover:bg-[#15803D] disabled:cursor-not-allowed disabled:opacity-50"
       :disabled="isSubmitting || !canSave"
       @click="handleSave"
     >
-      {{ isSubmitting ? (isEditing ? 'กำลังแก้ไข...' : 'กำลังบันทึก...') : (isEditing ? 'แก้ไข' : 'บันทึก') }}
+      {{ isSubmitting ? 'กำลังบันทึก...' : 'บันทึก' }}
     </Button>
   </div>
 </template>

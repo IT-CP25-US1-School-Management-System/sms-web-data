@@ -230,25 +230,29 @@ const router = createRouter({
         {
           path: 'professional-license',
           name: ROUTE_NAMES.ADD_TEACHER_PROFESSIONAL_LICENSE,
-          component: () => import('@/views/manage/add-edit-teacher/personal/ProfessionalLicense.vue'),
+          component: () =>
+            import('@/views/manage/add-edit-teacher/personal/ProfessionalLicense.vue'),
           meta: { requiresAuth: true, adminOnly: true, label: 'ใบประกอบวิชาชีพ' },
         },
         {
           path: 'position-history',
           name: ROUTE_NAMES.ADD_TEACHER_POSITION_HISTORY,
-          component: () => import('@/views/manage/add-edit-teacher/work_history/PositionHistory.vue'),
+          component: () =>
+            import('@/views/manage/add-edit-teacher/work_history/PositionHistory.vue'),
           meta: { requiresAuth: true, adminOnly: true, label: 'ข้อมูลการดำรงตำแหน่ง' },
         },
         {
           path: 'royal-decorations',
           name: ROUTE_NAMES.ADD_TEACHER_ROYAL_DECORATIONS,
-          component: () => import('@/views/manage/add-edit-teacher/work_history/RoyalDecorations.vue'),
+          component: () =>
+            import('@/views/manage/add-edit-teacher/work_history/RoyalDecorations.vue'),
           meta: { requiresAuth: true, adminOnly: true, label: 'เครื่องราชอิสริยาภรณ์' },
         },
         {
           path: 'academic-rank',
           name: ROUTE_NAMES.ADD_TEACHER_ACADEMIC_RANK,
-          component: () => import('@/views/manage/add-edit-teacher/work_history/AcademicRankHistory.vue'),
+          component: () =>
+            import('@/views/manage/add-edit-teacher/work_history/AcademicRankHistory.vue'),
           meta: { requiresAuth: true, adminOnly: true, label: 'ประวัติวิทยฐานะ' },
         },
         {
@@ -260,7 +264,8 @@ const router = createRouter({
         {
           path: 'contract-position',
           name: ROUTE_NAMES.ADD_TEACHER_CONTRACT_POSITION,
-          component: () => import('@/views/manage/add-edit-teacher/work_history/ContractPosition.vue'),
+          component: () =>
+            import('@/views/manage/add-edit-teacher/work_history/ContractPosition.vue'),
           meta: { requiresAuth: true, adminOnly: true, label: 'ประวัติการดำรงตำแหน่ง' },
         },
         {

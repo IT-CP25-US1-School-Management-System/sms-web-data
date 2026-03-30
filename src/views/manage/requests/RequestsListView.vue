@@ -25,7 +25,11 @@ import { usePagination } from '@/composables/usePagination'
 import type { PaginationData } from '@/composables/usePagination'
 import { toast } from 'vue-sonner'
 import type { DocumentRequest } from '@/types/document_request'
-import { getDocumentRequests, deleteDocumentRequest, createDocumentRequest } from '@/stores/document_request'
+import {
+  getDocumentRequests,
+  deleteDocumentRequest,
+  createDocumentRequest,
+} from '@/stores/document_request'
 import { ROUTE_NAMES } from '@/lib/constants'
 import { getPrefixName } from '@/lib/helpers'
 
@@ -57,21 +61,26 @@ const fetchRequests = async () => {
     const response = await getDocumentRequests()
     requests.value = response.data
     pagination.value.total_rows = response.total_rows || response.data.length
-    pagination.value.total_pages = Math.ceil(pagination.value.total_rows / pagination.value.per_page)
+    pagination.value.total_pages = Math.ceil(
+      pagination.value.total_rows / pagination.value.per_page,
+    )
   } catch (error: any) {
     console.error('Failed to fetch requests:', error)
     toast.error('เกิดข้อผิดพลาด', {
       description: error.message || 'ไม่สามารถโหลดข้อมูลคำร้องเอกสารได้',
     })
-  } finally {    
+  } finally {
     loading.value = false
   }
 }
 
 // Watch for pagination changes
-watch(() => pagination.value.page, () => {
-  fetchRequests()
-})
+watch(
+  () => pagination.value.page,
+  () => {
+    fetchRequests()
+  },
+)
 
 // Watch for search query changes (debounced)
 let searchTimeout: number
@@ -151,11 +160,8 @@ const handleAddRequest = async () => {
   // Create a simple new request and POST to API
   const startDate = new Date()
   const endDate = new Date(startDate.getTime() + 7 * 24 * 60 * 60 * 1000) // 7 days later
-  
-  const newRequestData: Omit<
-    DocumentRequest,
-    'id' | 'created_at' | 'updated_at'
-  > = {
+
+  const newRequestData: Omit<DocumentRequest, 'id' | 'created_at' | 'updated_at'> = {
     person_id: 'ea77ec78-1d48-4d76-b826-089c5cd8e764',
     document_type: 'ใบการศึกษา',
     title: 'คำร้องเอกสารใหม่',
@@ -191,13 +197,13 @@ function formatDate(dateString: string) {
 }
 
 function getStatusColor(
-  status: 'กำลังดำเนินการ' | 'อนุมัติ' | 'ไม่อนุมัติ' | null | undefined
+  status: 'กำลังดำเนินการ' | 'อนุมัติ' | 'ไม่อนุมัติ' | null | undefined,
 ): string {
   const normalizedStatus = status || 'กำลังดำเนินการ' // Treat null/undefined as "กำลังดำเนินการ"
   const colors: Record<'กำลังดำเนินการ' | 'อนุมัติ' | 'ไม่อนุมัติ', string> = {
-    'กำลังดำเนินการ': 'bg-yellow-300 text-blue-800',
-    'อนุมัติ': 'bg-green-600 text-white',
-    'ไม่อนุมัติ': 'bg-red-400 text-white',
+    กำลังดำเนินการ: 'bg-yellow-300 text-blue-800',
+    อนุมัติ: 'bg-green-600 text-white',
+    ไม่อนุมัติ: 'bg-red-400 text-white',
   }
   return colors[normalizedStatus] || 'bg-gray-100 text-gray-800'
 }
@@ -208,9 +214,11 @@ function getStatusColor(
     <div class="flex h-full flex-col gap-3 py-3">
       <!-- Header with search and add button -->
       <div class="shrink-0 space-y-2">
-        <div class="flex gap-4 justify-between items-center">
-          <div class="relative flex-1 max-w-md">
-            <Search class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <div class="flex items-center justify-between gap-4">
+          <div class="relative max-w-md flex-1">
+            <Search
+              class="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform"
+            />
             <Input
               v-model="searchQuery"
               type="text"
@@ -224,7 +232,7 @@ function getStatusColor(
             @click="handleAddRequest"
             :disabled="loading"
           >
-            <Plus class="h-4 w-4 mr-2" />
+            <Plus class="mr-2 h-4 w-4" />
             เพิ่มคำร้องใหม่
           </Button>
         </div>
@@ -232,20 +240,20 @@ function getStatusColor(
 
       <!-- Table Card -->
       <div class="flex min-h-0 flex-1 flex-col">
-        <div class="shrink-0 bg-primary text-primary-foreground rounded-lg px-4 py-2 mb-3">
+        <div class="bg-primary text-primary-foreground mb-3 shrink-0 rounded-lg px-4 py-2">
           <h2 class="text-base font-semibold">คำร้องเอกสาร</h2>
         </div>
 
-        <div class="flex min-h-0 flex-1 flex-col border rounded-lg px-4">
+        <div class="flex min-h-0 flex-1 flex-col rounded-lg border px-4">
           <!-- Table header (fixed, not scrollable) -->
           <table class="w-full" style="table-layout: fixed">
             <thead class="bg-muted/50">
               <tr>
-                <th class="text-left py-2 font-medium">ผู้ยื่นคำร้อง</th>
-                <th class="text-left py-2 font-medium">ประเภทเอกสาร</th>
-                <th class="text-left py-2 font-medium">สถานะ</th>
-                <th class="text-left py-2 font-medium">วันที่ยื่น</th>
-                <th class="text-center py-2 font-medium">การดำเนินการ</th>
+                <th class="py-2 text-left font-medium">ผู้ยื่นคำร้อง</th>
+                <th class="py-2 text-left font-medium">ประเภทเอกสาร</th>
+                <th class="py-2 text-left font-medium">สถานะ</th>
+                <th class="py-2 text-left font-medium">วันที่ยื่น</th>
+                <th class="py-2 text-center font-medium">การดำเนินการ</th>
               </tr>
             </thead>
           </table>
@@ -257,7 +265,7 @@ function getStatusColor(
                 <!-- Loading state -->
                 <tr v-if="loading">
                   <td colspan="4" class="py-8 text-center">
-                    <div class="flex justify-center items-center gap-2">
+                    <div class="flex items-center justify-center gap-2">
                       <Loader2 class="h-5 w-5 animate-spin" />
                       <span class="text-muted-foreground">กำลังโหลดข้อมูล...</span>
                     </div>
@@ -265,7 +273,7 @@ function getStatusColor(
                 </tr>
                 <!-- Empty state -->
                 <tr v-else-if="requests.length === 0">
-                  <td colspan="4" class="py-8 text-center text-muted-foreground">
+                  <td colspan="4" class="text-muted-foreground py-8 text-center">
                     ไม่พบข้อมูลคำร้องเอกสาร
                   </td>
                 </tr>
@@ -274,17 +282,24 @@ function getStatusColor(
                   v-else
                   v-for="request in requests"
                   :key="request.id"
-                  class="border-t hover:bg-muted/30 transition-colors"
+                  class="hover:bg-muted/30 border-t transition-colors"
                 >
                   <td class="py-2 align-middle">
                     <div v-if="request.person_data?.length" class="text-sm">
-                      {{ getPrefixName(request.person_data?.[0]?.prefix_id) }}{{ request.person_data?.[0]?.first_name_th }} {{ request.person_data?.[0]?.last_name_th }}
+                      {{ getPrefixName(request.person_data?.[0]?.prefix_id)
+                      }}{{ request.person_data?.[0]?.first_name_th }}
+                      {{ request.person_data?.[0]?.last_name_th }}
                     </div>
-                    <div v-else class="text-sm text-muted-foreground">-</div>
+                    <div v-else class="text-muted-foreground text-sm">-</div>
                   </td>
                   <td class="py-2 align-middle">{{ request.document_type }}</td>
                   <td class="py-2 align-middle">
-                    <span :class="['px-3 py-1 rounded-full text-sm font-medium', getStatusColor(request.status || undefined)]">
+                    <span
+                      :class="[
+                        'rounded-full px-3 py-1 text-sm font-medium',
+                        getStatusColor(request.status || undefined),
+                      ]"
+                    >
                       {{ request.status || 'กำลังดำเนินการ' }}
                     </span>
                   </td>
@@ -299,14 +314,14 @@ function getStatusColor(
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" class="flex flex-row gap-1 p-1">
                           <DropdownMenuItem @click="handleEdit(request)" class="cursor-pointer">
-                            <Pencil class="h-4 w-4 mr-2" />
+                            <Pencil class="mr-2 h-4 w-4" />
                             แก้ไข
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             @click="handleDelete(request)"
-                            class="text-red-600 cursor-pointer"
+                            class="cursor-pointer text-red-600"
                           >
-                            <Trash2 class="h-4 w-4 mr-2" />
+                            <Trash2 class="mr-2 h-4 w-4" />
                             ลบ
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -319,17 +334,15 @@ function getStatusColor(
           </div>
 
           <!-- Pagination - fixed at bottom -->
-          <div v-if="!loading && requests.length > 0" class="shrink-0 flex items-center justify-end gap-2 border-t py-2">
-            <span class="mr-auto text-sm text-muted-foreground">
+          <div
+            v-if="!loading && requests.length > 0"
+            class="flex shrink-0 items-center justify-end gap-2 border-t py-2"
+          >
+            <span class="text-muted-foreground mr-auto text-sm">
               แสดง {{ requests.length }} รายการจาก {{ pagination.total_rows }} รายการทั้งหมด
             </span>
 
-            <Button
-              variant="ghost"
-              size="sm"
-              :disabled="!canPreviousPage"
-              @click="previousPage"
-            >
+            <Button variant="ghost" size="sm" :disabled="!canPreviousPage" @click="previousPage">
               ← ก่อนหน้า
             </Button>
 
@@ -345,12 +358,7 @@ function getStatusColor(
               <span v-else class="px-2">...</span>
             </template>
 
-            <Button
-              variant="ghost"
-              size="sm"
-              :disabled="!canNextPage"
-              @click="nextPage"
-            >
+            <Button variant="ghost" size="sm" :disabled="!canNextPage" @click="nextPage">
               ถัดไป →
             </Button>
           </div>

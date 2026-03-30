@@ -5,12 +5,13 @@ import SkeletonCard from '@/components/SkeletonCard.vue'
 import { DATASET_DELETE, DATASET_EDIT, DATASET_GET ,DOCUMENT_DELETE, DOCUMENT_EDIT } from '@/lib/constants'
 import { formatDateInput, generateUUID } from '@/lib/helpers'
 import { useAuthStore } from '@/stores/auth'
-import { createDatasetRow, deleteDatasetRow, getDatasetRows, updateDatasetRow } from '@/stores/dataset'
 import {
-  createFileDocument,
-  deleteFileDocument,
-  getFileDocumentRows,
-} from '@/stores/document'
+  createDatasetRow,
+  deleteDatasetRow,
+  getDatasetRows,
+  updateDatasetRow,
+} from '@/stores/dataset'
+import { createFileDocument, deleteFileDocument, getFileDocumentRows } from '@/stores/document'
 import type { CreateFileDocumentParams, FileDocument } from '@/types/document'
 import type { DocumentLink } from '@/types/document_request'
 import { useTeacherStore } from '@/stores/teachers'
@@ -69,24 +70,23 @@ const LICENSE_GET_VERSION = DATASET_GET.DATASET_VERSION_LICENSE
 
 const LICENSE_DATASET = {
   DATASET_ID: DATASET_EDIT.DATASET_ID,
-  DATASET_VERSION:  DATASET_EDIT.DATASET_VERSION_LICENSE  ,//'v1.3.2'
-  VIEW_NAME : 'license_update',
-
+  DATASET_VERSION: DATASET_EDIT.DATASET_VERSION_LICENSE, //'v1.3.2'
+  VIEW_NAME: 'license_update',
 } as const
 const LICENSE_DATASET_DELETE = {
   DATASET_ID: DATASET_DELETE.DATASET_ID,
   DATASET_VERSION: DATASET_DELETE.DATASET_VERSION_LICENSE, //'v1.3.1'
-  VIEW_NAME : 'license_delete',
+  VIEW_NAME: 'license_delete',
 } as const
 const DOCUMENT_LINK_CREATE_DATASET = {
   DATASET_ID: DOCUMENT_EDIT.DATASET_ID,
   DATASET_VERSION: DOCUMENT_EDIT.DATASET_VERSION_DOCUMENT_LINK, //'v1.1.0'
-  VIEW_NAME : 'file_view',
+  VIEW_NAME: 'file_view',
 } as const
 const DOCUMENT_LINK_DELETE_DATASET = {
   DATASET_ID: DOCUMENT_DELETE.DATASET_ID,
   DATASET_VERSION: DOCUMENT_DELETE.DATASET_VERSION, //'v1.0.2'
-  VIEW_NAME : 'document_delete',
+  VIEW_NAME: 'document_delete',
 } as const
 
 const LICENSE_FILE_FIELD = 'license-file'
@@ -163,7 +163,9 @@ const licenseFields: CreateFormSection[][] = [
 ]
 
 function getCurrentUserName() {
-  return authStore.user?.name || authStore.user?.given_name || authStore.user?.email || 'current-user'
+  return (
+    authStore.user?.name || authStore.user?.given_name || authStore.user?.email || 'current-user'
+  )
 }
 
 function normalizeLicenseFiles(value: unknown): LicenseFileItem[] {
@@ -229,8 +231,12 @@ function extractProfessionalLicenseResponse(data: unknown) {
     }
   }
 
-  const records = Array.isArray(data[0]) ? (data[0] as ProfessionalLicenseRow[]) : (data as ProfessionalLicenseRow[])
-  const allDocumentLinks = records.flatMap((record) => (record.document_links || []) as DocumentLinkRow[])
+  const records = Array.isArray(data[0])
+    ? (data[0] as ProfessionalLicenseRow[])
+    : (data as ProfessionalLicenseRow[])
+  const allDocumentLinks = records.flatMap(
+    (record) => (record.document_links || []) as DocumentLinkRow[],
+  )
   const uniqueDocumentLinks = Array.from(
     new Map(
       allDocumentLinks.map((link) => [
@@ -246,7 +252,10 @@ function extractProfessionalLicenseResponse(data: unknown) {
   }
 }
 
-function createExistingLicenseFile(file: FileDocument, link?: DocumentLinkRow): ExistingLicenseFile {
+function createExistingLicenseFile(
+  file: FileDocument,
+  link?: DocumentLinkRow,
+): ExistingLicenseFile {
   return {
     name: file.original_filename,
     size: file.size,
@@ -258,8 +267,11 @@ function createExistingLicenseFile(file: FileDocument, link?: DocumentLinkRow): 
   }
 }
 
-async function getFileProfessionalLicense(record: ProfessionalLicenseRow, documentLinks: DocumentLinkRow[]) {
-  console.log("try10" , record, documentLinks)
+async function getFileProfessionalLicense(
+  record: ProfessionalLicenseRow,
+  documentLinks: DocumentLinkRow[],
+) {
+  console.log('try10', record, documentLinks)
   const matchedLinks = documentLinks.filter(
     (link) => link.entity_id === record.id && Boolean(link.document_key),
   )
@@ -316,9 +328,12 @@ async function getProfessionalLicenseData() {
     formRenderKey.value += 1
   } catch (error: any) {
     console.error('Professional License API Error:', error)
-    toast.error(`โหลดข้อมูลใบประกอบวิชาชีพไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
-      position: 'bottom-right',
-    })
+    toast.error(
+      `โหลดข้อมูลใบประกอบวิชาชีพไม่สำเร็จ: ${error?.response?.data?.message || error.message}`,
+      {
+        position: 'bottom-right',
+      },
+    )
     professionalLicenseData.value = []
     documentLinksByLicense.value = {}
     formRenderKey.value += 1
@@ -368,7 +383,7 @@ async function createProfessionalLicenseData(payload: Record<string, any>) {
     LICENSE_DATASET.DATASET_ID,
     LICENSE_DATASET.DATASET_VERSION,
     payload,
-    LICENSE_DATASET.VIEW_NAME
+    LICENSE_DATASET.VIEW_NAME,
   )
 }
 
@@ -378,7 +393,7 @@ async function updateProfessionalLicenseData(licenseId: string, payload: Record<
     LICENSE_DATASET.DATASET_VERSION,
     licenseId,
     payload,
-    LICENSE_DATASET.VIEW_NAME
+    LICENSE_DATASET.VIEW_NAME,
   )
 }
 
@@ -407,7 +422,7 @@ async function storeFile(documentIds: string[], license: ProfessionalLicenseRow)
       DOCUMENT_LINK_CREATE_DATASET.DATASET_ID,
       DOCUMENT_LINK_CREATE_DATASET.DATASET_VERSION,
       payload,
-      DOCUMENT_LINK_CREATE_DATASET.VIEW_NAME
+      DOCUMENT_LINK_CREATE_DATASET.VIEW_NAME,
     )
     createdLinks.push(response.data)
   }
@@ -459,7 +474,7 @@ async function persistProfessionalLicense(index: number, values: ProfessionalLic
       toast.success('บันทึกข้อมูลใบประกอบวิชาชีพสำเร็จ', {
         position: 'bottom-right',
       })
-      console.log("ytr1")
+      console.log('ytr1')
       await getProfessionalLicenseData()
       return
     }
@@ -471,7 +486,7 @@ async function persistProfessionalLicense(index: number, values: ProfessionalLic
         position: 'bottom-right',
       })
       await getProfessionalLicenseData()
-      console.log("try2")
+      console.log('try2')
       return
     }
 
@@ -482,24 +497,21 @@ async function persistProfessionalLicense(index: number, values: ProfessionalLic
         ...payload,
         id: currentRecord.id,
       })
-      console.log("try3")
-
+      console.log('try3')
     }
 
     await updateProfessionalLicenseData(currentRecord.id, payload)
-    console.log("try4")
+    console.log('try4')
     if (removedLinks.length) {
       await deleteDocumentLinks(removedLinks)
       await deleteFiles(removedLinks.map((link) => link.document_key))
-      console.log("try5")
-
+      console.log('try5')
     }
 
     toast.success('บันทึกข้อมูลใบประกอบวิชาชีพสำเร็จ', {
       position: 'bottom-right',
     })
     await getProfessionalLicenseData()
-
   } catch (error: any) {
     if (createdDocumentLinks.length) {
       try {
@@ -512,7 +524,7 @@ async function persistProfessionalLicense(index: number, values: ProfessionalLic
 
     if (uploadedDocumentKeys.length) {
       try {
-        console.log("try6")
+        console.log('try6')
         await deleteFiles(uploadedDocumentKeys)
         console.log('Rolled back uploaded files uploadedDocumentKeys:', uploadedDocumentKeys)
       } catch (rollbackError) {
@@ -522,7 +534,7 @@ async function persistProfessionalLicense(index: number, values: ProfessionalLic
 
     if (createdLicenseId) {
       try {
-        console.log("try7")
+        console.log('try7')
         await deleteProfessionalLicenseData(createdLicenseId)
       } catch (rollbackError) {
         console.error('Professional License dataset rollback error:', rollbackError)
@@ -530,11 +542,13 @@ async function persistProfessionalLicense(index: number, values: ProfessionalLic
     }
 
     console.error('Professional License Save Error:', error)
-    toast.error(`บันทึกข้อมูลใบประกอบวิชาชีพไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
-      position: 'bottom-right',
-    })
-}
-
+    toast.error(
+      `บันทึกข้อมูลใบประกอบวิชาชีพไม่สำเร็จ: ${error?.response?.data?.message || error.message}`,
+      {
+        position: 'bottom-right',
+      },
+    )
+  }
 }
 
 function handleSave(index: number, values: Record<string, any>) {
@@ -580,14 +594,15 @@ async function deleteProfessionalLicenseWithFiles(
     console.log('D1')
   } catch (error: any) {
     console.error('Professional License Delete Error:', error)
-    toast.error(`ลบข้อมูลใบประกอบวิชาชีพไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
-      position: 'bottom-right',
-    })
+    toast.error(
+      `ลบข้อมูลใบประกอบวิชาชีพไม่สำเร็จ: ${error?.response?.data?.message || error.message}`,
+      {
+        position: 'bottom-right',
+      },
+    )
     await getProfessionalLicenseData()
     console.log('D2')
-
-}
-
+  }
 }
 
 async function updateData(confirmed: boolean) {

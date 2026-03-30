@@ -24,7 +24,7 @@ import { createDatasetRow } from '@/stores/dataset'
 import { createFileDocument } from '@/stores/document'
 import type { CreateFileDocumentParams, FileDocument } from '@/types/document'
 import type { DocumentLink, DocumentRequest } from '@/types/document_request'
-import {  DOCUMENT_EDIT } from '@/lib/constants'
+import { DOCUMENT_EDIT } from '@/lib/constants'
 
 const fileMap = ref<Record<string, File[]>>({})
 const fileInputRefs = ref<Record<string, HTMLInputElement | null>>({})
@@ -157,7 +157,9 @@ function triggerFileInput(key: string) {
 }
 
 function getCurrentUserName() {
-  return authStore.user?.name || authStore.user?.given_name || authStore.user?.email || 'current-user'
+  return (
+    authStore.user?.name || authStore.user?.given_name || authStore.user?.email || 'current-user'
+  )
 }
 
 function getSelectedFiles(): File[] {
@@ -302,9 +304,12 @@ async function createDocumentDetail(values: Record<string, any>) {
   } catch (error: any) {
     console.error('Create Document Detail API Error:', error)
     console.error('Error Response:', error?.response?.data)
-    toast.error(`บันทึกรายละเอียดคำร้องไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
-      position: 'bottom-right',
-    })
+    toast.error(
+      `บันทึกรายละเอียดคำร้องไม่สำเร็จ: ${error?.response?.data?.message || error.message}`,
+      {
+        position: 'bottom-right',
+      },
+    )
     throw error
   }
 }
@@ -627,7 +632,9 @@ async function submitPA2Form() {
           <div class="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
             <VeeField name="pa2-pa1-count" v-slot="{ errors }">
               <div>
-                <p class="mb-1 text-sm font-semibold">ข้อตกลงPA (PA1) <span class="text-red-500">*</span></p>
+                <p class="mb-1 text-sm font-semibold">
+                  ข้อตกลงPA (PA1) <span class="text-red-500">*</span>
+                </p>
                 <p class="text-muted-foreground mb-2 text-xs">
                   ตั้งชื่อไฟล์ : กลุ่มสาระ-ชื่อ-สกุล-คศ.ปัจจุบัน-pa1
                 </p>
@@ -671,7 +678,9 @@ async function submitPA2Form() {
             </VeeField>
             <VeeField name="pa2-eval1-count" v-slot="{ errors }">
               <div>
-                <p class="mb-1 text-sm font-semibold">PA2 (กรรมการคนที่1 ผู้อำนวยการ) <span class="text-red-500">*</span></p>
+                <p class="mb-1 text-sm font-semibold">
+                  PA2 (กรรมการคนที่1 ผู้อำนวยการ) <span class="text-red-500">*</span>
+                </p>
                 <p class="text-muted-foreground mb-2 text-xs">
                   ตั้งชื่อไฟล์ : กลุ่มสาระ-ชื่อ-สกุล-คศ.ปัจจุบัน-pa2-กรรมการ1
                 </p>
@@ -721,7 +730,9 @@ async function submitPA2Form() {
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <VeeField name="pa2-eval2-count" v-slot="{ errors }">
               <div>
-                <p class="mb-1 text-sm font-semibold">PA2 (กรรมการคนที่ 2) <span class="text-red-500">*</span></p>
+                <p class="mb-1 text-sm font-semibold">
+                  PA2 (กรรมการคนที่ 2) <span class="text-red-500">*</span>
+                </p>
                 <p class="text-muted-foreground mb-2 text-xs">
                   ตั้งชื่อไฟล์ : กลุ่มสาระ-ชื่อ-สกุล-คศ.ปัจจุบัน-pa2-กรรมการ2
                 </p>
@@ -751,7 +762,7 @@ async function submitPA2Form() {
                     }}</span>
                     <button
                       type="button"
-                      class="hover:text-destructive text-muted-foreground rounded p-0.5 cursor-pointer "
+                      class="hover:text-destructive text-muted-foreground cursor-pointer rounded p-0.5"
                       @click="removeFile('pa2-eval2', i)"
                     >
                       <X class="h-3.5 w-3.5" />
@@ -768,7 +779,9 @@ async function submitPA2Form() {
             </VeeField>
             <VeeField name="pa2-eval3-count" v-slot="{ errors }">
               <div>
-                <p class="mb-1 text-sm font-semibold">PA2 (กรรมการคนที่ 3) <span class="text-red-500">*</span></p>
+                <p class="mb-1 text-sm font-semibold">
+                  PA2 (กรรมการคนที่ 3) <span class="text-red-500">*</span>
+                </p>
                 <p class="text-muted-foreground mb-2 text-xs">
                   ตั้งชื่อไฟล์ : กลุ่มสาระ-ชื่อ-สกุล-คศ.ปัจจุบัน-pa2-กรรมการ3
                 </p>
@@ -798,7 +811,7 @@ async function submitPA2Form() {
                     }}</span>
                     <button
                       type="button"
-                      class="hover:text-destructive text-muted-foreground rounded p-0.5 cursor-pointer"
+                      class="hover:text-destructive text-muted-foreground cursor-pointer rounded p-0.5"
                       @click="removeFile('pa2-eval3', i)"
                     >
                       <X class="h-3.5 w-3.5" />

@@ -2,11 +2,22 @@
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import SkeletonCard from '@/components/SkeletonCard.vue'
 import CreateForm from '@/components/form/CreateForm.vue'
-import { DATASET_DELETE, DATASET_EDIT, DATASET_GET, DOCUMENT_DELETE, DOCUMENT_EDIT } from '@/lib/constants'
+import {
+  DATASET_DELETE,
+  DATASET_EDIT,
+  DATASET_GET,
+  DOCUMENT_DELETE,
+  DOCUMENT_EDIT,
+} from '@/lib/constants'
 import { formatDateInput, generateUUID } from '@/lib/helpers'
 import { useAuthStore } from '@/stores/auth'
 import { createFileDocument, deleteFileDocument, getFileDocumentRows } from '@/stores/document'
-import { createDatasetRow, deleteDatasetRow, getDatasetRows, updateDatasetRow } from '@/stores/dataset'
+import {
+  createDatasetRow,
+  deleteDatasetRow,
+  getDatasetRows,
+  updateDatasetRow,
+} from '@/stores/dataset'
 import type { CreateFileDocumentParams, FileDocument } from '@/types/document'
 import type { DocumentLink } from '@/types/document_request'
 import { useTeacherStore } from '@/stores/teachers'
@@ -14,9 +25,21 @@ import { onMounted, ref } from 'vue'
 import { toast } from 'vue-sonner'
 
 type DocumentLinkRow = DocumentLink & { id?: string }
-type ExistingAcademicFile = { name: string; size: number; type?: string; resource_id: string; url?: string; existing: true; document_link_id?: string }
+type ExistingAcademicFile = {
+  name: string
+  size: number
+  type?: string
+  resource_id: string
+  url?: string
+  existing: true
+  document_link_id?: string
+}
 type AcademicFileItem = File | ExistingAcademicFile
-type AcademicRankRow = Record<string, any> & { id?: string; person_id?: string; document_links?: DocumentLinkRow[] }
+type AcademicRankRow = Record<string, any> & {
+  id?: string
+  person_id?: string
+  document_links?: DocumentLinkRow[]
+}
 type AcademicRankFormValue = AcademicRankRow & { 'order-file'?: AcademicFileItem[] }
 type CreateFormField = { name: string; label?: string; type: 'text' | 'date' | 'date-range' | 'select' | 'number' | 'email' | 'textarea' | 'file'; placeholder?: string; required?: boolean; disabled?: boolean; isShow?: boolean; defaultValue?: any; options?: { label: string; value: any }[]; accept?: string; multiple?: boolean }
 type CreateFormSection = { topic?: string; content: CreateFormField[] }
@@ -26,10 +49,24 @@ const EDIT_VIEW = 'academic_update'
 const ENTITY_TABLE = 'academic_rank'
 const FILE_FIELD = 'order-file'
 
-const DATASET_CONFIG = { DATASET_ID: DATASET_EDIT.DATASET_ID, DATASET_VERSION: DATASET_EDIT.DATASET_VERSION_ACADEMIC_RANK, VIEW_NAME: EDIT_VIEW } as const
-const DELETE_CONFIG = { DATASET_ID: DATASET_DELETE.DATASET_ID, DATASET_VERSION: DATASET_DELETE.DATASET_VERSION_ACADEMIC_RANK } as const
-const DOCUMENT_CREATE_CONFIG = { DATASET_ID: DOCUMENT_EDIT.DATASET_ID, DATASET_VERSION: DOCUMENT_EDIT.DATASET_VERSION_DOCUMENT_LINK, VIEW_NAME: 'file_view' } as const
-const DOCUMENT_DELETE_CONFIG = { DATASET_ID: DOCUMENT_DELETE.DATASET_ID, DATASET_VERSION: DOCUMENT_DELETE.DATASET_VERSION } as const
+const DATASET_CONFIG = {
+  DATASET_ID: DATASET_EDIT.DATASET_ID,
+  DATASET_VERSION: DATASET_EDIT.DATASET_VERSION_ACADEMIC_RANK,
+  VIEW_NAME: EDIT_VIEW,
+} as const
+const DELETE_CONFIG = {
+  DATASET_ID: DATASET_DELETE.DATASET_ID,
+  DATASET_VERSION: DATASET_DELETE.DATASET_VERSION_ACADEMIC_RANK,
+} as const
+const DOCUMENT_CREATE_CONFIG = {
+  DATASET_ID: DOCUMENT_EDIT.DATASET_ID,
+  DATASET_VERSION: DOCUMENT_EDIT.DATASET_VERSION_DOCUMENT_LINK,
+  VIEW_NAME: 'file_view',
+} as const
+const DOCUMENT_DELETE_CONFIG = {
+  DATASET_ID: DOCUMENT_DELETE.DATASET_ID,
+  DATASET_VERSION: DOCUMENT_DELETE.DATASET_VERSION,
+} as const
 
 const authStore = useAuthStore()
 const teacherStore = useTeacherStore()
@@ -84,7 +121,9 @@ const academicRankFields: CreateFormSection[][] = [[
 ]]
 
 function getCurrentUserName() {
-  return authStore.user?.name || authStore.user?.given_name || authStore.user?.email || 'current-user'
+  return (
+    authStore.user?.name || authStore.user?.given_name || authStore.user?.email || 'current-user'
+  )
 }
 
 function normalizeAcademicFiles(value: unknown): AcademicFileItem[] {
@@ -168,7 +207,11 @@ function formatAcademicRecord(record: AcademicRankRow) {
   }
 }
 
-function buildAcademicPayload(values: AcademicRankFormValue, currentRecord?: AcademicRankRow, personId?: string) {
+function buildAcademicPayload(
+  values: AcademicRankFormValue,
+  currentRecord?: AcademicRankRow,
+  personId?: string,
+) {
   const payload = { ...values }
   delete payload[FILE_FIELD]
 
@@ -199,22 +242,45 @@ function resolveAcademicPersonId(values: AcademicRankFormValue, currentRecord?: 
 }
 
 function extractAcademicResponse(data: unknown) {
-  if (!Array.isArray(data)) return { records: [] as AcademicRankRow[], allDocumentLinks: [] as DocumentLinkRow[] }
+  if (!Array.isArray(data))
+    return { records: [] as AcademicRankRow[], allDocumentLinks: [] as DocumentLinkRow[] }
   const source = Array.isArray(data[0]) ? data[0] : data
   const records = ((source as AcademicRankRow[]) || []).map(formatAcademicRecord)
-  const allDocumentLinks = records.flatMap((record) => (record.document_links || []) as DocumentLinkRow[])
+  const allDocumentLinks = records.flatMap(
+    (record) => (record.document_links || []) as DocumentLinkRow[],
+  )
   return {
     records,
-    allDocumentLinks: Array.from(new Map(allDocumentLinks.map((link) => [link.id || `${link.entity_id}-${link.document_key}-${link.created_at}`, link])).values()),
+    allDocumentLinks: Array.from(
+      new Map(
+        allDocumentLinks.map((link) => [
+          link.id || `${link.entity_id}-${link.document_key}-${link.created_at}`,
+          link,
+        ]),
+      ).values(),
+    ),
   }
 }
 
-function createExistingAcademicFile(file: FileDocument, link?: DocumentLinkRow): ExistingAcademicFile {
-  return { name: file.original_filename, size: file.size, type: file.content_type, resource_id: file.resource_id, url: file.url, existing: true, document_link_id: link?.id }
+function createExistingAcademicFile(
+  file: FileDocument,
+  link?: DocumentLinkRow,
+): ExistingAcademicFile {
+  return {
+    name: file.original_filename,
+    size: file.size,
+    type: file.content_type,
+    resource_id: file.resource_id,
+    url: file.url,
+    existing: true,
+    document_link_id: link?.id,
+  }
 }
 
 async function getAcademicFiles(record: AcademicRankRow, documentLinks: DocumentLinkRow[]) {
-  const matchedLinks = documentLinks.filter((link) => link.entity_id === record.id && Boolean(link.document_key))
+  const matchedLinks = documentLinks.filter(
+    (link) => link.entity_id === record.id && Boolean(link.document_key),
+  )
   if (!matchedLinks.length) return []
   const results = await Promise.allSettled(
     matchedLinks.map(async (link) => {
@@ -228,21 +294,39 @@ async function getAcademicFiles(record: AcademicRankRow, documentLinks: Document
 async function getAcademicRankData() {
   loading.value = true
   try {
-    const response = await getDatasetRows<AcademicRankRow>(DATASET_GET.DATASET_ID, DATASET_GET.DATASET_VERSION_ACADEMIC_RANK, { view: GET_VIEW, page: 1, per_page: 50 })
+    const response = await getDatasetRows<AcademicRankRow>(
+      DATASET_GET.DATASET_ID,
+      DATASET_GET.DATASET_VERSION_ACADEMIC_RANK,
+      { view: GET_VIEW, page: 1, per_page: 50 },
+    )
     const { records, allDocumentLinks } = extractAcademicResponse(response.data)
 
     documentLinksByAcademic.value = Object.fromEntries(
-      records.filter((record) => Boolean(record.id)).map((record) => [record.id as string, allDocumentLinks.filter((link) => link.entity_id === record.id)]),
+      records
+        .filter((record) => Boolean(record.id))
+        .map((record) => [
+          record.id as string,
+          allDocumentLinks.filter((link) => link.entity_id === record.id),
+        ]),
     )
 
     academicRankData.value = await Promise.all(
-      records.map(async (record) => ({ ...record, 'order-file': await getAcademicFiles(record, documentLinksByAcademic.value[record.id || ''] || []) })),
+      records.map(async (record) => ({
+        ...record,
+        'order-file': await getAcademicFiles(
+          record,
+          documentLinksByAcademic.value[record.id || ''] || [],
+        ),
+      })),
     )
 
     formRenderKey.value += 1
   } catch (error: any) {
     console.error('Academic Rank API Error:', error)
-    toast.error(`โหลดข้อมูลประวัติวิทยฐานะไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, { position: 'bottom-right' })
+    toast.error(
+      `โหลดข้อมูลประวัติวิทยฐานะไม่สำเร็จ: ${error?.response?.data?.message || error.message}`,
+      { position: 'bottom-right' },
+    )
     academicRankData.value = []
     documentLinksByAcademic.value = {}
     formRenderKey.value += 1
@@ -253,7 +337,12 @@ async function getAcademicRankData() {
 
 async function uploadAcademicFiles(files: File[]) {
   if (!files.length) return []
-  const params: CreateFileDocumentParams = { path: 'file-req', folder: 'file', uploaded_by: getCurrentUserName(), description: 'ประวัติวิทยฐานะ' }
+  const params: CreateFileDocumentParams = {
+    path: 'file-req',
+    folder: 'file',
+    uploaded_by: getCurrentUserName(),
+    description: 'ประวัติวิทยฐานะ',
+  }
   const uploadedKeys: string[] = []
   for (const file of files) {
     const response = await createFileDocument<FileDocument>(file, params)
@@ -275,11 +364,22 @@ async function deleteAcademicFiles(documentKeys: string[]) {
 }
 
 async function createAcademicRankData(payload: Record<string, any>) {
-  return createDatasetRow<AcademicRankRow>(DATASET_CONFIG.DATASET_ID, DATASET_CONFIG.DATASET_VERSION, payload, DATASET_CONFIG.VIEW_NAME)
+  return createDatasetRow<AcademicRankRow>(
+    DATASET_CONFIG.DATASET_ID,
+    DATASET_CONFIG.DATASET_VERSION,
+    payload,
+    DATASET_CONFIG.VIEW_NAME,
+  )
 }
 
 async function updateAcademicRankData(recordId: string, payload: Record<string, any>) {
-  return updateDatasetRow<AcademicRankRow>(DATASET_CONFIG.DATASET_ID, DATASET_CONFIG.DATASET_VERSION, recordId, payload, DATASET_CONFIG.VIEW_NAME)
+  return updateDatasetRow<AcademicRankRow>(
+    DATASET_CONFIG.DATASET_ID,
+    DATASET_CONFIG.DATASET_VERSION,
+    recordId,
+    payload,
+    DATASET_CONFIG.VIEW_NAME,
+  )
 }
 
 async function deleteAcademicRankData(recordId: string) {
@@ -311,7 +411,11 @@ async function deleteAcademicDocumentLinks(documentLinks: DocumentLinkRow[]) {
   for (const link of documentLinks) {
     const documentLinkKey = link.id || link.document_key
     if (!documentLinkKey) continue
-    await deleteDatasetRow(DOCUMENT_DELETE_CONFIG.DATASET_ID, DOCUMENT_DELETE_CONFIG.DATASET_VERSION, documentLinkKey)
+    await deleteDatasetRow(
+      DOCUMENT_DELETE_CONFIG.DATASET_ID,
+      DOCUMENT_DELETE_CONFIG.DATASET_VERSION,
+      documentLinkKey,
+    )
   }
 }
 
@@ -322,7 +426,9 @@ async function persistAcademicRank(index: number, values: AcademicRankFormValue)
   const currentFiles = normalizeAcademicFiles(values[FILE_FIELD])
   const existingFiles = currentFiles.filter(isExistingAcademicFile)
   const newFiles = currentFiles.filter((file): file is File => file instanceof File)
-  const currentLinks = currentRecord?.id ? documentLinksByAcademic.value[currentRecord.id] || [] : []
+  const currentLinks = currentRecord?.id
+    ? documentLinksByAcademic.value[currentRecord.id] || []
+    : []
   const keptDocumentKeys = new Set(existingFiles.map((file) => file.resource_id))
   const removedLinks = currentLinks.filter((link) => !keptDocumentKeys.has(link.document_key))
   const hasFileChanges = removedLinks.length > 0 || newFiles.length > 0
@@ -337,7 +443,11 @@ async function persistAcademicRank(index: number, values: AcademicRankFormValue)
       createdRecordId = createdRecord.data?.id || ''
       uploadedDocumentKeys = await uploadAcademicFiles(newFiles)
       if (uploadedDocumentKeys.length) {
-        createdDocumentLinks = await storeAcademicFiles(uploadedDocumentKeys, { ...createdRecord.data, ...payload, id: createdRecordId })
+        createdDocumentLinks = await storeAcademicFiles(uploadedDocumentKeys, {
+          ...createdRecord.data,
+          ...payload,
+          id: createdRecordId,
+        })
       }
       toast.success('บันทึกข้อมูลประวัติวิทยฐานะสำเร็จ', { position: 'bottom-right' })
       await getAcademicRankData()
@@ -353,7 +463,11 @@ async function persistAcademicRank(index: number, values: AcademicRankFormValue)
 
     if (newFiles.length) {
       uploadedDocumentKeys = await uploadAcademicFiles(newFiles)
-      createdDocumentLinks = await storeAcademicFiles(uploadedDocumentKeys, { ...currentRecord, ...payload, id: currentRecord.id })
+      createdDocumentLinks = await storeAcademicFiles(uploadedDocumentKeys, {
+        ...currentRecord,
+        ...payload,
+        id: currentRecord.id,
+      })
     }
 
     await updateAcademicRankData(currentRecord.id, payload)
@@ -391,7 +505,10 @@ async function persistAcademicRank(index: number, values: AcademicRankFormValue)
     }
 
     console.error('Academic Rank Save Error:', error)
-    toast.error(`บันทึกข้อมูลประวัติวิทยฐานะไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, { position: 'bottom-right' })
+    toast.error(
+      `บันทึกข้อมูลประวัติวิทยฐานะไม่สำเร็จ: ${error?.response?.data?.message || error.message}`,
+      { position: 'bottom-right' },
+    )
   }
 }
 
@@ -445,7 +562,10 @@ async function deleteAcademicRankWithFiles(recordId?: string, currentRecord?: Ac
     await getAcademicRankData()
   } catch (error: any) {
     console.error('Academic Rank Delete Error:', error)
-    toast.error(`ลบข้อมูลประวัติวิทยฐานะไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, { position: 'bottom-right' })
+    toast.error(
+      `ลบข้อมูลประวัติวิทยฐานะไม่สำเร็จ: ${error?.response?.data?.message || error.message}`,
+      { position: 'bottom-right' },
+    )
     await getAcademicRankData()
   }
 }

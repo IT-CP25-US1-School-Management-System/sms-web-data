@@ -23,10 +23,7 @@ async function getEducationRecordData() {
     // Previously this used `response.data[0]` which is a single object and
     // caused a type/assignment mismatch with `educationData: Ref<Record<string, any>[]>`.
     educationData.value = response.data[0]?.education_records || []
-
-   
   } catch (error: any) {
-  
     toast.error(`โหลดข้อมูลครอบครัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
       position: 'bottom-right',
     })

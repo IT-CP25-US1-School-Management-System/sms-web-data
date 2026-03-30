@@ -1,4 +1,3 @@
-
 import {
   getDatasetRows,
   getDatasetRowByKey,
@@ -6,20 +5,17 @@ import {
   updateDatasetRow,
   deleteDatasetRow,
 } from '@/stores/dataset'
+import { MANAGE_APPROVAL_LOGS_DATASET, MANAGE_DATASETS } from '@/lib/constants'
 import { defineStore } from 'pinia'
 import { ref, readonly } from 'vue'
 import { generateUUID } from '@/lib/helpers'
 import type { DatasetListResponse, DatasetRowResponse, DatasetQueryParams } from '@/types/dataset'
-import type {
-  DocumentRequest,
-  ApprovalLog,
-} from '@/types/document_request'
+import type { DocumentRequest, ApprovalLog } from '@/types/document_request'
 
-const DOCUMENT_REQUESTS_DATASET_ID = 'data_manage'
-const DOCUMENT_REQUESTS_DATASET_VERSION = 'v3.0.2'
-// Approval logs dataset version for view approval_logs
-const APPROVAL_LOGS_DATASET_ID = 'capstone'
-const APPROVAL_LOGS_VERSION = 'v2.0.3'
+const DOCUMENT_REQUESTS_DATASET_ID = MANAGE_DATASETS.DATASET_ID
+const DOCUMENT_REQUESTS_DATASET_VERSION = MANAGE_DATASETS.DATASET_VERSION_DOCUMENT_REQUEST
+const APPROVAL_LOGS_DATASET_ID = MANAGE_APPROVAL_LOGS_DATASET.DATASET_ID
+const APPROVAL_LOGS_VERSION = MANAGE_APPROVAL_LOGS_DATASET.DATASET_VERSION
 /**
  * Get approval logs (view: approval_logs, version: 2.0.3)
  */
@@ -48,10 +44,14 @@ export async function createApprovalLog(data: Omit<ApprovalLog, 'id' | 'created_
 export async function getDocumentRequests(
   params?: DatasetQueryParams,
 ): Promise<DatasetListResponse<DocumentRequest>> {
-  return getDatasetRows<DocumentRequest>(DOCUMENT_REQUESTS_DATASET_ID, DOCUMENT_REQUESTS_DATASET_VERSION, {
-    ...params,
-    view: 'document_requests',
-  })
+  return getDatasetRows<DocumentRequest>(
+    DOCUMENT_REQUESTS_DATASET_ID,
+    DOCUMENT_REQUESTS_DATASET_VERSION,
+    {
+      ...params,
+      view: 'document_requests',
+    },
+  )
 }
 
 /**
@@ -60,7 +60,12 @@ export async function getDocumentRequests(
 export async function getDocumentRequestById(
   requestId: string,
 ): Promise<DatasetRowResponse<DocumentRequest>> {
-  return getDatasetRowByKey<DocumentRequest>(DOCUMENT_REQUESTS_DATASET_ID, DOCUMENT_REQUESTS_DATASET_VERSION, requestId, 'document_requests')
+  return getDatasetRowByKey<DocumentRequest>(
+    DOCUMENT_REQUESTS_DATASET_ID,
+    DOCUMENT_REQUESTS_DATASET_VERSION,
+    requestId,
+    'document_requests',
+  )
 }
 
 /**
@@ -70,11 +75,15 @@ export async function createDocumentRequest(
   data: Omit<DocumentRequest, 'id' | 'created_at' | 'updated_at'>,
 ): Promise<DatasetRowResponse<DocumentRequest>> {
   const now = new Date().toISOString()
-  return createDatasetRow<DocumentRequest>(DOCUMENT_REQUESTS_DATASET_ID, DOCUMENT_REQUESTS_DATASET_VERSION, {
-    id: generateUUID(),
-    created_at: now,
-    ...data,
-  })
+  return createDatasetRow<DocumentRequest>(
+    DOCUMENT_REQUESTS_DATASET_ID,
+    DOCUMENT_REQUESTS_DATASET_VERSION,
+    {
+      id: generateUUID(),
+      created_at: now,
+      ...data,
+    },
+  )
 }
 
 /**
@@ -85,17 +94,26 @@ export async function updateDocumentRequest(
   data: Partial<DocumentRequest>,
 ): Promise<DatasetRowResponse<DocumentRequest>> {
   const now = new Date().toISOString()
-  return updateDatasetRow<DocumentRequest>(DOCUMENT_REQUESTS_DATASET_ID, DOCUMENT_REQUESTS_DATASET_VERSION, requestId, {
-    ...data,
-    updated_at: now,
-  })
+  return updateDatasetRow<DocumentRequest>(
+    DOCUMENT_REQUESTS_DATASET_ID,
+    DOCUMENT_REQUESTS_DATASET_VERSION,
+    requestId,
+    {
+      ...data,
+      updated_at: now,
+    },
+  )
 }
 
 /**
  * Delete a document request by ID (soft delete)
  */
 export async function deleteDocumentRequest(requestId: string): Promise<void> {
-  return deleteDatasetRow(DOCUMENT_REQUESTS_DATASET_ID, DOCUMENT_REQUESTS_DATASET_VERSION, requestId)
+  return deleteDatasetRow(
+    DOCUMENT_REQUESTS_DATASET_ID,
+    DOCUMENT_REQUESTS_DATASET_VERSION,
+    requestId,
+  )
 }
 
 /**

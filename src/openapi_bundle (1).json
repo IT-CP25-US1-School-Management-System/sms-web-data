@@ -43,9 +43,7 @@
   "paths": {
     "/health": {
       "get": {
-        "tags": [
-          "Health"
-        ],
+        "tags": ["Health"],
         "summary": "Health probe",
         "responses": {
           "200": {
@@ -56,9 +54,7 @@
     },
     "/introspect/sources": {
       "get": {
-        "tags": [
-          "Introspection"
-        ],
+        "tags": ["Introspection"],
         "summary": "List registered physical sources",
         "parameters": [
           {
@@ -137,9 +133,7 @@
         }
       },
       "post": {
-        "tags": [
-          "Introspection"
-        ],
+        "tags": ["Introspection"],
         "summary": "Create a new data source",
         "requestBody": {
           "required": true,
@@ -208,9 +202,7 @@
     },
     "/introspect/sources/{id}": {
       "put": {
-        "tags": [
-          "Introspection"
-        ],
+        "tags": ["Introspection"],
         "summary": "Update a data source",
         "parameters": [
           {
@@ -289,9 +281,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "Introspection"
-        ],
+        "tags": ["Introspection"],
         "summary": "Delete a data source",
         "parameters": [
           {
@@ -355,9 +345,7 @@
         }
       },
       "patch": {
-        "tags": [
-          "Introspection"
-        ],
+        "tags": ["Introspection"],
         "summary": "Activate or deactivate a data source",
         "parameters": [
           {
@@ -383,9 +371,7 @@
                     "description": "Set to true to activate, false to deactivate"
                   }
                 },
-                "required": [
-                  "is_active"
-                ]
+                "required": ["is_active"]
               }
             }
           }
@@ -442,9 +428,7 @@
     },
     "/introspect/schemas": {
       "get": {
-        "tags": [
-          "Introspection"
-        ],
+        "tags": ["Introspection"],
         "summary": "List schemas in a source",
         "parameters": [
           {
@@ -534,9 +518,7 @@
     },
     "/introspect/tables": {
       "get": {
-        "tags": [
-          "Introspection"
-        ],
+        "tags": ["Introspection"],
         "summary": "List tables in a schema",
         "parameters": [
           {
@@ -634,9 +616,7 @@
     },
     "/introspect/columns": {
       "get": {
-        "tags": [
-          "Introspection"
-        ],
+        "tags": ["Introspection"],
         "summary": "List columns for a table",
         "parameters": [
           {
@@ -742,9 +722,7 @@
     },
     "/datasets": {
       "get": {
-        "tags": [
-          "Catalog"
-        ],
+        "tags": ["Catalog"],
         "summary": "Search datasets",
         "parameters": [
           {
@@ -829,9 +807,7 @@
         }
       },
       "post": {
-        "tags": [
-          "Catalog"
-        ],
+        "tags": ["Catalog"],
         "summary": "New dataset and Update dataset",
         "requestBody": {
           "required": true,
@@ -880,9 +856,7 @@
     },
     "/datasets/{id}": {
       "get": {
-        "tags": [
-          "Catalog"
-        ],
+        "tags": ["Catalog"],
         "summary": "Get dataset detail",
         "parameters": [
           {
@@ -933,9 +907,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "Catalog"
-        ],
+        "tags": ["Catalog"],
         "summary": "Delete dataset by id",
         "parameters": [
           {
@@ -988,9 +960,7 @@
     },
     "/datasets/{id}/versions": {
       "get": {
-        "tags": [
-          "Contracts"
-        ],
+        "tags": ["Contracts"],
         "summary": "Get list of dataset versions (contracts)",
         "parameters": [
           {
@@ -1045,11 +1015,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "active",
-                "preview",
-                "deprecated"
-              ]
+              "enum": ["active", "preview", "deprecated"]
             },
             "description": "Filter by status"
           }
@@ -1108,9 +1074,7 @@
         }
       },
       "post": {
-        "tags": [
-          "Contracts"
-        ],
+        "tags": ["Contracts"],
         "summary": "Create a new dataset version (contract)",
         "parameters": [
           {
@@ -1185,9 +1149,7 @@
     },
     "/datasets/{id}/versions/{version}": {
       "get": {
-        "tags": [
-          "Contracts"
-        ],
+        "tags": ["Contracts"],
         "summary": "Get dataset version by ID (contract details)",
         "parameters": [
           {
@@ -1248,9 +1210,7 @@
         }
       },
       "put": {
-        "tags": [
-          "Contracts"
-        ],
+        "tags": ["Contracts"],
         "summary": "Update dataset version (contract)",
         "parameters": [
           {
@@ -1322,9 +1282,7 @@
         }
       },
       "patch": {
-        "tags": [
-          "Contracts"
-        ],
+        "tags": ["Contracts"],
         "summary": "Update dataset version status",
         "parameters": [
           {
@@ -1398,9 +1356,7 @@
     },
     "/datasets/{id}/versions/{version}/data": {
       "get": {
-        "tags": [
-          "Serving"
-        ],
+        "tags": ["Serving"],
         "summary": "List rows from a dataset version (policy-aware, dynamic)",
         "parameters": [
           {
@@ -1463,12 +1419,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "AND",
-                "OR",
-                "and",
-                "or"
-              ],
+              "enum": ["AND", "OR", "and", "or"],
               "default": "AND"
             },
             "description": "Logical operator between filter groups"
@@ -1486,12 +1437,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "ASC",
-                "DESC",
-                "asc",
-                "desc"
-              ],
+              "enum": ["ASC", "DESC", "asc", "desc"],
               "default": "ASC"
             },
             "description": "Sort order"
@@ -1572,9 +1518,7 @@
         }
       },
       "post": {
-        "tags": [
-          "Serving"
-        ],
+        "tags": ["Serving"],
         "summary": "Create a new row in dataset version",
         "parameters": [
           {
@@ -1684,9 +1628,7 @@
     },
     "/datasets/{id}/versions/{version}/data/key/{key}": {
       "get": {
-        "tags": [
-          "Serving"
-        ],
+        "tags": ["Serving"],
         "summary": "Get a row by key from dataset version (policy-aware)",
         "parameters": [
           {
@@ -1785,9 +1727,7 @@
         }
       },
       "put": {
-        "tags": [
-          "Serving"
-        ],
+        "tags": ["Serving"],
         "summary": "Update a row by key (replace all fields)",
         "parameters": [
           {
@@ -1894,9 +1834,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "Serving"
-        ],
+        "tags": ["Serving"],
         "summary": "Delete a row by key (soft delete)",
         "parameters": [
           {
@@ -1989,9 +1927,7 @@
     },
     "/reporting/export/job": {
       "post": {
-        "tags": [
-          "Reporting"
-        ],
+        "tags": ["Reporting"],
         "summary": "Export a dataset to object storage (csv/xlxs)",
         "requestBody": {
           "required": true,
@@ -2025,9 +1961,7 @@
     },
     "/reporting/export/job/{job_id}/status": {
       "get": {
-        "tags": [
-          "Reporting"
-        ],
+        "tags": ["Reporting"],
         "summary": "Get status of an export job",
         "parameters": [
           {
@@ -2060,9 +1994,7 @@
     },
     "/reporting/export/job/{job_id}/result": {
       "get": {
-        "tags": [
-          "Reporting"
-        ],
+        "tags": ["Reporting"],
         "summary": "Get the result of an export job",
         "parameters": [
           {
@@ -2095,9 +2027,7 @@
     },
     "/reporting/import/job": {
       "post": {
-        "tags": [
-          "Reporting"
-        ],
+        "tags": ["Reporting"],
         "summary": "Import a report",
         "requestBody": {
           "content": {
@@ -2115,10 +2045,7 @@
                     "description": "The ID of the dataset to import the report into"
                   }
                 },
-                "required": [
-                  "file",
-                  "dataset_id"
-                ]
+                "required": ["file", "dataset_id"]
               }
             }
           }
@@ -2155,9 +2082,7 @@
     },
     "/reporting/import/job/{job_id}/status": {
       "get": {
-        "tags": [
-          "Reporting"
-        ],
+        "tags": ["Reporting"],
         "summary": "Get status of an import job",
         "parameters": [
           {
@@ -2190,9 +2115,7 @@
     },
     "/reporting/import/job/{job_id}/result": {
       "get": {
-        "tags": [
-          "Reporting"
-        ],
+        "tags": ["Reporting"],
         "summary": "Get the result of an export job",
         "parameters": [
           {
@@ -2225,9 +2148,7 @@
     },
     "/reporting/import/pdf/template": {
       "post": {
-        "tags": [
-          "Reporting"
-        ],
+        "tags": ["Reporting"],
         "summary": "Import a PDF template",
         "requestBody": {
           "content": {
@@ -2271,11 +2192,7 @@
                           }
                         },
                         "description": "List of positions corresponding to the columns",
-                        "required": [
-                          "column",
-                          "x",
-                          "y"
-                        ]
+                        "required": ["column", "x", "y"]
                       },
                       "dataset_id": {
                         "type": "string",
@@ -2284,10 +2201,7 @@
                     }
                   }
                 },
-                "required": [
-                  "file",
-                  "data"
-                ]
+                "required": ["file", "data"]
               }
             }
           }
@@ -2334,9 +2248,7 @@
     },
     "/reporting/import/pdf/template/{template_id}": {
       "get": {
-        "tags": [
-          "Reporting"
-        ],
+        "tags": ["Reporting"],
         "summary": "Get PDF template for Export",
         "parameters": [
           {
@@ -2387,11 +2299,7 @@
                         }
                       },
                       "description": "List of positions corresponding to the columns",
-                      "required": [
-                        "column",
-                        "x",
-                        "y"
-                      ]
+                      "required": ["column", "x", "y"]
                     },
                     "dataset_id": {
                       "type": "string",
@@ -2425,9 +2333,7 @@
         }
       },
       "put": {
-        "tags": [
-          "Reporting"
-        ],
+        "tags": ["Reporting"],
         "summary": "Update a PDF template",
         "parameters": [
           {
@@ -2472,22 +2378,14 @@
                       }
                     },
                     "description": "List of positions corresponding to the columns",
-                    "required": [
-                      "column",
-                      "x",
-                      "y"
-                    ]
+                    "required": ["column", "x", "y"]
                   },
                   "dataset_id": {
                     "type": "string",
                     "description": "The ID of the dataset associated with the template"
                   }
                 },
-                "required": [
-                  "columns",
-                  "position",
-                  "dataset_id"
-                ]
+                "required": ["columns", "position", "dataset_id"]
               }
             }
           }
@@ -2532,9 +2430,7 @@
         }
       },
       "delete": {
-        "tags": [
-          "Reporting"
-        ],
+        "tags": ["Reporting"],
         "summary": "Delete a PDF template",
         "parameters": [
           {
@@ -2565,9 +2461,7 @@
     },
     "/reporting/export/pdf/template/job": {
       "post": {
-        "tags": [
-          "Reporting"
-        ],
+        "tags": ["Reporting"],
         "summary": "Export a PDF report based on a template",
         "requestBody": {
           "required": true,
@@ -2589,11 +2483,7 @@
                     "description": "The key identifying the specific report instance to generate"
                   }
                 },
-                "required": [
-                  "template_id",
-                  "dataset_id",
-                  "key"
-                ]
+                "required": ["template_id", "dataset_id", "key"]
               }
             }
           }
@@ -2640,9 +2530,7 @@
     },
     "/reporting/export/pdf/template/job/{job_id}/status": {
       "get": {
-        "tags": [
-          "Reporting"
-        ],
+        "tags": ["Reporting"],
         "summary": "Get status of an import job",
         "parameters": [
           {
@@ -2681,9 +2569,7 @@
     },
     "/reporting/export/pdf/template/job/{job_id}/result": {
       "get": {
-        "tags": [
-          "Reporting"
-        ],
+        "tags": ["Reporting"],
         "summary": "Get status of an import job",
         "parameters": [
           {
@@ -2854,9 +2740,7 @@
             }
           }
         },
-        "required": [
-          "error"
-        ]
+        "required": ["error"]
       },
       "SourcesDTO": {
         "type": "object",
@@ -2872,9 +2756,7 @@
           },
           "type": {
             "type": "string",
-            "enum": [
-              "jdbc"
-            ],
+            "enum": ["jdbc"],
             "description": "Source type"
           },
           "is_active": {
@@ -2883,20 +2765,12 @@
           },
           "sensitivity": {
             "type": "string",
-            "enum": [
-              "public",
-              "internal",
-              "confidential",
-              "restricted"
-            ],
+            "enum": ["public", "internal", "confidential", "restricted"],
             "description": "Data sensitivity level"
           },
           "db_type": {
             "type": "string",
-            "enum": [
-              "postgres",
-              "mysql"
-            ],
+            "enum": ["postgres", "mysql"],
             "description": "Database type"
           },
           "host": {
@@ -2953,9 +2827,7 @@
           },
           "type": {
             "type": "string",
-            "enum": [
-              "jdbc"
-            ],
+            "enum": ["jdbc"],
             "description": "Source type (optional)"
           },
           "is_active": {
@@ -2964,20 +2836,12 @@
           },
           "sensitivity": {
             "type": "string",
-            "enum": [
-              "public",
-              "internal",
-              "confidential",
-              "restricted"
-            ],
+            "enum": ["public", "internal", "confidential", "restricted"],
             "description": "Data sensitivity level (optional)"
           },
           "db_type": {
             "type": "string",
-            "enum": [
-              "postgres",
-              "mysql"
-            ],
+            "enum": ["postgres", "mysql"],
             "description": "Database type (optional)"
           },
           "host": {
@@ -3038,9 +2902,7 @@
             "description": "Creation timestamp"
           }
         },
-        "required": [
-          "schema"
-        ]
+        "required": ["schema"]
       },
       "Tables": {
         "type": "object",
@@ -3072,10 +2934,7 @@
             "description": "Creation timestamp"
           }
         },
-        "required": [
-          "schema",
-          "table_name"
-        ]
+        "required": ["schema", "table_name"]
       },
       "Columns": {
         "type": "object",
@@ -3129,13 +2988,7 @@
             "description": "Creation timestamp"
           }
         },
-        "required": [
-          "schema",
-          "table_name",
-          "column_name",
-          "data_type",
-          "is_nullable"
-        ]
+        "required": ["schema", "table_name", "column_name", "data_type", "is_nullable"]
       },
       "Dataset": {
         "type": "object",
@@ -3154,12 +3007,7 @@
           },
           "sensitivity": {
             "type": "string",
-            "enum": [
-              "public",
-              "internal",
-              "confidential",
-              "restricted"
-            ]
+            "enum": ["public", "internal", "confidential", "restricted"]
           },
           "has_pii": {
             "type": "boolean"
@@ -3247,12 +3095,7 @@
           },
           "sensitivity": {
             "type": "string",
-            "enum": [
-              "public",
-              "internal",
-              "confidential",
-              "restricted"
-            ]
+            "enum": ["public", "internal", "confidential", "restricted"]
           },
           "has_pii": {
             "type": "boolean"
@@ -3312,19 +3155,13 @@
                   "description": "Enum values (optional)"
                 }
               },
-              "required": [
-                "name",
-                "table_name",
-                "type"
-              ]
+              "required": ["name", "table_name", "type"]
             },
             "minItems": 1,
             "description": "Column definitions"
           }
         },
-        "required": [
-          "columns"
-        ]
+        "required": ["columns"]
       },
       "AccessPolicy": {
         "type": "object",
@@ -3358,19 +3195,11 @@
             "description": "Allowed views/columns"
           }
         },
-        "required": [
-          "role",
-          "scope",
-          "allow_view"
-        ]
+        "required": ["role", "scope", "allow_view"]
       },
       "FromRef": {
         "type": "object",
-        "required": [
-          "source",
-          "schema",
-          "table"
-        ],
+        "required": ["source", "schema", "table"],
         "properties": {
           "source": {
             "type": "string"
@@ -3444,20 +3273,11 @@
       },
       "JoinRef": {
         "type": "object",
-        "required": [
-          "type",
-          "source",
-          "schema",
-          "table",
-          "on"
-        ],
+        "required": ["type", "source", "schema", "table", "on"],
         "properties": {
           "type": {
             "type": "string",
-            "enum": [
-              "inner",
-              "left"
-            ]
+            "enum": ["inner", "left"]
           },
           "source": {
             "type": "string"
@@ -3478,10 +3298,7 @@
       },
       "Projection": {
         "type": "object",
-        "required": [
-          "as",
-          "expr"
-        ],
+        "required": ["as", "expr"],
         "properties": {
           "as": {
             "type": "string"
@@ -3499,10 +3316,7 @@
       },
       "WhereAllow": {
         "type": "object",
-        "required": [
-          "key",
-          "expr"
-        ],
+        "required": ["key", "expr"],
         "properties": {
           "key": {
             "type": "string"
@@ -3514,14 +3328,7 @@
             "type": "array",
             "items": {
               "type": "string",
-              "enum": [
-                "=",
-                "IN",
-                ">",
-                "<",
-                ">=",
-                "<="
-              ]
+              "enum": ["=", "IN", ">", "<", ">=", "<="]
             }
           }
         }
@@ -3594,11 +3401,7 @@
                 "$ref": "#/components/schemas/QueryPlan"
               }
             },
-            "required": [
-              "default_view",
-              "key_field",
-              "query"
-            ]
+            "required": ["default_view", "key_field", "query"]
           },
           "views": {
             "type": "object",
@@ -3620,10 +3423,7 @@
                     "description": "Column names"
                   }
                 },
-                "required": [
-                  "table_name",
-                  "columns"
-                ]
+                "required": ["table_name", "columns"]
               }
             },
             "description": "View definitions"
@@ -3654,11 +3454,7 @@
                 "$ref": "#/components/schemas/QueryPlan"
               }
             },
-            "required": [
-              "key_field",
-              "allow_edit",
-              "query"
-            ],
+            "required": ["key_field", "allow_edit", "query"],
             "description": "Write policy (optional)"
           },
           "delete": {
@@ -3672,16 +3468,11 @@
                 "$ref": "#/components/schemas/QueryPlan"
               }
             },
-            "required": [
-              "key_field",
-              "query"
-            ],
+            "required": ["key_field", "query"],
             "description": "Delete policy (optional)"
           }
         },
-        "required": [
-          "views"
-        ]
+        "required": ["views"]
       },
       "DatasetVersion": {
         "type": "object",
@@ -3702,11 +3493,7 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "active",
-              "preview",
-              "deprecated"
-            ],
+            "enum": ["active", "preview", "deprecated"],
             "description": "Version status"
           },
           "schema": {
@@ -3735,14 +3522,7 @@
             "description": "Last update timestamp"
           }
         },
-        "required": [
-          "dataset_id",
-          "version",
-          "status",
-          "schema",
-          "access_policies",
-          "policies"
-        ]
+        "required": ["dataset_id", "version", "status", "schema", "access_policies", "policies"]
       },
       "InsertDatasetVersionDTO": {
         "type": "object",
@@ -3758,11 +3538,7 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "active",
-              "preview",
-              "deprecated"
-            ],
+            "enum": ["active", "preview", "deprecated"],
             "description": "Version status"
           },
           "schema": {
@@ -3780,14 +3556,7 @@
             "$ref": "#/components/schemas/Policies"
           }
         },
-        "required": [
-          "version",
-          "source_id",
-          "status",
-          "schema",
-          "access_policies",
-          "policies"
-        ]
+        "required": ["version", "source_id", "status", "schema", "access_policies", "policies"]
       },
       "UpdateDatasetVersionDTO": {
         "type": "object",
@@ -3799,11 +3568,7 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "active",
-              "preview",
-              "deprecated"
-            ],
+            "enum": ["active", "preview", "deprecated"],
             "description": "Version status"
           },
           "schema": {
@@ -3821,30 +3586,18 @@
             "$ref": "#/components/schemas/Policies"
           }
         },
-        "required": [
-          "source_id",
-          "status",
-          "schema",
-          "access_policies",
-          "policies"
-        ]
+        "required": ["source_id", "status", "schema", "access_policies", "policies"]
       },
       "UpdateDatasetVersionStatusDTO": {
         "type": "object",
         "properties": {
           "status": {
             "type": "string",
-            "enum": [
-              "active",
-              "preview",
-              "deprecated"
-            ],
+            "enum": ["active", "preview", "deprecated"],
             "description": "New status for the dataset version"
           }
         },
-        "required": [
-          "status"
-        ]
+        "required": ["status"]
       },
       "ExportJobCreate": {
         "type": "object",
@@ -3863,10 +3616,7 @@
           },
           "format": {
             "type": "string",
-            "enum": [
-              "parquet",
-              "csv"
-            ],
+            "enum": ["parquet", "csv"],
             "default": "parquet"
           },
           "destination_uri": {
@@ -3879,12 +3629,7 @@
         "properties": {
           "status": {
             "type": "string",
-            "enum": [
-              "pending",
-              "in_progress",
-              "completed",
-              "failed"
-            ]
+            "enum": ["pending", "in_progress", "completed", "failed"]
           },
           "created_at": {
             "type": "string",
@@ -3907,12 +3652,7 @@
         "properties": {
           "status": {
             "type": "string",
-            "enum": [
-              "pending",
-              "in_progress",
-              "completed",
-              "failed"
-            ]
+            "enum": ["pending", "in_progress", "completed", "failed"]
           },
           "created_at": {
             "type": "string",
@@ -3939,12 +3679,7 @@
         "properties": {
           "status": {
             "type": "string",
-            "enum": [
-              "pending",
-              "in_progress",
-              "completed",
-              "failed"
-            ]
+            "enum": ["pending", "in_progress", "completed", "failed"]
           },
           "created_at": {
             "type": "string",
@@ -3964,12 +3699,7 @@
         "properties": {
           "status": {
             "type": "string",
-            "enum": [
-              "pending",
-              "in_progress",
-              "completed",
-              "failed"
-            ]
+            "enum": ["pending", "in_progress", "completed", "failed"]
           },
           "created_at": {
             "type": "string",
@@ -4053,10 +3783,7 @@
         "in": "query",
         "schema": {
           "type": "string",
-          "enum": [
-            "asc",
-            "desc"
-          ],
+          "enum": ["asc", "desc"],
           "description": "Sort order: 'asc' for ascending, 'desc' for descending"
         }
       },

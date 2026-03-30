@@ -1,7 +1,7 @@
 import { documentApiInstance } from '@/stores/api'
 import type { CreateFileDocumentParams, FileDocument, FileDocumentResponse } from '@/types/document'
 
-//ใช้สำหรับดึงข้อมูลเอกสารที่ถูกสร้างขึ้นมาแล้วจาก document service  หน้าที่ใช้เช่น ใบประกอบวิชาชีพ  
+//ใช้สำหรับดึงข้อมูลเอกสารที่ถูกสร้างขึ้นมาแล้วจาก document service  หน้าที่ใช้เช่น ใบประกอบวิชาชีพ
 export async function getFileDocumentRows<T = Record<string, any>>(
   key: string,
 ): Promise<FileDocumentResponse<T>> {
@@ -10,7 +10,6 @@ export async function getFileDocumentRows<T = Record<string, any>>(
   )
   return response.data
 }
-
 
 export async function createFileDocument<T = FileDocument>(
   file: File | Blob,
@@ -40,15 +39,11 @@ export async function createFileDocument<T = FileDocument>(
   return response.data
 }
 
-
-
 export async function deleteFileDocument<T = FileDocument>(
   key: string,
 ): Promise<FileDocumentResponse<T>> {
   const response = await documentApiInstance.delete<FileDocumentResponse<T>>(
-    `/v1/documents/resource/${key}`
+    `/v1/documents/resource/${key}`,
   )
   return response.data
 }
-   
-
