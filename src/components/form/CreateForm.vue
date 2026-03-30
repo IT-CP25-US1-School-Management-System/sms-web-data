@@ -46,6 +46,7 @@ type FieldItem = {
   required?: boolean
   disabled?: boolean
   isShow?: boolean
+  defaultValue?: any
   options?: { label: string; value: any }[]
   accept?: string // e.g. '.pdf,.jpg,.png' or 'image/*'
   multiple?: boolean
@@ -158,10 +159,13 @@ function buildSchemas() {
           }
           return
         }
-
         // Special-case file fields: validate presence. Files are stored in
         // `fileMap[entryIndex][name]` and VeeField will receive either a File
         // or an array of File depending on `multiple`.
+        if (f.type === 'number') {
+          shape[f.name] = buildNumberFieldSchema(label, f.required)
+          return
+        }
         if (f.type === 'file') {
           const requiredMsg = `กรุณาอัปโหลดเอกสาร`
 
@@ -215,11 +219,6 @@ function buildSchemas() {
           return
         }
 
-        if (f.type === 'number') {
-          shape[f.name] = buildNumberFieldSchema(label, f.required)
-          return
-        }
-
         // Default: treat as string. For required fields enforce non-empty with a Thai message.
         // Use preprocess to convert null/undefined to empty string so Zod returns our
         // custom message (rather than the generic "Expected string, received null").
@@ -268,6 +267,20 @@ const fileInputRefs = ref<Array<Record<string, HTMLInputElement | null>>>([])
 const fileSizeErrors = ref<Array<Record<string, string | undefined>>>([])
 const fileTypeErrors = ref<Array<Record<string, string | undefined>>>([])
 const MAX_FILE_SIZE = 15 * 1024 * 1024 // 15 MB
+
+function createDefaultEntryValues(entry: FieldSection[] = []) {
+  const defaultValues: Record<string, any> = {}
+
+  entry.forEach((section) => {
+    section.content.forEach((field) => {
+      if (field.defaultValue !== undefined) {
+        defaultValues[field.name] = field.defaultValue
+      }
+    })
+  })
+
+  return defaultValues
+}
 
 function getAcceptRules(accept?: string) {
   return (
@@ -365,8 +378,8 @@ watch(
       // (ถ้ามีค่ามา เราใช้ค่าที่ parent ให้มาเป็นหลัก จึงไม่ตั้งค่าเริ่มต้นอื่น)
     } else if (localValues.value.length === 0) {
       // กรณีไม่มี values จาก parent: สร้าง localValues ให้ตรงกับจำนวน localEntries
-      localValues.value = localEntries.value.map(() => ({}))
-      initialEntryValues.value = localEntries.value.map(() => ({}))
+      localValues.value = localEntries.value.map((entry) => createDefaultEntryValues(entry))
+      initialEntryValues.value = localEntries.value.map((entry) => createDefaultEntryValues(entry))
       entryTouchedStates.value = localEntries.value.map(() => false)
       localValuesVersions.value = localEntries.value.map(() => 0)
     }
@@ -412,8 +425,8 @@ function addEntry() {
   const template = props.fields[0]
   const cloned: FieldSection[] = JSON.parse(JSON.stringify(template))
   localEntries.value.push(cloned)
-  localValues.value.push({})
-  initialEntryValues.value.push({})
+  localValues.value.push(createDefaultEntryValues(cloned))
+  initialEntryValues.value.push(createDefaultEntryValues(cloned))
   entryTouchedStates.value.push(false)
   localValuesVersions.value.push(0)
   // keep formRefs aligned with new entry

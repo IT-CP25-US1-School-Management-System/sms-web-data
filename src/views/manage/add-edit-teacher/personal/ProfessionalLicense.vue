@@ -11,11 +11,7 @@ import {
   updateProfessionalLicense,
   useTeacherStore,
 } from '@/stores/teachers'
-import {
-  createFileDocument,
-  deleteFileDocument,
-  getFileDocumentRows,
-} from '@/stores/document'
+import { createFileDocument, deleteFileDocument, getFileDocumentRows } from '@/stores/document'
 import { createDatasetRow, deleteDatasetRow } from '@/stores/dataset'
 import type { CreateFileDocumentParams, FileDocument } from '@/types/document'
 import type { DocumentLink } from '@/types/document_request'
@@ -42,8 +38,8 @@ type LicenseFileItem = File | ExistingLicenseFile
 
 type ProfessionalLicenseRow = Record<string, any> &
   Partial<ProfessionalLicense> & {
-  document_links?: DocumentLinkRow[]
-}
+    document_links?: DocumentLinkRow[]
+  }
 
 type ProfessionalLicenseFormValue = ProfessionalLicenseRow & {
   'license-file'?: LicenseFileItem[]
@@ -66,7 +62,6 @@ type CreateFormSection = {
   topic?: string
   content: CreateFormField[]
 }
-
 
 const LICENSE_FILE_FIELD = 'license-file'
 const LICENSE_ENTITY_TABLE = 'profession-license'
@@ -159,7 +154,9 @@ const licenseFields: CreateFormSection[][] = [
 ]
 
 function getCurrentUserName() {
-  return authStore.user?.name || authStore.user?.given_name || authStore.user?.email || 'current-user'
+  return (
+    authStore.user?.name || authStore.user?.given_name || authStore.user?.email || 'current-user'
+  )
 }
 
 function normalizeLicenseFiles(value: unknown): LicenseFileItem[] {
@@ -231,8 +228,12 @@ function extractProfessionalLicenseResponse(data: unknown) {
     }
   }
 
-  const records = Array.isArray(data[0]) ? (data[0] as ProfessionalLicenseRow[]) : (data as ProfessionalLicenseRow[])
-  const allDocumentLinks = records.flatMap((record) => (record.document_links || []) as DocumentLinkRow[])
+  const records = Array.isArray(data[0])
+    ? (data[0] as ProfessionalLicenseRow[])
+    : (data as ProfessionalLicenseRow[])
+  const allDocumentLinks = records.flatMap(
+    (record) => (record.document_links || []) as DocumentLinkRow[],
+  )
   const uniqueDocumentLinks = Array.from(
     new Map(
       allDocumentLinks.map((link) => [
@@ -248,7 +249,10 @@ function extractProfessionalLicenseResponse(data: unknown) {
   }
 }
 
-function createExistingLicenseFile(file: FileDocument, link?: DocumentLinkRow): ExistingLicenseFile {
+function createExistingLicenseFile(
+  file: FileDocument,
+  link?: DocumentLinkRow,
+): ExistingLicenseFile {
   return {
     name: file.original_filename,
     size: file.size,
@@ -260,7 +264,10 @@ function createExistingLicenseFile(file: FileDocument, link?: DocumentLinkRow): 
   }
 }
 
-async function getFileProfessionalLicense(record: ProfessionalLicenseRow, documentLinks: DocumentLinkRow[]) {
+async function getFileProfessionalLicense(
+  record: ProfessionalLicenseRow,
+  documentLinks: DocumentLinkRow[],
+) {
   const matchedLinks = documentLinks.filter(
     (link) => link.entity_id === record.id && Boolean(link.document_key),
   )
@@ -321,9 +328,12 @@ async function getProfessionalLicenseData() {
     formRenderKey.value += 1
   } catch (error: any) {
     console.error('Professional License API Error:', error)
-    toast.error(`โหลดข้อมูลใบประกอบวิชาชีพไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
-      position: 'bottom-right',
-    })
+    toast.error(
+      `โหลดข้อมูลใบประกอบวิชาชีพไม่สำเร็จ: ${error?.response?.data?.message || error.message}`,
+      {
+        position: 'bottom-right',
+      },
+    )
     professionalLicenseData.value = []
     documentLinksByLicense.value = {}
     formRenderKey.value += 1
@@ -479,7 +489,6 @@ async function persistProfessionalLicense(index: number, values: ProfessionalLic
       position: 'bottom-right',
     })
     await getProfessionalLicenseData()
-
   } catch (error: any) {
     if (createdDocumentLinks.length) {
       try {
@@ -506,9 +515,12 @@ async function persistProfessionalLicense(index: number, values: ProfessionalLic
     }
 
     console.error('Professional License Save Error:', error)
-    toast.error(`บันทึกข้อมูลใบประกอบวิชาชีพไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
-      position: 'bottom-right',
-    })
+    toast.error(
+      `บันทึกข้อมูลใบประกอบวิชาชีพไม่สำเร็จ: ${error?.response?.data?.message || error.message}`,
+      {
+        position: 'bottom-right',
+      },
+    )
   }
 }
 
@@ -552,9 +564,12 @@ async function deleteProfessionalLicenseWithFiles(
     await getProfessionalLicenseData()
   } catch (error: any) {
     console.error('Professional License Delete Error:', error)
-    toast.error(`ลบข้อมูลใบประกอบวิชาชีพไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
-      position: 'bottom-right',
-    })
+    toast.error(
+      `ลบข้อมูลใบประกอบวิชาชีพไม่สำเร็จ: ${error?.response?.data?.message || error.message}`,
+      {
+        position: 'bottom-right',
+      },
+    )
     await getProfessionalLicenseData()
   }
 }
@@ -616,7 +631,7 @@ onMounted(() => {
 
 <template>
   <div class="mx-6 flex flex-col gap-4 pb-6">
-    <p v-if="loading" class="text-sm text-muted-foreground">กำลังโหลดข้อมูล...</p>
+    <p v-if="loading" class="text-muted-foreground text-sm">กำลังโหลดข้อมูล...</p>
 
     <CreateForm
       :key="formRenderKey"

@@ -146,6 +146,7 @@
 ✅ **Disabled Menu**: Menu items ถูก disable จนกว่าจะสร้าง personal data (ได้ ID)
 ✅ **Delete Modal**: Delete ใช้ confirm modal แทน browser confirm()
 ✅ **Edit Feature**: Edit mode ใช้ query parameter เพื่อ load data และ populate form, unified CREATE/UPDATE logic
+
 ## March 30, 2026 - EducationInfo admin flow update
 
 - `src/views/manage/add-edit-teacher/personal/EducationInfo.vue` now fetches teacher-specific education data through `src/stores/teachers.ts`.

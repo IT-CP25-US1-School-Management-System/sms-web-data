@@ -118,9 +118,9 @@ function getCurrentUserName() {
   )
 }
 
-function getSelectedFiles(): File[] {
-  return Object.values(fileMap.value).flatMap((files) => files ?? [])
-}
+// function getSelectedFiles(): File[] {
+//   return Object.values(fileMap.value).flatMap((files) => files ?? [])
+// }
 
 type UploadedSectionFile = {
   documentKey: string

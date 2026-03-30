@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import DropDownForm from '@/components/form/DropDownForm.vue'
+import SkeletonCard from '@/components/SkeletonCard.vue'
 import { Button } from '@/components/ui/button'
 import { getDatasetRows, updateDatasetRow } from '@/stores/dataset'
 import { onMounted, ref, computed } from 'vue'
@@ -10,6 +11,7 @@ import { calAge, formatDateInput } from '@/lib/helpers.ts'
 import { DATASET_EDIT, DATASET_GET } from '@/lib/constants'
 
 const loading = ref(false)
+const loadData = ref(false)
 const personalData = ref<Record<string, any>>({})
 const personalDataUpdate = ref<PersonData>({
   id: '',
@@ -32,7 +34,7 @@ const sensitiveForm = ref<any>(null)
 const contactForm = ref<any>(null)
 
 async function getPersonalDetailData() {
-  loading.value = true
+  loadData.value = true
   try {
     const response = await getDatasetRows(DATASET_GET.DATASET_ID, DATASET_GET.DATASET_VERSION, {
       view: 'personal_get',
@@ -40,7 +42,6 @@ async function getPersonalDetailData() {
       per_page: 50,
     })
     personalData.value = response.data[0] || {}
-    console.log('Personal Detail API Response:', response.data[0])
     personalData.value.birth_date = formatDateInput(personalData.value.birth_date)
     personalDataUpdate.value = { ...personalData.value } as PersonData
     personalData.value.prefix_id = response.data[0]?.prefixes?.prefixes_name_th || ''
@@ -50,8 +51,9 @@ async function getPersonalDetailData() {
     toast.error(`โหลดข้อมูลส่วนตัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
       position: 'bottom-right',
     })
+  } finally {
+    loadData.value = false
   }
-  loading.value = false
 }
 
 async function updateDataPersonalDetail() {
@@ -76,8 +78,6 @@ async function updateDataPersonalDetail() {
       })
     }
   } catch (error: any) {
-    console.error('Personal Detail API Error:', error)
-    console.error('Error Response:', error?.response?.data)
     toast.error(
       `อัพเดตข้อมูลส่วนตัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`,
       {
@@ -95,6 +95,7 @@ onMounted(() => {
 function updateData(action: boolean) {
   // Implementation for updating personal detail data
   if (action) {
+    contactForm.value?.submitForm?.()
     const now = new Date().toISOString()
     personalDataUpdate.value = {
       ...personalDataUpdate.value,
@@ -111,8 +112,8 @@ async function onSaveAll() {
   let isAllValid = []
 
   for (const fRef of forms) {
-    if (fRef.value?.submitForm) {
-      const isValid = await fRef.value.submitForm()
+    if (fRef.value?.validateForm) {
+      const isValid = await fRef.value.validateForm()
       if (!isValid) {
         isAllValid.push(false)
       }
@@ -146,7 +147,11 @@ const isSaveDisabled = computed(() => loading.value || !hasAnyChanges.value)
 </script>
 
 <template>
-  <div class="mx-6 flex flex-col gap-4">
+  <div v-show="loadData" class="flex-1 space-y-4 overflow-y-auto px-4 sm:px-6">
+    <SkeletonCard />
+  </div>
+
+  <div v-show="!loadData" class="mx-6 flex flex-col gap-4">
     <!-- ข้อมูลทั่วไป -->
     <DropDownForm
       topic="ข้อมูลทั่วไป"
@@ -190,15 +195,15 @@ const isSaveDisabled = computed(() => loading.value || !hasAnyChanges.value)
           placeholder: '-',
         },
         {
-          name: 'middle_name_en',
-          label: 'Middlename',
+          name: 'first_name_en',
+          label: 'Name',
           type: 'text',
           disabled: true,
           placeholder: '-',
         },
         {
-          name: 'first_name_en',
-          label: 'Name',
+          name: 'middle_name_en',
+          label: 'Middlename',
           type: 'text',
           disabled: true,
           placeholder: '-',

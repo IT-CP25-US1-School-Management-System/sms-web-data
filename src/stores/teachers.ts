@@ -132,25 +132,21 @@ export async function getProfessionalLicensesByTeacherId(
 ): Promise<DatasetRowResponse<{ professional_licenses?: ProfessionalLicense[] }>> {
   const response = await getDatasetRows<
     ProfessionalLicense | { professional_licenses?: ProfessionalLicense[] }
-  >(
-    LICENSE_DATASET_ID,
-    LICENSE_DATASET_VERSION,
-    {
-      view: 'professional_licenses',
-      page: 1,
-      per_page: 100,
-      where: [
-        [
-          {
-            table_name: 'professional_licenses',
-            field: 'person_id',
-            operator: '=',
-            value: teacherId,
-          },
-        ],
+  >(LICENSE_DATASET_ID, LICENSE_DATASET_VERSION, {
+    view: 'professional_licenses',
+    page: 1,
+    per_page: 100,
+    where: [
+      [
+        {
+          table_name: 'professional_licenses',
+          field: 'person_id',
+          operator: '=',
+          value: teacherId,
+        },
       ],
-    },
-  )
+    ],
+  })
 
   const rawData = response.data || []
   const firstRow = rawData[0]

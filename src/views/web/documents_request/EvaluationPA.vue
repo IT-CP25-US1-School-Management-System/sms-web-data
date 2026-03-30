@@ -35,17 +35,17 @@ const MAX_FILE_SIZE = 15 * 1024 * 1024
 const FILE_SIZE_ERROR_MESSAGE = `ขนาดไฟล์ต้องไม่เกิน ${Math.floor(MAX_FILE_SIZE / (1024 * 1024))} MB`
 const authStore = useAuthStore()
 
-const pa2GroupSubject = ref('')
-const pa2TeachLevel1 = ref('')
-const pa2TeachLevel2 = ref('')
-const pa2Subject = ref('')
-const pa2TeachHours = ref('')
-const pa2SupportHours = ref('')
-const pa2QualityHours = ref('')
-const pa2PolicyHours = ref('')
-const pa2Evaluator1 = ref('')
-const pa2Evaluator2 = ref('')
-const pa2Evaluator3 = ref('')
+const subject_group = ref('')
+const teaching_level_1 = ref('')
+const teaching_level_2 = ref('')
+const subject_name = ref('')
+const teaching_hours_per_week = ref('')
+const support_hours_per_week = ref('')
+const dev_quality_hours_per_week = ref('')
+const policy_hours_per_week = ref('')
+const committee_name_1 = ref('')
+const committee_name_2 = ref('')
+const committee_name_3 = ref('')
 
 const documentRequest = ref<DocumentRequest>({
   id: '',
@@ -68,17 +68,19 @@ const documentLink = ref<DocumentLink>({
 const validationSchema = computed(() => {
   return toTypedSchema(
     z.object({
-      pa2GroupSubject: z.string().min(1, 'กลุ่มสาระ จำเป็นต้องเลือก'),
-      pa2TeachLevel1: z.string().min(1, 'ปฏิบัติการสอนชั้น/ระดับ จำเป็นต้องกรอก'),
-      pa2TeachLevel2: z.string().min(1, 'ปฏิบัติการสอนชั้น/ระดับ จำเป็นต้องกรอก'),
-      pa2Subject: z.string().min(1, 'รายวิชา จำเป็นต้องกรอก'),
-      pa2TeachHours: z.string().min(1, 'การสอนตามตารางสอน จำเป็นต้องกรอก'),
-      pa2SupportHours: z.string().min(1, 'งานส่งเสริมและสนับสนุนการจัดการเรียนรู้ จำเป็นต้องกรอก'),
-      pa2QualityHours: z.string().min(1, 'งานพัฒนาคุณภาพการศึกษา จำเป็นต้องกรอก'),
-      pa2PolicyHours: z.string().min(1, 'งานตอบสนองนโยบายและจุดเน้น จำเป็นต้องกรอก'),
-      pa2Evaluator1: z.string().min(1, 'คนที่ 1 จำเป็นต้องกรอก'),
-      pa2Evaluator2: z.string().min(1, 'คนที่ 2 จำเป็นต้องกรอก'),
-      pa2Evaluator3: z.string().min(1, 'คนที่ 3 จำเป็นต้องกรอก'),
+      subject_group: z.string().min(1, 'กลุ่มสาระ จำเป็นต้องเลือก'),
+      teaching_level_1: z.string().min(1, 'ปฏิบัติการสอนชั้น/ระดับ จำเป็นต้องกรอก'),
+      teaching_level_2: z.string().min(1, 'ปฏิบัติการสอนชั้น/ระดับ จำเป็นต้องกรอก'),
+      subject_name: z.string().min(1, 'รายวิชา จำเป็นต้องกรอก'),
+      teaching_hours_per_week: z.string().min(1, 'การสอนตามตารางสอน จำเป็นต้องกรอก'),
+      support_hours_per_week: z
+        .string()
+        .min(1, 'งานส่งเสริมและสนับสนุนการจัดการเรียนรู้ จำเป็นต้องกรอก'),
+      dev_quality_hours_per_week: z.string().min(1, 'งานพัฒนาคุณภาพการศึกษา จำเป็นต้องกรอก'),
+      policy_hours_per_week: z.string().min(1, 'งานตอบสนองนโยบายและจุดเน้น จำเป็นต้องกรอก'),
+      committee_name_1: z.string().min(1, 'คนที่ 1 จำเป็นต้องกรอก'),
+      committee_name_2: z.string().min(1, 'คนที่ 2 จำเป็นต้องกรอก'),
+      committee_name_3: z.string().min(1, 'คนที่ 3 จำเป็นต้องกรอก'),
       'pa2-pa1-count': z.number().min(1, 'PA1 จำเป็นต้องแนบไฟล์'),
       'pa2-eval1-count': z.number().min(1, 'PA2 กรรมการคนที่ 1 จำเป็นต้องแนบไฟล์'),
       'pa2-eval2-count': z.number().min(1, 'PA2 กรรมการคนที่ 2 จำเป็นต้องแนบไฟล์'),
@@ -88,17 +90,17 @@ const validationSchema = computed(() => {
 })
 
 const initialValues = computed(() => ({
-  pa2GroupSubject: pa2GroupSubject.value,
-  pa2TeachLevel1: pa2TeachLevel1.value,
-  pa2TeachLevel2: pa2TeachLevel2.value,
-  pa2Subject: pa2Subject.value,
-  pa2TeachHours: pa2TeachHours.value,
-  pa2SupportHours: pa2SupportHours.value,
-  pa2QualityHours: pa2QualityHours.value,
-  pa2PolicyHours: pa2PolicyHours.value,
-  pa2Evaluator1: pa2Evaluator1.value,
-  pa2Evaluator2: pa2Evaluator2.value,
-  pa2Evaluator3: pa2Evaluator3.value,
+  subject_group: subject_group.value,
+  teaching_level_1: teaching_level_1.value,
+  teaching_level_2: teaching_level_2.value,
+  subject_name: subject_name.value,
+  teaching_hours_per_week: teaching_hours_per_week.value,
+  support_hours_per_week: support_hours_per_week.value,
+  dev_quality_hours_per_week: dev_quality_hours_per_week.value,
+  policy_hours_per_week: policy_hours_per_week.value,
+  committee_name_1: committee_name_1.value,
+  committee_name_2: committee_name_2.value,
+  committee_name_3: committee_name_3.value,
   'pa2-pa1-count': fileMap.value['pa2-pa1']?.length || 0,
   'pa2-eval1-count': fileMap.value['pa2-eval1']?.length || 0,
   'pa2-eval2-count': fileMap.value['pa2-eval2']?.length || 0,
@@ -167,17 +169,17 @@ function getSelectedFiles(): File[] {
 }
 
 function resetEvaluationPAForm() {
-  pa2GroupSubject.value = ''
-  pa2TeachLevel1.value = ''
-  pa2TeachLevel2.value = ''
-  pa2Subject.value = ''
-  pa2TeachHours.value = ''
-  pa2SupportHours.value = ''
-  pa2QualityHours.value = ''
-  pa2PolicyHours.value = ''
-  pa2Evaluator1.value = ''
-  pa2Evaluator2.value = ''
-  pa2Evaluator3.value = ''
+  subject_group.value = ''
+  teaching_level_1.value = ''
+  teaching_level_2.value = ''
+  subject_name.value = ''
+  teaching_hours_per_week.value = ''
+  support_hours_per_week.value = ''
+  dev_quality_hours_per_week.value = ''
+  policy_hours_per_week.value = ''
+  committee_name_1.value = ''
+  committee_name_2.value = ''
+  committee_name_3.value = ''
   fileMap.value = {}
   fileSizeErrors.value = {}
 
@@ -187,17 +189,17 @@ function resetEvaluationPAForm() {
 
   formRef.value?.resetForm({
     values: {
-      pa2GroupSubject: '',
-      pa2TeachLevel1: '',
-      pa2TeachLevel2: '',
-      pa2Subject: '',
-      pa2TeachHours: '',
-      pa2SupportHours: '',
-      pa2QualityHours: '',
-      pa2PolicyHours: '',
-      pa2Evaluator1: '',
-      pa2Evaluator2: '',
-      pa2Evaluator3: '',
+      subject_group: '',
+      teaching_level_1: '',
+      teaching_level_2: '',
+      subject_name: '',
+      teaching_hours_per_week: '',
+      support_hours_per_week: '',
+      dev_quality_hours_per_week: '',
+      policy_hours_per_week: '',
+      committee_name_1: '',
+      committee_name_2: '',
+      committee_name_3: '',
       'pa2-pa1-count': 0,
       'pa2-eval1-count': 0,
       'pa2-eval2-count': 0,
@@ -346,34 +348,34 @@ async function onSubmit(values: Record<string, any>) {
 async function submitPA2Form() {
   if (isSubmitting.value) return
 
-  formRef.value?.setFieldValue('pa2GroupSubject', pa2GroupSubject.value)
-  formRef.value?.setFieldValue('pa2TeachLevel1', pa2TeachLevel1.value)
-  formRef.value?.setFieldValue('pa2TeachLevel2', pa2TeachLevel2.value)
-  formRef.value?.setFieldValue('pa2Subject', pa2Subject.value)
-  formRef.value?.setFieldValue('pa2TeachHours', pa2TeachHours.value)
-  formRef.value?.setFieldValue('pa2SupportHours', pa2SupportHours.value)
-  formRef.value?.setFieldValue('pa2QualityHours', pa2QualityHours.value)
-  formRef.value?.setFieldValue('pa2PolicyHours', pa2PolicyHours.value)
-  formRef.value?.setFieldValue('pa2Evaluator1', pa2Evaluator1.value)
-  formRef.value?.setFieldValue('pa2Evaluator2', pa2Evaluator2.value)
-  formRef.value?.setFieldValue('pa2Evaluator3', pa2Evaluator3.value)
+  formRef.value?.setFieldValue('subject_group', subject_group.value)
+  formRef.value?.setFieldValue('teaching_level_1', teaching_level_1.value)
+  formRef.value?.setFieldValue('teaching_level_2', teaching_level_2.value)
+  formRef.value?.setFieldValue('subject_name', subject_name.value)
+  formRef.value?.setFieldValue('teaching_hours_per_week', teaching_hours_per_week.value)
+  formRef.value?.setFieldValue('support_hours_per_week', support_hours_per_week.value)
+  formRef.value?.setFieldValue('dev_quality_hours_per_week', dev_quality_hours_per_week.value)
+  formRef.value?.setFieldValue('policy_hours_per_week', policy_hours_per_week.value)
+  formRef.value?.setFieldValue('committee_name_1', committee_name_1.value)
+  formRef.value?.setFieldValue('committee_name_2', committee_name_2.value)
+  formRef.value?.setFieldValue('committee_name_3', committee_name_3.value)
   formRef.value?.setFieldValue('pa2-pa1-count', fileMap.value['pa2-pa1']?.length || 0)
   formRef.value?.setFieldValue('pa2-eval1-count', fileMap.value['pa2-eval1']?.length || 0)
   formRef.value?.setFieldValue('pa2-eval2-count', fileMap.value['pa2-eval2']?.length || 0)
   formRef.value?.setFieldValue('pa2-eval3-count', fileMap.value['pa2-eval3']?.length || 0)
 
   const fieldNames = [
-    'pa2GroupSubject',
-    'pa2TeachLevel1',
-    'pa2TeachLevel2',
-    'pa2Subject',
-    'pa2TeachHours',
-    'pa2SupportHours',
-    'pa2QualityHours',
-    'pa2PolicyHours',
-    'pa2Evaluator1',
-    'pa2Evaluator2',
-    'pa2Evaluator3',
+    'subject_group',
+    'teaching_level_1',
+    'teaching_level_2',
+    'subject_name',
+    'teaching_hours_per_week',
+    'support_hours_per_week',
+    'dev_quality_hours_per_week',
+    'policy_hours_per_week',
+    'committee_name_1',
+    'committee_name_2',
+    'committee_name_3',
     'pa2-pa1-count',
     'pa2-eval1-count',
     'pa2-eval2-count',
@@ -407,7 +409,7 @@ async function submitPA2Form() {
           <div
             class="mb-4 grid grid-cols-1 items-end gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
           >
-            <VeeField name="pa2GroupSubject" v-slot="{ field, errors }">
+            <VeeField name="subject_group" v-slot="{ field, errors }">
               <Field :data-invalid="!!errors.length">
                 <FieldLabel>กลุ่มสาระ <span class="text-red-500">*</span></FieldLabel>
                 <Select
@@ -415,7 +417,7 @@ async function submitPA2Form() {
                   @update:model-value="
                     (v) => {
                       field.onChange(v)
-                      pa2GroupSubject = String(v ?? '')
+                      subject_group = String(v ?? '')
                     }
                   "
                 >
@@ -431,7 +433,7 @@ async function submitPA2Form() {
                 <FieldError v-if="errors.length" :errors="errors" />
               </Field>
             </VeeField>
-            <VeeField name="pa2TeachLevel1" v-slot="{ field, errors }">
+            <VeeField name="teaching_level_1" v-slot="{ field, errors }">
               <Field :data-invalid="!!errors.length">
                 <FieldLabel>ปฏิบัติการสอนชั้น/ระดับ <span class="text-red-500">*</span></FieldLabel>
                 <Input
@@ -439,7 +441,7 @@ async function submitPA2Form() {
                   @update:model-value="
                     (v) => {
                       field.onChange(v)
-                      pa2TeachLevel1 = String(v ?? '')
+                      teaching_level_1 = String(v ?? '')
                     }
                   "
                   type="text"
@@ -448,7 +450,7 @@ async function submitPA2Form() {
                 <FieldError v-if="errors.length" :errors="errors" />
               </Field>
             </VeeField>
-            <VeeField name="pa2TeachLevel2" v-slot="{ field, errors }">
+            <VeeField name="teaching_level_2" v-slot="{ field, errors }">
               <Field :data-invalid="!!errors.length">
                 <FieldLabel>ปฏิบัติการสอนชั้น/ระดับ <span class="text-red-500">*</span></FieldLabel>
                 <Input
@@ -456,7 +458,7 @@ async function submitPA2Form() {
                   @update:model-value="
                     (v) => {
                       field.onChange(v)
-                      pa2TeachLevel2 = String(v ?? '')
+                      teaching_level_2 = String(v ?? '')
                     }
                   "
                   type="text"
@@ -465,7 +467,7 @@ async function submitPA2Form() {
                 <FieldError v-if="errors.length" :errors="errors" />
               </Field>
             </VeeField>
-            <VeeField name="pa2Subject" v-slot="{ field, errors }">
+            <VeeField name="subject_name" v-slot="{ field, errors }">
               <Field :data-invalid="!!errors.length">
                 <FieldLabel>รายวิชา <span class="text-red-500">*</span></FieldLabel>
                 <Input
@@ -473,7 +475,7 @@ async function submitPA2Form() {
                   @update:model-value="
                     (v) => {
                       field.onChange(v)
-                      pa2Subject = String(v ?? '')
+                      subject_name = String(v ?? '')
                     }
                   "
                   type="text"
@@ -487,7 +489,7 @@ async function submitPA2Form() {
           <div
             class="mb-4 grid grid-cols-1 items-end gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
           >
-            <VeeField name="pa2TeachHours" v-slot="{ field, errors }">
+            <VeeField name="teaching_hours_per_week" v-slot="{ field, errors }">
               <Field :data-invalid="!!errors.length">
                 <FieldLabel>การสอนตามตารางสอน <span class="text-red-500">*</span></FieldLabel>
                 <Input
@@ -495,7 +497,7 @@ async function submitPA2Form() {
                   @update:model-value="
                     (v) => {
                       field.onChange(v)
-                      pa2TeachHours = String(v ?? '')
+                      teaching_hours_per_week = String(v ?? '')
                     }
                   "
                   type="text"
@@ -504,7 +506,7 @@ async function submitPA2Form() {
                 <FieldError v-if="errors.length" :errors="errors" />
               </Field>
             </VeeField>
-            <VeeField name="pa2SupportHours" v-slot="{ field, errors }">
+            <VeeField name="support_hours_per_week" v-slot="{ field, errors }">
               <Field :data-invalid="!!errors.length">
                 <FieldLabel
                   >งานส่งเสริมและสนับสนุนการจัดการเรียนรู้
@@ -515,7 +517,7 @@ async function submitPA2Form() {
                   @update:model-value="
                     (v) => {
                       field.onChange(v)
-                      pa2SupportHours = String(v ?? '')
+                      support_hours_per_week = String(v ?? '')
                     }
                   "
                   type="text"
@@ -524,7 +526,7 @@ async function submitPA2Form() {
                 <FieldError v-if="errors.length" :errors="errors" />
               </Field>
             </VeeField>
-            <VeeField name="pa2QualityHours" v-slot="{ field, errors }">
+            <VeeField name="dev_quality_hours_per_week" v-slot="{ field, errors }">
               <Field :data-invalid="!!errors.length">
                 <FieldLabel
                   >งานพัฒนาคุณภาพการศึกษาของสถานศึกษา
@@ -535,7 +537,7 @@ async function submitPA2Form() {
                   @update:model-value="
                     (v) => {
                       field.onChange(v)
-                      pa2QualityHours = String(v ?? '')
+                      dev_quality_hours_per_week = String(v ?? '')
                     }
                   "
                   type="text"
@@ -544,7 +546,7 @@ async function submitPA2Form() {
                 <FieldError v-if="errors.length" :errors="errors" />
               </Field>
             </VeeField>
-            <VeeField name="pa2PolicyHours" v-slot="{ field, errors }">
+            <VeeField name="policy_hours_per_week" v-slot="{ field, errors }">
               <Field :data-invalid="!!errors.length">
                 <FieldLabel
                   >งานตอบสนองนโยบายและจุดเน้น <span class="text-red-500">*</span></FieldLabel
@@ -554,7 +556,7 @@ async function submitPA2Form() {
                   @update:model-value="
                     (v) => {
                       field.onChange(v)
-                      pa2PolicyHours = String(v ?? '')
+                      policy_hours_per_week = String(v ?? '')
                     }
                   "
                   type="text"
@@ -568,7 +570,7 @@ async function submitPA2Form() {
           <div
             class="mb-4 grid grid-cols-1 items-end gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
           >
-            <VeeField name="pa2Evaluator1" v-slot="{ field, errors }">
+            <VeeField name="committee_name_1" v-slot="{ field, errors }">
               <Field :data-invalid="!!errors.length">
                 <FieldLabel
                   >รายชื่อคณะกรรมการประเมิน คนที่ 1 <span class="text-red-500">*</span></FieldLabel
@@ -578,7 +580,7 @@ async function submitPA2Form() {
                   @update:model-value="
                     (v) => {
                       field.onChange(v)
-                      pa2Evaluator1 = String(v ?? '')
+                      committee_name_1 = String(v ?? '')
                     }
                   "
                   type="text"
@@ -587,7 +589,7 @@ async function submitPA2Form() {
                 <FieldError v-if="errors.length" :errors="errors" />
               </Field>
             </VeeField>
-            <VeeField name="pa2Evaluator2" v-slot="{ field, errors }">
+            <VeeField name="committee_name_2" v-slot="{ field, errors }">
               <Field :data-invalid="!!errors.length">
                 <FieldLabel
                   >รายชื่อคณะกรรมการผู้ประเมิน คนที่ 2
@@ -598,7 +600,7 @@ async function submitPA2Form() {
                   @update:model-value="
                     (v) => {
                       field.onChange(v)
-                      pa2Evaluator2 = String(v ?? '')
+                      committee_name_2 = String(v ?? '')
                     }
                   "
                   type="text"
@@ -607,7 +609,7 @@ async function submitPA2Form() {
                 <FieldError v-if="errors.length" :errors="errors" />
               </Field>
             </VeeField>
-            <VeeField name="pa2Evaluator3" v-slot="{ field, errors }">
+            <VeeField name="committee_name_3" v-slot="{ field, errors }">
               <Field :data-invalid="!!errors.length">
                 <FieldLabel
                   >รายชื่อคณะกรรมการผู้ประเมิน คนที่ 3
@@ -618,7 +620,7 @@ async function submitPA2Form() {
                   @update:model-value="
                     (v) => {
                       field.onChange(v)
-                      pa2Evaluator3 = String(v ?? '')
+                      committee_name_3 = String(v ?? '')
                     }
                   "
                   type="text"

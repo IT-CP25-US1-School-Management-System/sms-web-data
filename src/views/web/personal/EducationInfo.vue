@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import NormalForm from '@/components/form/NormalForm.vue'
+import SkeletonCard from '@/components/SkeletonCard.vue'
 import { DATASET_GET } from '@/lib/constants'
 import { getDatasetRows } from '@/stores/dataset'
 import { onMounted, ref } from 'vue'
@@ -31,13 +32,17 @@ async function getEducationRecordData() {
 }
 
 onMounted(() => {
-  console.log('education')
   getEducationRecordData()
 })
 </script>
 
 <template>
+  <div v-if="loading" class="flex-1 space-y-4 overflow-y-auto px-4 sm:px-6">
+    <SkeletonCard />
+  </div>
+
   <div
+    v-else
     class="mx-6 flex flex-col gap-4"
     v-for="item in educationData.length ? educationData : [{}]"
     :key="item.id"

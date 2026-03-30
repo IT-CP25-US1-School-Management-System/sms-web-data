@@ -39,12 +39,16 @@ async function getEmploymentData() {
       view: 'employment_get',
       page: 1,
       per_page: 50,
-      where: [[{
-        table_name: 'employment_contracts',
-        field: 'person_id',
-        operator: '=',
-        value: personId,
-      }]],
+      where: [
+        [
+          {
+            table_name: 'employment_contracts',
+            field: 'person_id',
+            operator: '=',
+            value: personId,
+          },
+        ],
+      ],
     })
     employmentData.value = response.data[0]?.employment_contracts || []
     toast.success(`โหลดข้อมูลที่อยู่สำเร็จ (${response.total_rows} รายการ)`, {
@@ -70,9 +74,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 mx-6"
-   v-for="item in employmentData" :key="item.id"
-   >
+  <div class="mx-6 flex flex-col gap-4" v-for="item in employmentData" :key="item.id">
     <!-- ข้อมูลการทำงาน -->
     แก้ไขไม่ได้
     <DropDownForm
@@ -94,7 +96,6 @@ onMounted(() => {
           required: true,
           placeholder: '-',
           disabled: true,
-
         },
         {
           name: 'hiring_nature',
@@ -110,7 +111,6 @@ onMounted(() => {
           type: 'text',
           placeholder: '-',
           disabled: true,
-
         },
       ]"
     />
@@ -134,7 +134,6 @@ onMounted(() => {
           required: true,
           placeholder: '-',
           disabled: true,
-
         },
       ]"
     />
@@ -150,7 +149,6 @@ onMounted(() => {
           required: true,
           placeholder: '-',
           disabled: true,
-
         },
         {
           name: 'contract-count',
@@ -182,7 +180,6 @@ onMounted(() => {
           required: true,
           placeholder: '-',
           disabled: true,
-
         },
         {
           name: 'current-contract-start',
@@ -191,7 +188,6 @@ onMounted(() => {
           required: true,
           placeholder: '-',
           disabled: true,
-
         },
         {
           name: 'contract-end-date',
@@ -223,10 +219,8 @@ onMounted(() => {
           required: true,
           placeholder: '-',
           disabled: true,
-
         },
       ]"
     />
   </div>
-
 </template>

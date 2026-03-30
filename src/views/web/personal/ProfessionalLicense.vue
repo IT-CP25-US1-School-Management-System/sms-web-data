@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import CreateForm from '@/components/form/CreateForm.vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
+import SkeletonCard from '@/components/SkeletonCard.vue'
 import {
   DATASET_DELETE,
   DATASET_EDIT,
@@ -19,6 +20,7 @@ import {
 import { createFileDocument, deleteFileDocument, getFileDocumentRows } from '@/stores/document'
 import type { CreateFileDocumentParams, FileDocument } from '@/types/document'
 import type { DocumentLink } from '@/types/document_request'
+import { useTeacherStore } from '@/stores/teachers'
 import { onMounted, ref } from 'vue'
 import { toast } from 'vue-sonner'
 
@@ -97,6 +99,7 @@ const LICENSE_FILE_FIELD = 'license-file'
 const LICENSE_ENTITY_TABLE = 'profession-license'
 
 const authStore = useAuthStore()
+const teacherStore = useTeacherStore()
 
 const loading = ref(false)
 const busyEntries = ref<Record<number, 'save' | 'delete'>>({})
@@ -197,7 +200,7 @@ function buildProfessionalLicensePayload(
 ) {
   const basePayload = {
     id: currentRecord?.id || values.id || generateUUID(),
-    person_id: personId || currentRecord?.person_id || values.person_id || '',
+    person_id: teacherStore.personId || personId || '',
     license_type: values.license_type || '',
     license_no: values.license_no || '',
     issue_date: formatApiDate(values.issue_date),
@@ -223,12 +226,7 @@ function resolveProfessionalLicensePersonId(
   values: ProfessionalLicenseFormValue,
   currentRecord?: ProfessionalLicenseRow,
 ) {
-  return (
-    currentRecord?.person_id ||
-    values.person_id ||
-    professionalLicenseData.value.find((record) => record.person_id)?.person_id ||
-    ''
-  )
+  return teacherStore.personId || currentRecord?.person_id || values.person_id || ''
 }
 
 function extractProfessionalLicenseResponse(data: unknown) {
@@ -422,7 +420,7 @@ async function storeFile(documentIds: string[], license: ProfessionalLicenseRow)
       entity_table: LICENSE_ENTITY_TABLE,
       entity_id: license.id || '',
       purpose: buildLicensePurpose(license),
-      person_id: license.person_id || '',
+      person_id: teacherStore.personId || license.person_id || '',
       created_at: new Date().toISOString(),
     }
 
@@ -663,7 +661,11 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="mx-6 flex flex-col gap-4 pb-6">
+  <div v-if="loading" class="flex-1 space-y-4 overflow-y-auto px-4 sm:px-6">
+    <SkeletonCard />
+  </div>
+
+  <div v-else class="mx-6 flex flex-col gap-4 pb-6">
     <CreateForm
       :key="formRenderKey"
       :busyEntries="busyEntries"

@@ -11,16 +11,7 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar'
-import {
-  Home,
-  Settings,
-  Users,
-  User,
-  FileClock,
-  Notebook,
-  TicketSlash,
-  FileKey,
-} from 'lucide-vue-next'
+import { Home, Users, User, FileClock, Notebook, TicketSlash, FileKey } from 'lucide-vue-next'
 import AppSidebar from './AppSidebar.vue'
 import ModeToggle from '@/components/ModeToggle.vue'
 

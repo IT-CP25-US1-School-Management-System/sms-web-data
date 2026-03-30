@@ -9,13 +9,17 @@ export interface ExportJobResponse {
   job_id: string
 }
 
-export interface GetExportJobResponse {
+export interface FileUrl {
   status: string
   created_at?: string | null
   completed_at?: string | null
   started_at?: string | null
   destination_uri?: string | null
   error_message?: string | null
+}
+
+export interface GetExportJobResponse {
+  data: FileUrl
 }
 
 export type ImportJobState = 'pending' | 'in_progress' | 'succeeded' | 'failed'

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import ConfirmModal from '@/components/ConfirmModal.vue'
+import SkeletonCard from '@/components/SkeletonCard.vue'
 import CreateForm from '@/components/form/CreateForm.vue'
 import {
   DATASET_DELETE,
@@ -39,6 +40,7 @@ type ContractRow = Record<string, any> & {
   document_links?: DocumentLinkRow[]
 }
 type ContractFormValue = ContractRow & { file?: ContractFileItem[] }
+type PersonalRow = Record<string, any> & { roles?: { roles_name?: string } | null }
 type CreateFormField = {
   name: string
   label?: string
@@ -84,6 +86,7 @@ const busyEntries = ref<Record<number, 'save' | 'delete'>>({})
 const contractPositionData = ref<ContractFormValue[]>([])
 const documentLinksByContract = ref<Record<string, DocumentLinkRow[]>>({})
 const formRenderKey = ref(0)
+const personalPosition = ref('')
 
 const confirmModal = ref(false)
 const action = ref('update')
@@ -104,7 +107,7 @@ const contractFields: CreateFormSection[][] = [
           label: 'วันเดือนปี',
           type: 'date',
           required: true,
-          placeholder: '-',
+          placeholder: '',
           disabled: false,
         },
         {
@@ -112,7 +115,7 @@ const contractFields: CreateFormSection[][] = [
           label: 'ตำแหน่ง',
           type: 'text',
           required: true,
-          placeholder: '-',
+          placeholder: '',
           disabled: false,
         },
         {
@@ -120,11 +123,11 @@ const contractFields: CreateFormSection[][] = [
           label: 'เงินเดือน',
           type: 'number',
           required: true,
-          placeholder: '-',
+          placeholder: '',
           disabled: false,
         },
         {
-          name: 'contract_number',
+          name: 'order_no',
           label: 'เลขที่คำสั่ง/สัญญาจ้าง',
           type: 'text',
           required: true,
@@ -132,8 +135,8 @@ const contractFields: CreateFormSection[][] = [
           disabled: false,
         },
         {
-          name: 'file',
-          label: 'ดาวน์โหลดไฟล์',
+          name: FILE_FIELD,
+          label: 'แนบเอกสารเอกสารสัญญาจ้าง',
           type: 'file',
           accept: '.pdf,.jpg,.png',
           multiple: true,
@@ -166,7 +169,11 @@ function buildContractPurpose(values: Partial<ContractRow>, fileField?: string) 
 }
 
 function formatContractRecord(record: ContractRow) {
-  return { ...record, date: record.date ? formatDateInput(record.date) : null }
+  return {
+    ...record,
+    date: record.date ? formatDateInput(record.date) : null,
+    position: personalPosition.value || record.position || '',
+  }
 }
 
 function buildContractPayload(
@@ -181,6 +188,7 @@ function buildContractPayload(
     ...payload,
     id: currentRecord?.id || values.id || generateUUID(),
     person_id: personId || currentRecord?.person_id || values.person_id || '',
+    position: personalPosition.value || values.position || currentRecord?.position || '',
     date: values.date ? formatDateInput(values.date) : null,
     created_at: currentRecord?.created_at || new Date().toISOString(),
     updated_at: currentRecord?.id ? new Date().toISOString() : null,
@@ -253,12 +261,21 @@ async function getContractFiles(record: ContractRow, documentLinks: DocumentLink
 async function getContractPositionData() {
   loading.value = true
   try {
-    const response = await getDatasetRows<ContractRow>(
-      DATASET_GET.DATASET_ID,
-      DATASET_GET.DATASET_VERSION_CONTRACT_POSITION,
-      { view: GET_VIEW, page: 1, per_page: 50 },
-    )
-    const { records, allDocumentLinks } = extractContractResponse(response.data)
+    const [contractResponse, personalResponse] = await Promise.all([
+      getDatasetRows<ContractRow>(
+        DATASET_GET.DATASET_ID,
+        DATASET_GET.DATASET_VERSION_CONTRACT_POSITION,
+        { view: GET_VIEW, page: 1, per_page: 50 },
+      ),
+      getDatasetRows<PersonalRow>(DATASET_GET.DATASET_ID, DATASET_GET.DATASET_VERSION, {
+        view: 'personal_get',
+        page: 1,
+        per_page: 50,
+      }),
+    ])
+    personalPosition.value = personalResponse.data?.[0]?.roles?.roles_name || ''
+    console.log('Contract Position API Response:', contractResponse)
+    const { records, allDocumentLinks } = extractContractResponse(contractResponse.data)
     documentLinksByContract.value = Object.fromEntries(
       records
         .filter((record) => Boolean(record.id))
@@ -537,7 +554,11 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="mx-6 flex flex-col gap-4 pb-6">
+  <div v-if="loading" class="flex-1 space-y-4 overflow-y-auto px-4 sm:px-6">
+    <SkeletonCard />
+  </div>
+
+  <div v-else class="mx-6 flex flex-col gap-4 pb-6">
     <CreateForm
       :key="formRenderKey"
       :busyEntries="busyEntries"

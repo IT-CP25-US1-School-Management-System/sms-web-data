@@ -1,47 +1,80 @@
 <script setup lang="ts">
 import DropDownForm from '@/components/form/DropDownForm.vue'
-import { Button } from '@/components/ui/button'
+import SkeletonCard from '@/components/SkeletonCard.vue'
 import { DATASET_GET } from '@/lib/constants'
-
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { toast } from 'vue-sonner'
 import { getDatasetRows } from '@/stores/dataset'
 
 const loading = ref(false)
 const employmentData = ref<Record<string, any>[]>([])
+const personalPosition = ref('')
+const formRenderKey = ref(0)
+const displayEmploymentData = computed(() =>
+  employmentData.value.length
+    ? employmentData.value
+    : [
+        {
+          id: 'empty-employment',
+          position: personalPosition.value,
+        },
+      ],
+)
+
 async function getEmploymentData() {
   loading.value = true
   try {
-    const response = await getDatasetRows(DATASET_GET.DATASET_ID, DATASET_GET.DATASET_VERSION, {
-      view: 'employment_get',
-      page: 1,
-      per_page: 50,
-    })
-    employmentData.value = response.data[0]?.employment_contracts || []
-    console.log('Address API Response:', response)
-    console.log('Address Data:', response.data)
-    toast.success(`โหลดข้อมูลที่อยู่สำเร็จ (${response.total_rows} รายการ)`, {
-      position: 'bottom-right',
-    })
+    const [employmentResponse, personalResponse] = await Promise.all([
+      getDatasetRows(DATASET_GET.DATASET_ID, DATASET_GET.DATASET_VERSION, {
+        view: 'employment_get',
+        page: 1,
+        per_page: 50,
+      }),
+      getDatasetRows(DATASET_GET.DATASET_ID, DATASET_GET.DATASET_VERSION, {
+        view: 'personal_get',
+        page: 1,
+        per_page: 50,
+      }),
+    ])
+
+    const positionName = personalResponse.data?.[0]?.roles?.roles_name || ''
+    personalPosition.value = positionName
+    console.log('Position from Personal API:', positionName)
+    const records = employmentResponse.data?.[0]?.employment_contracts || []
+    console.log('Employment API Response:', records)
+    console.log('Personal API Response:', personalResponse.data)
+    employmentData.value = records.map((record: Record<string, any>) => ({
+      ...record,
+      position: positionName || record.position || '',
+    }))
+    formRenderKey.value += 1
   } catch (error: any) {
     console.error('Personal Detail API Error:', error)
     console.error('Error Response:', error?.response?.data)
     toast.error(`โหลดข้อมูลครอบครัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
       position: 'bottom-right',
     })
+  } finally {
+    loading.value = false
   }
-  loading.value = false
 }
 
 onMounted(() => {
-  console.log('Employment')
   getEmploymentData()
 })
 </script>
 
 <template>
-  <div class="mx-6 flex flex-col gap-4" v-for="item in employmentData" :key="item.id">
-    <!-- ข้อมูลการทำงาน -->
+  <div v-if="loading" class="flex-1 space-y-4 overflow-y-auto px-4 sm:px-6">
+    <SkeletonCard />
+  </div>
+
+  <div
+    v-else
+    v-for="item in displayEmploymentData"
+    :key="`${formRenderKey}-${item.id}`"
+    class="mx-6 flex flex-col gap-4"
+  >
     แก้ไขไม่ได้
     <DropDownForm
       topic="ข้อมูลการทำงาน"
@@ -72,18 +105,22 @@ onMounted(() => {
           disabled: true,
         },
         {
-          name: 'latest-transfer-type',
+          name: 'contract_action',
           label: 'ประเภทการเคลื่อนไหวล่าสุด',
-          type: 'text',
+          type: 'select',
           placeholder: '-',
           disabled: true,
+          options: [
+            { label: 'การต่อสัญญา', value: 'การต่อสัญญา' },
+            { label: 'ทำสัญญาครั้งแรก', value: 'ทำสัญญาครั้งแรก' },
+          ],
         },
       ]"
     />
 
-    <!-- ข้อมูลค่าตอบแทนและสิทธิประโยชน์ -->
     <DropDownForm
       topic="ข้อมูลค่าตอบแทนและสิทธิประโยชน์"
+      :values="item"
       :fields="[
         {
           name: 'salary',
@@ -94,7 +131,7 @@ onMounted(() => {
           disabled: true,
         },
         {
-          name: 'social-security-contribution',
+          name: 'social_security',
           label: 'เงินสมทบกองทุนประกันสังคม',
           type: 'number',
           required: true,
@@ -104,12 +141,12 @@ onMounted(() => {
       ]"
     />
 
-    <!-- ข้อมูลสัญญาจ้างและเอกสารจ้างจิง -->
     <DropDownForm
-      topic="ข้อมูลสัญญาจ้างและเอกสารจ้างจิง"
+      topic="ข้อมูลสัญญาจ้างและเอกสารจ้างจริง"
+      :values="item"
       :fields="[
         {
-          name: 'contract-order-no',
+          name: 'order_no',
           label: 'เลขที่คำสั่ง / สัญญาจ้าง',
           type: 'text',
           required: true,
@@ -127,12 +164,12 @@ onMounted(() => {
       ]"
     />
 
-    <!-- ข้อมูลระยะเวลาในการจ้างงาน -->
     <DropDownForm
       topic="ข้อมูลระยะเวลาในการจ้างงาน"
+      :values="item"
       :fields="[
         {
-          name: 'first-contract-date',
+          name: 'first_contract_start',
           label: 'ว/ด/ป เริ่มสัญญาครั้งแรก',
           type: 'text',
           required: true,
@@ -148,7 +185,7 @@ onMounted(() => {
           disabled: true,
         },
         {
-          name: 'current-contract-start',
+          name: 'period_start',
           label: 'วันเดือนปีที่เริ่มสัญญาจ้าง (สัญญาปัจจุบัน)',
           type: 'text',
           required: true,
@@ -156,7 +193,7 @@ onMounted(() => {
           disabled: true,
         },
         {
-          name: 'contract-end-date',
+          name: 'period_end',
           label: 'วันเดือนปีสิ้นสุดสัญญาจ้าง',
           type: 'text',
           required: true,
@@ -166,25 +203,36 @@ onMounted(() => {
       ]"
     />
 
-    <!-- ข้อมูลแหล่งงบประมาณที่ใช้จ้าง -->
     <DropDownForm
       topic="ข้อมูลแหล่งงบประมาณที่ใช้จ้าง"
+      :values="item"
       :fields="[
         {
-          name: 'budget-type',
+          name: 'budget_type',
           label: 'ประเภทเงินงบประมาณ',
-          type: 'text',
+          type: 'select',
           required: true,
           placeholder: '-',
           disabled: true,
+          options: [
+            { label: 'เงินงบประมาณ', value: 'เงินงบประมาณ' },
+            { label: 'เงินนอกงบประมาณ', value: 'เงินนอกงบประมาณ' },
+            { label: 'เงินรายได้สถานศึกษา', value: 'เงินรายได้สถานศึกษา' },
+            { label: 'เงินอุดหนุนค่าใช้จ่ายรายหัว', value: 'เงินอุดหนุนค่าใช้จ่ายรายหัว' },
+          ],
         },
         {
-          name: 'school-income-type',
+          name: 'school_revenue_type',
           label: 'ประเภทเงินรายได้สถานศึกษา',
-          type: 'text',
+          type: 'select',
           required: true,
           placeholder: '-',
           disabled: true,
+          options: [
+            { label: 'ลูกจ้างชั่วคราว (มีประกันสังคม)', value: 'ลูกจ้างชั่วคราว (มีประกันสังคม)' },
+            { label: 'เหมาบริการ (ไม่มีประกันสังคม)', value: 'เหมาบริการ(ไม่มีประกันสังคม)' },
+            { label: 'เหมาบริการ (ประกันตนเอง)', value: 'เหมาบริการ (ประกันตนเอง)' },
+          ],
         },
       ]"
     />

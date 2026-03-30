@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import ConfirmModal from '@/components/ConfirmModal.vue'
+import SkeletonCard from '@/components/SkeletonCard.vue'
 import CreateForm from '@/components/form/CreateForm.vue'
 import {
   DATASET_DELETE,
@@ -10,6 +11,7 @@ import {
 } from '@/lib/constants'
 import { formatDateInput, generateUUID } from '@/lib/helpers'
 import { useAuthStore } from '@/stores/auth'
+import { useTeacherStore } from '@/stores/teachers'
 import { createFileDocument, deleteFileDocument, getFileDocumentRows } from '@/stores/document'
 import {
   createDatasetRow,
@@ -60,7 +62,7 @@ type CreateFormSection = {
   subFields?: CreateFormField[]
 }
 
-const INNOVATION_GET_VIEW = 'innovations_get'
+const INNOVATION_GET_VIEW = 'innovation_get'
 const INNOVATION_EDIT_VIEW = 'innovations_update'
 const INNOVATION_ENTITY_TABLE = 'profession-license'
 const INNOVATION_FILE_FIELDS = ['photo-file', 'certificate-file'] as const
@@ -86,12 +88,14 @@ const DOCUMENT_DELETE_CONFIG = {
 } as const
 
 const authStore = useAuthStore()
-
+const teacherStore = useTeacherStore()
+console.log('Teacher Store:')
 const loading = ref(false)
 const busyEntries = ref<Record<number, 'save' | 'delete'>>({})
 const innovationData = ref<InnovationFormValue[]>([])
 const documentLinksByInnovation = ref<Record<string, DocumentLinkRow[]>>({})
 const formRenderKey = ref(0)
+const innovationPersonId = ref('')
 
 const confirmModal = ref(false)
 const action = ref('update')
@@ -109,7 +113,7 @@ const innovationFields: CreateFormSection[][] = [
       topic: 'ข้อมูลพื้นฐาน',
       content: [
         {
-          name: 'academic-year',
+          name: 'academic_year',
           label: 'ปีการศึกษา',
           type: 'text',
           required: true,
@@ -117,7 +121,7 @@ const innovationFields: CreateFormSection[][] = [
           placeholder: '',
         },
         {
-          name: 'course-title',
+          name: 'project_title',
           label: 'หลักสูตร / เรื่อง / หัวข้อ',
           type: 'text',
           required: true,
@@ -151,13 +155,18 @@ const innovationFields: CreateFormSection[][] = [
     {
       topic: 'ข้อมูลผลงาน',
       content: [
-        { name: 'award', label: 'รางวัล', type: 'text', required: true, placeholder: '' },
         {
-          name: 'achievement-level',
+          name: 'achivement_level',
           label: 'ผลงานระดับ',
-          type: 'text',
+          type: 'select',
           required: true,
           placeholder: '',
+          options: [
+            { label: 'ระดับเขต', value: 'ระดับเขต' },
+            { label: 'ระดับภาค', value: 'ระดับภาค' },
+            { label: 'ระดับประเทศ', value: 'ระดับประเทศ' },
+            { label: 'ระดับนานาชาติ', value: 'ระดับนานาชาติ' },
+          ],
         },
       ],
     },
@@ -166,35 +175,29 @@ const innovationFields: CreateFormSection[][] = [
       content: [],
       subFields: [
         {
-          name: 'student-name',
+          name: 'student_name',
           label: 'ชื่อนักเรียน',
           type: 'text',
           required: true,
           placeholder: '',
         },
-        { name: 'class-level', label: 'ชั้น', type: 'text', required: true, placeholder: '' },
-        { name: 'room', label: 'ห้อง', type: 'text', required: true, placeholder: '' },
+        { name: 'class_level', label: 'ชั้น', type: 'text', required: true, placeholder: '' },
+        { name: 'class_room', label: 'ห้อง', type: 'text', required: true, placeholder: '' },
       ],
     },
     {
       topic: 'ข้อมูลผู้ครูที่ดูแล',
       content: [
+        { name: 'supervior', label: 'ครูผู้ดูแล', type: 'text', required: true, placeholder: '' },
         {
-          name: 'teacher-name',
-          label: 'ครูผู้ดูแล',
-          type: 'text',
-          required: true,
-          placeholder: '',
-        },
-        {
-          name: 'learning-group',
+          name: 'subject_group',
           label: 'กลุ่มสาระการเรียนรู้',
           type: 'text',
           required: true,
           placeholder: '',
         },
         {
-          name: 'photo-file',
+          name: 'photo_file',
           label: 'แนบภาพ',
           type: 'file',
           accept: '.jpg,.jpeg,.png',
@@ -202,7 +205,7 @@ const innovationFields: CreateFormSection[][] = [
           required: true,
         },
         {
-          name: 'certificate-file',
+          name: 'certificate_file',
           label: 'แนบเกียรติบัตร',
           type: 'file',
           accept: '.pdf,.jpg,.png',
@@ -231,8 +234,17 @@ function isExistingInnovationFile(file: InnovationFileItem): file is ExistingInn
 }
 
 function buildInnovationPurpose(values: Partial<InnovationRow>, fileField?: string) {
-  const basePurpose = `${values.license_type || 'license'}_${values.license_no || 'unknown'}`
-  return fileField ? `${basePurpose}_${fileField}` : basePurpose
+  const topic = values.project_title || 'ไม่ระบุหัวข้อ'
+
+  if (fileField === 'photo-file') {
+    return `ภาพการอบรม/ศึกษาดูงานสำหรับ ${topic}_${fileField}`
+  }
+
+  if (fileField === 'certificate-file') {
+    return `ใบประกาศนียบัตรของ ${topic}_${fileField}`
+  }
+
+  return String(topic)
 }
 
 function matchesInnovationFileField(link: DocumentLinkRow, fileField: string) {
@@ -260,11 +272,22 @@ function buildInnovationPayload(
 ) {
   const payload = { ...values }
   for (const fileField of INNOVATION_FILE_FIELDS) delete payload[fileField]
+  const resolvedPersonId =
+    personId ||
+    teacherStore.personId ||
+    teacherStore.currentTeacher?.id ||
+    authStore.user?.id ||
+    innovationPersonId.value ||
+    currentRecord?.person_id ||
+    values.person_id ||
+    innovationData.value.find((record) => record.person_id)?.person_id ||
+    ''
+
   return {
     ...currentRecord,
     ...payload,
     id: currentRecord?.id || values.id || generateUUID(),
-    person_id: personId || currentRecord?.person_id || values.person_id || '',
+    person_id: resolvedPersonId,
     start_date: values.start_date ? formatDateInput(values.start_date) : null,
     end_date: values.end_date ? formatDateInput(values.end_date) : null,
     created_at: currentRecord?.created_at || new Date().toISOString(),
@@ -274,6 +297,10 @@ function buildInnovationPayload(
 
 function resolveInnovationPersonId(values: InnovationFormValue, currentRecord?: InnovationRow) {
   return (
+    teacherStore.personId ||
+    teacherStore.currentTeacher?.id ||
+    authStore.user?.id ||
+    innovationPersonId.value ||
     currentRecord?.person_id ||
     values.person_id ||
     innovationData.value.find((record) => record.person_id)?.person_id ||
@@ -345,7 +372,7 @@ async function getInnovationData() {
   try {
     const response = await getDatasetRows<InnovationRow>(
       DATASET_GET.DATASET_ID,
-      DATASET_GET.DATASET_VERSION,
+      DATASET_GET.DATASET_VERSION_INNOVATIONS,
       {
         view: INNOVATION_GET_VIEW,
         page: 1,
@@ -354,7 +381,8 @@ async function getInnovationData() {
     )
 
     const { records, allDocumentLinks } = extractInnovationResponse(response.data)
-
+    innovationPersonId.value =
+      (response.data?.[0] as Record<string, any> | undefined)?.person_id || ''
     documentLinksByInnovation.value = Object.fromEntries(
       records
         .filter((record) => Boolean(record.id))
@@ -389,6 +417,7 @@ async function getInnovationData() {
     )
     innovationData.value = []
     documentLinksByInnovation.value = {}
+    innovationPersonId.value = ''
     formRenderKey.value += 1
   } finally {
     loading.value = false
@@ -461,7 +490,7 @@ async function storeInnovationFiles(
         entity_table: INNOVATION_ENTITY_TABLE,
         entity_id: record.id || '',
         purpose: buildInnovationPurpose(record, fileField),
-        person_id: record.person_id || '',
+        person_id: teacherStore.personId || '',
         created_at: new Date().toISOString(),
       },
       DOCUMENT_CREATE_CONFIG.VIEW_NAME,
@@ -680,7 +709,11 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="mx-6 flex flex-col gap-4 pb-6">
+  <div v-if="loading" class="flex-1 space-y-4 overflow-y-auto px-4 sm:px-6">
+    <SkeletonCard />
+  </div>
+
+  <div v-else class="mx-6 flex flex-col gap-4 pb-6">
     <CreateForm
       :key="formRenderKey"
       :busyEntries="busyEntries"

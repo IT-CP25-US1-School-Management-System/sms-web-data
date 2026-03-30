@@ -1,10 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
-import { env } from '@/lib/env'
-import { ROUTE_NAMES } from '@/lib/constants'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { ref, computed, onMounted } from 'vue'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,7 +24,6 @@ import {
   SidebarMenuSubItem,
 } from '@/components/ui/sidebar'
 import {
-  Settings,
   User,
   ChevronsUpDown,
   LogOut,
@@ -38,7 +32,14 @@ import {
   Notebook,
   TicketSlash,
 } from 'lucide-vue-next'
-
+import { useRouter, useRoute } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import { useTeacherStore } from '@/stores/teachers'
+import { env } from '@/lib/env'
+import { DATASET_GET, ROUTE_NAMES } from '@/lib/constants'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { getTeacherById } from '@/stores/teachers'
+import { getDatasetRows } from '@/stores/dataset'
 import { getImgInitials } from '@/lib/helpers'
 
 interface MenuChild {
@@ -60,6 +61,44 @@ interface MenuItem {
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const teacherStore = useTeacherStore()
+
+async function loadCurrentTeacher() {
+  try {
+    const response = await getDatasetRows(DATASET_GET.DATASET_ID, DATASET_GET.DATASET_VERSION, {
+      view: 'personal_get',
+      page: 1,
+      per_page: 50,
+    })
+
+    if (response.data?.[0]) {
+      teacherStore.setCurrentTeacher(response.data[0])
+    }
+  } catch (error) {
+    console.error('Failed to load current teacher data:', error)
+  }
+}
+
+onMounted(async () => {
+  const idFromUrl = route.query.id as string
+
+  if (teacherStore.currentTeacher?.id) return
+
+  if (idFromUrl) {
+    try {
+      const response = await getTeacherById(idFromUrl)
+      if (response.data) {
+        teacherStore.setCurrentTeacher(response.data)
+      }
+    } catch (error) {
+      console.error('Failed to load teacher data:', error)
+    }
+
+    return
+  }
+
+  await loadCurrentTeacher()
+})
 
 const menuConfig: {
   main: MenuItem[]
@@ -119,35 +158,35 @@ const menuConfig: {
           label: 'ข้อมูลการดำรงตำแหน่ง',
           icon: null,
           routeName: ROUTE_NAMES.POSITION_HISTORY,
-          showCondition: () => !isGovernment.value,
+          showCondition: () => isGovernment.value, // only for government staff
         },
         {
           id: 'royal-decorations',
           label: 'ประวัติเครื่องราชอิสริยาภรณ์',
           icon: null,
           routeName: ROUTE_NAMES.ROYAL_DECORATIONS,
-          showCondition: () => !isGovernment.value, // only for government staff
+          showCondition: () => isGovernment.value, // only for government staff
         },
         {
           id: 'academic-rank-history',
           label: 'ประวัติวิทยฐานะ',
           icon: null,
           routeName: ROUTE_NAMES.ACADEMIC_RANK_HISTORY,
-          showCondition: () => !isGovernment.value, // only for government staff
+          showCondition: () => isGovernment.value, // only for government staff
         },
         {
           id: 'employment',
           label: 'ข้อมูลการจ้าง',
           icon: null,
           routeName: ROUTE_NAMES.EMPLOYMENT,
-          showCondition: () => isGovernment.value, // show for non-government (contract) staff
+          showCondition: () => !isGovernment.value, // show for non-government (contract) staff
         },
         {
           id: 'contract-position',
-          label: 'ประวัติการดำรงตำแหน่ง (อัตราจ้าง)',
+          label: 'ประวัติการดำรงตำแหน่ง',
           icon: null,
           routeName: ROUTE_NAMES.CONTRACT_POSITION,
-          showCondition: () => isGovernment.value, // show for non-government (contract) staff
+          showCondition: () => !isGovernment.value, // show for non-government (contract) staff
         },
       ],
     },
@@ -272,15 +311,17 @@ const mockAuth = {
 // coming from the auth store may vary in shape (some backends nest attributes),
 // so check common locations where `is_government` might appear.
 const isGovernment = computed(() => {
-  const u: any = authStore.user
+  const u: any = teacherStore.currentTeacher || authStore.user
   if (!u) return false
-  return Boolean(
+
+  const rawValue =
     u.is_government ??
     u.profile?.is_government ??
     u.attributes?.is_government ??
-    u['isGovernment'] ??
-    false,
-  )
+    u.isGovernment ??
+    false
+
+  return rawValue === true || rawValue === 'true'
 })
 
 const isActiveRoute = (routeName: string | null) => {

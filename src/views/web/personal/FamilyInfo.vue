@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import CreateForm from '@/components/form/CreateForm.vue'
 import ConfirmModal from '@/components/ConfirmModal.vue'
+import SkeletonCard from '@/components/SkeletonCard.vue'
 import provincesJson from '@/assets/thai-province-data/provinces.json'
 import districtsJson from '@/assets/thai-province-data/districts.json'
 import subDistrictsJson from '@/assets/thai-province-data/sub_districts.json'
@@ -8,7 +9,7 @@ import { DATASET_GET, DATASET_EDIT } from '@/lib/constants'
 import { getDatasetRows, updateDatasetRow } from '@/stores/dataset'
 import type { District, Province, SubDistrict } from '@/types/address'
 import type { FamilyMember } from '@/types/teacher'
-import { computed, onMounted, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { toast } from 'vue-sonner'
 
 type CreateFormField = {
@@ -113,9 +114,18 @@ function getSubDistrictOptions(districtCode?: string) {
   return cloneOptions(subDistrictOptionsByDistrict.get(String(districtCode || '')) || [])
 }
 
-function mapFamilyMemberForForm(member: Partial<FamilyMember>) {
+function mapFamilyMemberForForm(
+  member: Partial<FamilyMember> & {
+    prefixes?: {
+      prefixes_name_th?: string
+      prefixes_name_en?: string
+    }
+  },
+) {
   return {
     ...member,
+
+    prefix_name: (member as Record<string, any>)?.prefixes?.prefixes_name_th || '',
     is_alive: member.is_alive ? 'มีชีวิต' : 'ไม่มีชีวิต',
     province_code: member.province_code ?? '',
     district_code: member.district_code ?? '',
@@ -146,7 +156,7 @@ function createFamilyFields(values: Record<string, any>): CreateFormSection[] {
           disabled: true,
         },
         {
-          name: 'prefix_id',
+          name: 'prefix_name',
           label: 'คำนำหน้า',
           type: 'text',
           placeholder: '-',
@@ -212,7 +222,7 @@ function createFamilyFields(values: Record<string, any>): CreateFormSection[] {
         },
         {
           name: 'phone',
-          label: 'โทรศัพท์',
+          label: 'เบอร์โทรศัพท์',
           type: 'text',
           required: true,
           placeholder: '0xxxxxxxxx',
@@ -291,7 +301,6 @@ function createFamilyFields(values: Record<string, any>): CreateFormSection[] {
           name: 'moo',
           label: 'หมู่ที่',
           type: 'text',
-          required: true,
           placeholder: '',
         },
         {
@@ -316,18 +325,22 @@ function syncFamilyAddress(index: number, incomingValues?: Record<string, any>) 
   const previousProvinceCode = String(currentValues.province_code || '')
   const previousDistrictCode = String(currentValues.district_code || '')
   const nextProvinceCode = String(values.province_code || '')
+  let shouldRefreshFields = false
+
   if (nextProvinceCode !== previousProvinceCode) {
     values.district_code = ''
     values.district = ''
     values.subdistrict_code = ''
     values.subdistrict = ''
     values.postal_code = ''
+    shouldRefreshFields = true
   }
 
   if (String(values.district_code || '') !== previousDistrictCode) {
     values.subdistrict_code = ''
     values.subdistrict = ''
     values.postal_code = ''
+    shouldRefreshFields = true
   }
 
   const resolvedProvinceCode = String(values.province_code || '')
@@ -343,8 +356,15 @@ function syncFamilyAddress(index: number, incomingValues?: Record<string, any>) 
       postalCodeBySubDistrict.get(resolvedSubDistrictCode) || values.postal_code || ''
   }
 
-  familyData.value[index] = values
-  familyFields.value[index] = createFamilyFields(values)
+  const nextFamilyData = [...familyData.value]
+  nextFamilyData[index] = values
+  familyData.value = nextFamilyData
+
+  if (shouldRefreshFields) {
+    const nextFamilyFields = [...familyFields.value]
+    nextFamilyFields[index] = createFamilyFields(values)
+    familyFields.value = nextFamilyFields
+  }
 }
 
 function normalizeFamilyPayload(currentMember: Record<string, any>, values?: Record<string, any>) {
@@ -378,9 +398,16 @@ async function getFamilyData() {
       page: 1,
       per_page: 50,
     })
-
+    console.log('Family API Response:', response)
+    const rootPrefixName =
+      (response.data[0] as Record<string, any> | undefined)?.prefixes?.prefixes_name_th || ''
     familyData.value = (response.data[0]?.family_members || []).map((member: FamilyMember) =>
-      mapFamilyMemberForForm(member),
+      mapFamilyMemberForForm({
+        ...member,
+        prefixes:
+          (member as Record<string, any>)?.prefixes ||
+          (rootPrefixName ? { prefixes_name_th: rootPrefixName } : undefined),
+      }),
     )
     familyFields.value = familyData.value.map((member) => createFamilyFields(member))
   } catch (error: any) {
@@ -425,11 +452,16 @@ async function updateFamilyData(groupIndex: number, values?: Record<string, any>
       payload,
     )
 
-    familyData.value[groupIndex] = mapFamilyMemberForForm({
+    const nextFamilyData = [...familyData.value]
+    nextFamilyData[groupIndex] = mapFamilyMemberForForm({
       ...currentMember,
       ...payload,
     })
-    familyFields.value[groupIndex] = createFamilyFields(familyData.value[groupIndex])
+    familyData.value = nextFamilyData
+
+    const nextFamilyFields = [...familyFields.value]
+    nextFamilyFields[groupIndex] = createFamilyFields(nextFamilyData[groupIndex] || {})
+    familyFields.value = nextFamilyFields
 
     if ((response as { message?: string }).message === 'success') {
       toast.success('บันทึกข้อมูลข้อมูลครอบครัวสำเร็จ', {
@@ -441,8 +473,6 @@ async function updateFamilyData(groupIndex: number, values?: Record<string, any>
       })
     }
   } catch (error: any) {
-    console.error('Family API Error:', error)
-    console.error('Error Response:', error?.response?.data)
     toast.error(
       `อัปเดตข้อมูลครอบครัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`,
       {
@@ -463,18 +493,28 @@ function updateData(confirmed: boolean) {
   confirmModal.value = false
 }
 
+function shouldSyncFamilyAddress(groupIndex: number, values?: Record<string, any>) {
+  if (!values) return false
+
+  const currentMember = familyData.value[groupIndex] || {}
+  return (
+    String(values.province_code || '') !== String(currentMember.province_code || '') ||
+    String(values.district_code || '') !== String(currentMember.district_code || '') ||
+    String(values.subdistrict_code || '') !== String(currentMember.subdistrict_code || '') ||
+    String(values.postal_code || '') !== String(currentMember.postal_code || '')
+  )
+}
+
 function handleChange(groupIndex: number, values?: Record<string, any>) {
+  if (!shouldSyncFamilyAddress(groupIndex, values)) return
   syncFamilyAddress(groupIndex, values)
 }
 
 function handleSave(groupIndex: number, values?: Record<string, any>) {
-  syncFamilyAddress(groupIndex, values)
   pendingGroupIndex.value = groupIndex
-  pendingValues.value = familyData.value[groupIndex] || {}
+  pendingValues.value = values || {}
   confirmModal.value = true
 }
-
-const createFormValues = computed(() => familyData.value.map((member) => ({ ...member })))
 
 onMounted(() => {
   void getFamilyData()
@@ -482,13 +522,16 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="mx-6 flex flex-col gap-4">
-    แก้ไขไม่ได้ ยกเว้นที่ เบอร์โทร อีเมล , ที่อยู่ update ได้
+  <div v-if="loading" class="flex-1 space-y-4 overflow-y-auto px-4 sm:px-6">
+    <SkeletonCard />
+  </div>
+
+  <div v-else class="mx-6 flex flex-col gap-4">
     <CreateForm
       :isDropdown="true"
       :readonly="true"
       :deferCommitOnSave="true"
-      :values="createFormValues"
+      :values="familyData"
       :canDelete="false"
       :fields="familyFields"
       @change="handleChange"

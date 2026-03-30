@@ -6,7 +6,12 @@ import { formatDateInput, generateUUID } from '@/lib/helpers'
 import { useAuthStore } from '@/stores/auth'
 import { useTeacherStore } from '@/stores/teachers'
 import { createFileDocument, deleteFileDocument, getFileDocumentRows } from '@/stores/document'
-import { createDatasetRow, deleteDatasetRow, getDatasetRows, updateDatasetRow } from '@/stores/dataset'
+import {
+  createDatasetRow,
+  deleteDatasetRow,
+  getDatasetRows,
+  updateDatasetRow,
+} from '@/stores/dataset'
 import type { CreateFileDocumentParams, FileDocument } from '@/types/document'
 import type { DocumentLink } from '@/types/document_request'
 import { onMounted, ref } from 'vue'
@@ -197,7 +202,9 @@ const academicRankFields: CreateFormSection[][] = [
 ]
 
 function getCurrentUserName() {
-  return authStore.user?.name || authStore.user?.given_name || authStore.user?.email || 'current-user'
+  return (
+    authStore.user?.name || authStore.user?.given_name || authStore.user?.email || 'current-user'
+  )
 }
 
 function normalizeAcademicFiles(value: unknown): AcademicFileItem[] {
@@ -235,7 +242,10 @@ function formatAcademicRecord(record: AcademicRankRow) {
     [RANKING_TYPE_FIELD]: record[RANKING_TYPE_FIELD] ?? record.ranking_type ?? '',
     special_reward: record.special_month_reward ?? record.special_reward ?? null,
     [SPECIAL_COMPENSATION_FIELD]:
-      record[SPECIAL_COMPENSATION_FIELD] ?? record.special_reward ?? record.special_compensation ?? null,
+      record[SPECIAL_COMPENSATION_FIELD] ??
+      record.special_reward ??
+      record.special_compensation ??
+      null,
     awarded_date: record.awarded_date ? formatDateInput(record.awarded_date) : null,
     approval_date: record.approval_date ? formatDateInput(record.approval_date) : null,
   }
@@ -277,19 +287,16 @@ function buildAcademicPayload(
     id: currentRecord?.id || values.id || generateUUID(),
     person_id: personId || currentRecord?.person_id || values.person_id || '',
     order_no: orderNoField ?? payload.order_no ?? currentRecord?.order_no ?? '',
-    ranking_type:
-      rankingTypeField ?? payload.ranking_type ?? currentRecord?.ranking_type ?? '',
+    ranking_type: rankingTypeField ?? payload.ranking_type ?? currentRecord?.ranking_type ?? '',
     reward: normalizeAcademicNumber(values.reward ?? payload.reward ?? currentRecord?.reward),
-    special_month_reward:
-      normalizeAcademicNumber(
-        specialMonthRewardField ??
-          payload.special_month_reward ??
-          currentRecord?.special_month_reward,
-      ),
-    special_reward:
-      normalizeAcademicNumber(
-        specialCompensationField ?? payload.special_reward ?? currentRecord?.special_reward,
-      ),
+    special_month_reward: normalizeAcademicNumber(
+      specialMonthRewardField ??
+        payload.special_month_reward ??
+        currentRecord?.special_month_reward,
+    ),
+    special_reward: normalizeAcademicNumber(
+      specialCompensationField ?? payload.special_reward ?? currentRecord?.special_reward,
+    ),
     position_reward: normalizeAcademicNumber(
       values.position_reward ?? payload.position_reward ?? currentRecord?.position_reward,
     ),
@@ -334,7 +341,10 @@ function extractAcademicResponse(data: unknown) {
   }
 }
 
-function createExistingAcademicFile(file: FileDocument, link?: DocumentLinkRow): ExistingAcademicFile {
+function createExistingAcademicFile(
+  file: FileDocument,
+  link?: DocumentLinkRow,
+): ExistingAcademicFile {
   return {
     name: file.original_filename,
     size: file.size,
@@ -644,7 +654,10 @@ function handleSave(index: number, values: Record<string, any>) {
   confirmModal.value = true
 }
 
-async function deleteAcademicRankWithFiles(recordId?: string, currentRecord?: AcademicRankFormValue) {
+async function deleteAcademicRankWithFiles(
+  recordId?: string,
+  currentRecord?: AcademicRankFormValue,
+) {
   try {
     if (!recordId || !currentRecord?.id) {
       toast.success('ลบข้อมูลประวัติวิทยฐานะสำเร็จ', {

@@ -4,6 +4,7 @@ import NormalForm, {
   type NormalFormChangePayload,
   type NormalFormOption,
 } from '@/components/form/NormalForm.vue'
+import SkeletonCard from '@/components/SkeletonCard.vue'
 import { DATASET_GET, DATASET_EDIT } from '@/lib/constants'
 import { Button } from '@/components/ui/button'
 import { getDatasetRows, updateDatasetRow } from '@/stores/dataset'
@@ -314,7 +315,6 @@ async function getAddressData() {
       createAddressFormState(address, index),
     )
   } catch (error: any) {
-    console.error('Address API Error:', error)
     toast.error(`โหลดข้อมูลที่อยู่ไม่สำเร็จ: ${error?.response?.data?.message || error.message}`)
     addressForms.value = [createAddressFormState(undefined, 0)]
   } finally {
@@ -328,15 +328,17 @@ async function updateAddressData() {
   const version = DATASET_EDIT.DATASET_VERSION_ADDRESS
 
   try {
+    const savedPayload = { ...addressDataUpdate.value }
     const response = await updateDatasetRow(
       // assuming the API identifies the record to update by an 'id' field
       datasetId,
       version,
-      addressDataUpdate.value.id,
-      addressDataUpdate.value,
+      savedPayload.id,
+      savedPayload,
     )
 
     if ((response as { message?: string }).message === 'success') {
+      applySavedAddressState(savedPayload)
       toast.success(`อัพเดตข้อมูลที่อยู่สำเร็จ`, {
         position: 'bottom-right',
       })
@@ -356,9 +358,9 @@ async function updateAddressData() {
   loading.value = false
 }
 
-function updateData(action: boolean) {
+async function updateData(action: boolean) {
   if (action) {
-    updateAddressData()
+    await updateAddressData()
   }
   confirmModal.value = false
 }
@@ -425,6 +427,31 @@ function buildAddressUpdate(
   }
 }
 
+function applySavedAddressState(savedPayload: PersonAddress) {
+  const nextAddressForms = [...addressForms.value]
+  const targetIndex = nextAddressForms.findIndex((entry) => entry.id === savedPayload.id)
+  if (targetIndex === -1) return
+
+  const target = nextAddressForms[targetIndex]
+  if (!target) return
+
+  const nextSource: PersonAddress = {
+    ...(target.source || {}),
+    ...savedPayload,
+  }
+  const nextInitialValues = buildAddressValues(nextSource)
+
+  target.source = nextSource
+  target.initialValues = cloneFormValues(nextInitialValues)
+  target.currentValues = cloneFormValues(nextInitialValues)
+  target.fields = createAddressFields(nextInitialValues)
+  target.hasChanges = false
+  syncCascade(target, nextInitialValues, true)
+
+  nextAddressForms[targetIndex] = target
+  addressForms.value = nextAddressForms
+}
+
 const hasAnyChanges = computed(() =>
   addressForms.value.some(
     (entry) => JSON.stringify(entry.currentValues) !== JSON.stringify(entry.initialValues),
@@ -463,19 +490,18 @@ async function onSaveAll() {
   if (!pendingPayloads.size) return
 
   confirmModal.value = true
-
-  addressForms.value.forEach((form) => {
-    form.initialValues = cloneFormValues(form.currentValues)
-    form.hasChanges = false
-  })
 }
 </script>
 
 <template>
   <div class="flex flex-col gap-4">
-    <div v-for="(form, index) in addressForms" :key="form.id" class="px-4 sm:px-6">
+    <div v-if="loading" class="flex-1 space-y-4 overflow-y-auto px-4 sm:px-6">
+      <SkeletonCard />
+    </div>
+
+    <div v-else v-for="form in addressForms" :key="form.id" class="px-4 sm:px-6">
       <NormalForm
-        :topic="`ข้อมูลที่อยู่ #${index + 1}`"
+        :topic="`ข้อมูลที่อยู่`"
         :fields="form.fields"
         :values="form.initialValues"
         :ref="(instance) => setFormRef(form.id, instance as NormalFormInstance | null)"

@@ -227,7 +227,16 @@ async function submitForm() {
   return result.valid && filesValid
 }
 
-defineExpose({ submitForm, isDirty })
+async function validateForm() {
+  if (!formRef.value) return false
+
+  const result = await formRef.value.validate()
+  const filesValid = validateFileFields()
+
+  return result.valid && filesValid
+}
+
+defineExpose({ submitForm, validateForm, isDirty })
 
 const isOpen = ref(true)
 
@@ -378,7 +387,8 @@ function formatDisplayDate(str: string | undefined): string {
                   <Input
                     v-if="['text', 'number', 'email'].includes(fieldItem.type)"
                     :id="`form-field-${fieldItem.name}`"
-                    v-bind="field"
+                    :model-value="localValues[fieldItem.name]"
+                    @update:model-value="(val) => field['onUpdate:modelValue']?.(val)"
                     :type="fieldItem.type"
                     :placeholder="fieldItem.placeholder || fieldItem.label || fieldItem.name"
                     autocomplete="off"
@@ -478,7 +488,8 @@ function formatDisplayDate(str: string | undefined): string {
                   <Textarea
                     v-else-if="fieldItem.type === 'textarea'"
                     :id="`form-field-${fieldItem.name}`"
-                    v-bind="field"
+                    :model-value="localValues[fieldItem.name]"
+                    @update:model-value="(val) => field['onUpdate:modelValue']?.(val)"
                     :placeholder="fieldItem.placeholder || fieldItem.label || fieldItem.name"
                     :disabled="fieldItem.disabled"
                     class="min-h-20 w-full resize-none disabled:opacity-50"

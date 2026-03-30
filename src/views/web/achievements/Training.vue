@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import ConfirmModal from '@/components/ConfirmModal.vue'
+import SkeletonCard from '@/components/SkeletonCard.vue'
 import CreateForm from '@/components/form/CreateForm.vue'
 import {
   DATASET_DELETE,
@@ -21,6 +22,7 @@ import type { CreateFileDocumentParams, FileDocument } from '@/types/document'
 import type { DocumentLink } from '@/types/document_request'
 import { onMounted, ref } from 'vue'
 import { toast } from 'vue-sonner'
+import { useTeacherStore } from '@/stores/teachers'
 
 type DocumentLinkRow = DocumentLink & { id?: string }
 
@@ -69,6 +71,7 @@ const TRAINING_GET_VIEW = 'training_get'
 const TRAINING_EDIT_VIEW = 'training_update'
 const TRAINING_ENTITY_TABLE = 'trainings'
 const TRAINING_FILE_FIELDS = ['photo-file', 'certificate-file'] as const
+const teacherStore = useTeacherStore()
 
 const TRAINING_DATASET = {
   DATASET_ID: DATASET_EDIT.DATASET_ID,
@@ -114,15 +117,15 @@ const trainingFields: CreateFormSection[][] = [
   [
     {
       content: [
-        {
-          name: 'work-type',
-          label: 'เลือกประเภทผลงาน',
-          type: 'select',
-          required: true,
-          isShow: true,
-          placeholder: 'เลือกประเภทผลงาน',
-          options: [],
-        },
+        // {
+        //   name: 'work-type',
+        //   label: 'เลือกประเภทผลงาน',
+        //   type: 'select',
+        //   required: true,
+        //   isShow: true,
+        //   placeholder: 'เลือกประเภทผลงาน',
+        //   options: [],
+        // },
         {
           name: 'course_title',
           label: 'หลักสูตร/เรื่อง/หัวข้อ',
@@ -148,7 +151,7 @@ const trainingFields: CreateFormSection[][] = [
         {
           name: 'hours',
           label: 'จำนวนชั่วโมง',
-          type: 'text',
+          type: 'number',
           required: true,
           placeholder: '',
         },
@@ -218,8 +221,17 @@ function isExistingTrainingFile(file: TrainingFileItem): file is ExistingTrainin
 }
 
 function buildTrainingPurpose(values: Partial<TrainingRow>, fileField?: string) {
-  const basePurpose = `${values.license_type || 'license'}_${values.license_no || 'unknown'}`
-  return fileField ? `${basePurpose}_${fileField}` : basePurpose
+  const topic = values.project_title || 'ไม่ระบุหัวข้อ'
+
+  if (fileField === 'photo-file') {
+    return `ภาพข้อมูลผลงาน/นวัตกรรมสำหรับ ${topic}_${fileField}`
+  }
+
+  if (fileField === 'certificate-file') {
+    return `ใบประกาศนียบัตรของ ${topic}_${fileField}`
+  }
+
+  return String(topic)
 }
 
 function matchesTrainingFileField(
@@ -251,12 +263,18 @@ function buildTrainingPayload(
 ) {
   const payload = { ...values }
   for (const fileField of TRAINING_FILE_FIELDS) delete payload[fileField]
+  const hoursValue =
+    values.hours === '' || values.hours === null || values.hours === undefined
+      ? null
+      : Number(values.hours)
 
   return {
     ...currentRecord,
     ...payload,
     id: currentRecord?.id || values.id || generateUUID(),
-    person_id: personId || currentRecord?.person_id || values.person_id || '',
+    person_id:
+      personId || teacherStore.personId || currentRecord?.person_id || values.person_id || '',
+    hours: hoursValue,
     start_date: formatTrainingDate(values.start_date),
     end_date: formatTrainingDate(values.end_date),
     created_at: currentRecord?.created_at || new Date().toISOString(),
@@ -341,7 +359,7 @@ async function getTrainingData() {
   try {
     const response = await getDatasetRows<TrainingRow>(
       DATASET_GET.DATASET_ID,
-      DATASET_GET.DATASET_VERSION,
+      DATASET_GET.DATASET_VERSION_TRAINING,
       {
         view: TRAINING_GET_VIEW,
         page: 1,
@@ -703,7 +721,11 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="mx-6 flex flex-col gap-4 pb-6">
+  <div v-if="loading" class="flex-1 space-y-4 overflow-y-auto px-4 sm:px-6">
+    <SkeletonCard />
+  </div>
+
+  <div v-else class="mx-6 flex flex-col gap-4 pb-6">
     <CreateForm
       :key="formRenderKey"
       :busyEntries="busyEntries"

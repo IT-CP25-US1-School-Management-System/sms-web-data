@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import ConfirmModal from '@/components/ConfirmModal.vue'
+import SkeletonCard from '@/components/SkeletonCard.vue'
 import CreateForm from '@/components/form/CreateForm.vue'
 import {
   DATASET_DELETE,
@@ -19,6 +20,7 @@ import {
 } from '@/stores/dataset'
 import type { CreateFileDocumentParams, FileDocument } from '@/types/document'
 import type { DocumentLink } from '@/types/document_request'
+import { useTeacherStore } from '@/stores/teachers'
 import { onMounted, ref } from 'vue'
 import { toast } from 'vue-sonner'
 
@@ -60,12 +62,12 @@ const FILE_FIELD = 'announcement-file'
 
 const DATASET_CONFIG = {
   DATASET_ID: DATASET_EDIT.DATASET_ID,
-  DATASET_VERSION: DATASET_EDIT.DATASET_VERSION_LICENSE,
+  DATASET_VERSION: DATASET_EDIT.DATASET_VERSION_ROYAL_DECORATIONS,
   VIEW_NAME: EDIT_VIEW,
 } as const
 const DELETE_CONFIG = {
   DATASET_ID: DATASET_DELETE.DATASET_ID,
-  DATASET_VERSION: DATASET_DELETE.DATASET_VERSION_LICENSE,
+  DATASET_VERSION: DATASET_DELETE.DATASET_VERSION_ROYAL_DECORATIONS,
 } as const
 const DOCUMENT_CREATE_CONFIG = {
   DATASET_ID: DOCUMENT_EDIT.DATASET_ID,
@@ -78,6 +80,7 @@ const DOCUMENT_DELETE_CONFIG = {
 } as const
 
 const authStore = useAuthStore()
+const teacherStore = useTeacherStore()
 
 const loading = ref(false)
 const busyEntries = ref<Record<number, 'save' | 'delete'>>({})
@@ -100,7 +103,7 @@ const royalDecorationFields: CreateFormSection[][] = [
     {
       content: [
         {
-          name: 'gazette_publish_date',
+          name: 'announce_date',
           label: 'วันที่ประกาศในราชกิจจา',
           type: 'date',
           required: true,
@@ -110,7 +113,7 @@ const royalDecorationFields: CreateFormSection[][] = [
         {
           name: 'year',
           label: 'ประจำปี',
-          type: 'text',
+          type: 'number',
           required: true,
           isShow: true,
           placeholder: '',
@@ -125,7 +128,7 @@ const royalDecorationFields: CreateFormSection[][] = [
         },
         { name: 'gazette_section', label: 'ตอนที่', type: 'text', placeholder: '' },
         {
-          name: 'announce_date',
+          name: 'gazette_publish_date',
           label: 'ลงวันที่',
           type: 'date',
           required: true,
@@ -182,7 +185,7 @@ function buildRoyalPurpose(values: Partial<RoyalDecorationRow>, fileField?: stri
 function formatRoyalRecord(record: RoyalDecorationRow) {
   return {
     ...record,
-    year: record.year != null ? String(record.year) : '',
+    year: record.year != null ? record.year : 0,
     gazette_publish_date: record.gazette_publish_date
       ? formatDateInput(record.gazette_publish_date)
       : null,
@@ -201,8 +204,8 @@ function buildRoyalPayload(
     ...currentRecord,
     ...payload,
     id: currentRecord?.id || values.id || generateUUID(),
-    person_id: personId || currentRecord?.person_id || values.person_id || '',
-    year: values.year || '',
+    person_id: teacherStore.personId || personId || '',
+    year: values.year || 0,
     gazette_publish_date: values.gazette_publish_date
       ? formatDateInput(values.gazette_publish_date)
       : null,
@@ -216,12 +219,7 @@ function resolveRoyalPersonId(
   values: RoyalDecorationFormValue,
   currentRecord?: RoyalDecorationRow,
 ) {
-  return (
-    currentRecord?.person_id ||
-    values.person_id ||
-    royalDecorationData.value.find((record) => record.person_id)?.person_id ||
-    ''
-  )
+  return teacherStore.personId || currentRecord?.person_id || values.person_id || ''
 }
 
 function extractRoyalResponse(data: unknown) {
@@ -276,7 +274,7 @@ async function getRoyalDecorationData() {
   try {
     const response = await getDatasetRows<RoyalDecorationRow>(
       DATASET_GET.DATASET_ID,
-      DATASET_GET.DATASET_VERSION,
+      DATASET_GET.DATASET_VERSION_ROYAL_DECORATIONS,
       { view: GET_VIEW, page: 1, per_page: 50 },
     )
     const { records, allDocumentLinks } = extractRoyalResponse(response.data)
@@ -374,7 +372,7 @@ async function storeRoyalFiles(documentIds: string[], record: RoyalDecorationRow
         entity_table: ENTITY_TABLE,
         entity_id: record.id || '',
         purpose: buildRoyalPurpose(record, FILE_FIELD),
-        person_id: record.person_id || '',
+        person_id: teacherStore.personId || record.person_id || '',
         created_at: new Date().toISOString(),
       },
       DOCUMENT_CREATE_CONFIG.VIEW_NAME,
@@ -563,7 +561,11 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="mx-6 flex flex-col gap-4 pb-6">
+  <div v-if="loading" class="flex-1 space-y-4 overflow-y-auto px-4 sm:px-6">
+    <SkeletonCard />
+  </div>
+
+  <div v-else class="mx-6 flex flex-col gap-4 pb-6">
     <CreateForm
       :key="formRenderKey"
       :busyEntries="busyEntries"
