@@ -17,6 +17,7 @@ type ExistingContractFile = { name: string; size: number; type?: string; resourc
 type ContractFileItem = File | ExistingContractFile
 type ContractRow = Record<string, any> & { id?: string; person_id?: string; document_links?: DocumentLinkRow[] }
 type ContractFormValue = ContractRow & { file?: ContractFileItem[] }
+type PersonalRow = Record<string, any> & { roles?: { roles_name?: string } | null }
 type CreateFormField = { name: string; label?: string; type: 'text' | 'date' | 'date-range' | 'select' | 'number' | 'email' | 'textarea' | 'file'; placeholder?: string; required?: boolean; disabled?: boolean; isShow?: boolean; options?: { label: string; value: any }[]; accept?: string; multiple?: boolean }
 type CreateFormSection = { topic?: string; content: CreateFormField[] }
 
@@ -37,6 +38,7 @@ const busyEntries = ref<Record<number, 'save' | 'delete'>>({})
 const contractPositionData = ref<ContractFormValue[]>([])
 const documentLinksByContract = ref<Record<string, DocumentLinkRow[]>>({})
 const formRenderKey = ref(0)
+const personalPosition = ref('')
 
 const confirmModal = ref(false)
 const action = ref('update')
@@ -51,9 +53,9 @@ const pendingAction = ref<
 const contractFields: CreateFormSection[][] = [[
   {
     content: [
-      { name: 'date', label: 'วันเดือนปี', type: 'date', required: true, placeholder: '-', disabled: false },
-      { name: 'position', label: 'ตำแหน่ง', type: 'text', required: true, placeholder: '-', disabled: false },
-      { name: 'salary', label: 'เงินเดือน', type: 'number', required: true, placeholder: '-', disabled: false },
+      { name: 'date', label: 'วันเดือนปี', type: 'date', required: true, placeholder: '', disabled: false },
+      { name: 'position', label: 'ตำแหน่ง', type: 'text', required: true, placeholder: '', disabled: false },
+      { name: 'salary', label: 'เงินเดือน', type: 'number', required: true, placeholder: '', disabled: false },
       { name: 'order_no', label: 'เลขที่คำสั่ง/สัญญาจ้าง', type: 'text', required: true, placeholder: '', disabled: false },
       { name: FILE_FIELD, label: 'แนบเอกสารเอกสารสัญญาจ้าง', type: 'file', accept: '.pdf,.jpg,.png', multiple: true ,required: true },
     ],
@@ -80,7 +82,11 @@ function buildContractPurpose(values: Partial<ContractRow>, fileField?: string) 
 }
 
 function formatContractRecord(record: ContractRow) {
-  return { ...record, date: record.date ? formatDateInput(record.date) : null }
+  return {
+    ...record,
+    date: record.date ? formatDateInput(record.date) : null,
+    position: personalPosition.value || record.position || '',
+  }
 }
 
 function buildContractPayload(values: ContractFormValue, currentRecord?: ContractRow, personId?: string) {
@@ -91,6 +97,7 @@ function buildContractPayload(values: ContractFormValue, currentRecord?: Contrac
     ...payload,
     id: currentRecord?.id || values.id || generateUUID(),
     person_id: personId || currentRecord?.person_id || values.person_id || '',
+    position: personalPosition.value || values.position || currentRecord?.position || '',
     date: values.date ? formatDateInput(values.date) : null,
     created_at: currentRecord?.created_at || new Date().toISOString(),
     updated_at: currentRecord?.id ? new Date().toISOString() : null,
@@ -132,9 +139,13 @@ async function getContractFiles(record: ContractRow, documentLinks: DocumentLink
 async function getContractPositionData() {
   loading.value = true
   try {
-    const response = await getDatasetRows<ContractRow>(DATASET_GET.DATASET_ID, DATASET_GET.DATASET_VERSION_CONTRACT_POSITION, { view: GET_VIEW, page: 1, per_page: 50 })
-    console.log('Contract Position API Response:', response)
-    const { records, allDocumentLinks } = extractContractResponse(response.data)
+    const [contractResponse, personalResponse] = await Promise.all([
+      getDatasetRows<ContractRow>(DATASET_GET.DATASET_ID, DATASET_GET.DATASET_VERSION_CONTRACT_POSITION, { view: GET_VIEW, page: 1, per_page: 50 }),
+      getDatasetRows<PersonalRow>(DATASET_GET.DATASET_ID, DATASET_GET.DATASET_VERSION, { view: 'personal_get', page: 1, per_page: 50 }),
+    ])
+    personalPosition.value = personalResponse.data?.[0]?.roles?.roles_name || ''
+    console.log('Contract Position API Response:', contractResponse)
+    const { records, allDocumentLinks } = extractContractResponse(contractResponse.data)
     documentLinksByContract.value = Object.fromEntries(
       records.filter((record) => Boolean(record.id)).map((record) => [record.id as string, allDocumentLinks.filter((link) => link.entity_id === record.id)]),
     )

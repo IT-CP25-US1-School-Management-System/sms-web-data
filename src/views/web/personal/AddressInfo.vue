@@ -330,15 +330,17 @@ async function updateAddressData() {
   const version = DATASET_EDIT.DATASET_VERSION_ADDRESS
 
   try {
+    const savedPayload = { ...addressDataUpdate.value }
     const response = await updateDatasetRow(
        // assuming the API identifies the record to update by an 'id' field
       datasetId, 
       version,
-      addressDataUpdate.value.id,
-      addressDataUpdate.value, 
+      savedPayload.id,
+      savedPayload, 
     )
     
     if ((response as { message?: string }).message === 'success') {
+      applySavedAddressState(savedPayload)
       toast.success(`อัพเดตข้อมูลที่อยู่สำเร็จ`, {
         position: 'bottom-right',
       })
@@ -356,9 +358,9 @@ async function updateAddressData() {
   loading.value = false
 }
 
-function updateData(action:boolean) {
+async function updateData(action:boolean) {
   if (action) {
-   updateAddressData()
+   await updateAddressData()
   } 
   confirmModal.value = false
 }
@@ -421,6 +423,31 @@ function buildAddressUpdate(source: PersonAddress | undefined, payload: Record<s
     created_at: source?.created_at || new Date().toISOString(),
     updated_at: new Date().toISOString(),
   }
+}
+
+function applySavedAddressState(savedPayload: PersonAddress) {
+  const nextAddressForms = [...addressForms.value]
+  const targetIndex = nextAddressForms.findIndex((entry) => entry.id === savedPayload.id)
+  if (targetIndex === -1) return
+
+  const target = nextAddressForms[targetIndex]
+  if (!target) return
+
+  const nextSource: PersonAddress = {
+    ...(target.source || {}),
+    ...savedPayload,
+  }
+  const nextInitialValues = buildAddressValues(nextSource)
+
+  target.source = nextSource
+  target.initialValues = cloneFormValues(nextInitialValues)
+  target.currentValues = cloneFormValues(nextInitialValues)
+  target.fields = createAddressFields(nextInitialValues)
+  target.hasChanges = false
+  syncCascade(target, nextInitialValues, true)
+
+  nextAddressForms[targetIndex] = target
+  addressForms.value = nextAddressForms
 }
 
 

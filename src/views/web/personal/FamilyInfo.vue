@@ -112,9 +112,18 @@ function getSubDistrictOptions(districtCode?: string) {
   return cloneOptions(subDistrictOptionsByDistrict.get(String(districtCode || '')) || [])
 }
 
-function mapFamilyMemberForForm(member: Partial<FamilyMember>) {
+function mapFamilyMemberForForm(
+  member: Partial<FamilyMember> & {
+    prefixes?: {
+      prefixes_name_th?: string
+      prefixes_name_en?: string
+    }
+  },
+) {
   return {
     ...member,
+    
+    prefix_name: (member as Record<string, any>)?.prefixes?.prefixes_name_th || '',
     is_alive: member.is_alive ? 'มีชีวิต' : 'ไม่มีชีวิต',
     province_code: member.province_code ?? '',
     district_code: member.district_code ?? '',
@@ -145,7 +154,7 @@ function createFamilyFields(values: Record<string, any>): CreateFormSection[] {
           disabled: true,
         },
         {
-          name: 'prefix_id',
+          name: 'prefix_name',
           label: 'คำนำหน้า',
           type: 'text',
           placeholder: '-',
@@ -385,9 +394,16 @@ async function getFamilyData() {
       page: 1,
       per_page: 50,
     })
-
+    console.log('Family API Response:', response)
+    const rootPrefixName =
+      (response.data[0] as Record<string, any> | undefined)?.prefixes?.prefixes_name_th || ''
     familyData.value = (response.data[0]?.family_members || []).map((member: FamilyMember) =>
-      mapFamilyMemberForForm(member),
+      mapFamilyMemberForForm({
+        ...member,
+        prefixes:
+          (member as Record<string, any>)?.prefixes ||
+          (rootPrefixName ? { prefixes_name_th: rootPrefixName } : undefined),
+      }),
     )
     familyFields.value = familyData.value.map((member) => createFamilyFields(member))
   } catch (error: any) {

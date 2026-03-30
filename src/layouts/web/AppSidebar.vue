@@ -101,18 +101,6 @@ onMounted(async () => {
   await loadCurrentTeacher()
 })
 
-const isGovernment = computed(() => {
-  const u: any = teacherStore.currentTeacher || authStore.user
-  console.log('Auth User Object:',  teacherStore.currentTeacher) // Debug log to inspect user object structure
-  if (!u) return false
-  return Boolean(
-    u.is_government ??
-      u.profile?.is_government ??
-      u.attributes?.is_government ??
-      u['isGovernment'] ??
-      false,
-  )
-})
 
 const menuConfig: {
   main: MenuItem[]
@@ -171,36 +159,36 @@ const menuConfig: {
           id: 'position-history',
           label: 'ข้อมูลการดำรงตำแหน่ง',
           icon: null,
-          routeName: ROUTE_NAMES.POSITION_HISTORY,
-          showCondition: () => !isGovernment.value,
+          routeName: ROUTE_NAMES.POSITION_HISTORY, 
+          showCondition: () => isGovernment.value, // only for government staff
         },
         {
           id: 'royal-decorations',
           label: 'ประวัติเครื่องราชอิสริยาภรณ์',
           icon: null,
           routeName: ROUTE_NAMES.ROYAL_DECORATIONS,
-          showCondition: () => !isGovernment.value, // only for government staff
+          showCondition: () => isGovernment.value, // only for government staff
         },
         {
           id: 'academic-rank-history',
           label: 'ประวัติวิทยฐานะ',
           icon: null,
           routeName: ROUTE_NAMES.ACADEMIC_RANK_HISTORY,
-          showCondition: () => !isGovernment.value, // only for government staff
+          showCondition: () => isGovernment.value, // only for government staff
         },
         {
           id: 'employment',
           label: 'ข้อมูลการจ้าง',
           icon: null,
           routeName: ROUTE_NAMES.EMPLOYMENT,
-          showCondition: () => isGovernment.value, // show for non-government (contract) staff
+          showCondition: () => !isGovernment.value, // show for non-government (contract) staff
         },
         {
           id: 'contract-position',
           label: 'ประวัติการดำรงตำแหน่ง',
           icon: null,
           routeName: ROUTE_NAMES.CONTRACT_POSITION,
-          showCondition: () => isGovernment.value, // show for non-government (contract) staff
+          showCondition: () => !isGovernment.value, // show for non-government (contract) staff
         },
       ],
     },
@@ -324,6 +312,20 @@ const mockAuth = {
 // Determine whether the current user is government staff. The user object
 // coming from the auth store may vary in shape (some backends nest attributes),
 // so check common locations where `is_government` might appear.
+const isGovernment = computed(() => {
+  const u: any = teacherStore.currentTeacher || authStore.user
+  if (!u) return false
+
+  const rawValue =
+    u.is_government ??
+    u.profile?.is_government ??
+    u.attributes?.is_government ??
+    u.isGovernment ??
+    false
+
+  return rawValue === true || rawValue === 'true'
+})
+
 const isActiveRoute = (routeName: string | null) => {
   if (!routeName) return false
   return route.name === routeName || route.name?.toString().startsWith(routeName)

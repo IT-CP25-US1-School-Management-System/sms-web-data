@@ -9,6 +9,7 @@ import { createFileDocument, deleteFileDocument, getFileDocumentRows } from '@/s
 import { createDatasetRow, deleteDatasetRow, getDatasetRows, updateDatasetRow } from '@/stores/dataset'
 import type { CreateFileDocumentParams, FileDocument } from '@/types/document'
 import type { DocumentLink } from '@/types/document_request'
+import { useTeacherStore } from '@/stores/teachers'
 import { onMounted, ref } from 'vue'
 import { toast } from 'vue-sonner'
 
@@ -17,7 +18,7 @@ type ExistingAcademicFile = { name: string; size: number; type?: string; resourc
 type AcademicFileItem = File | ExistingAcademicFile
 type AcademicRankRow = Record<string, any> & { id?: string; person_id?: string; document_links?: DocumentLinkRow[] }
 type AcademicRankFormValue = AcademicRankRow & { 'order-file'?: AcademicFileItem[] }
-type CreateFormField = { name: string; label?: string; type: 'text' | 'date' | 'date-range' | 'select' | 'number' | 'email' | 'textarea' | 'file'; placeholder?: string; required?: boolean; disabled?: boolean; isShow?: boolean; options?: { label: string; value: any }[]; accept?: string; multiple?: boolean }
+type CreateFormField = { name: string; label?: string; type: 'text' | 'date' | 'date-range' | 'select' | 'number' | 'email' | 'textarea' | 'file'; placeholder?: string; required?: boolean; disabled?: boolean; isShow?: boolean; defaultValue?: any; options?: { label: string; value: any }[]; accept?: string; multiple?: boolean }
 type CreateFormSection = { topic?: string; content: CreateFormField[] }
 
 const GET_VIEW = 'academic_get'
@@ -31,6 +32,7 @@ const DOCUMENT_CREATE_CONFIG = { DATASET_ID: DOCUMENT_EDIT.DATASET_ID, DATASET_V
 const DOCUMENT_DELETE_CONFIG = { DATASET_ID: DOCUMENT_DELETE.DATASET_ID, DATASET_VERSION: DOCUMENT_DELETE.DATASET_VERSION } as const
 
 const authStore = useAuthStore()
+const teacherStore = useTeacherStore()
 
 const loading = ref(false)
 const busyEntries = ref<Record<number, 'save' | 'delete'>>({})
@@ -52,19 +54,19 @@ const academicRankFields: CreateFormSection[][] = [[
   {
     topic: 'ประวัติการมีวิทยฐานะ',
     content: [
-      { name: 'order-no', label: 'คำสั่ง', type: 'text', required: true, isShow: true, placeholder: '' },
+      { name: 'order_no', label: 'คำสั่ง', type: 'text', required: true, isShow: true, placeholder: '' },
       { name: 'criteria', label: 'หลักเกณฑ์การได้รับวิทยฐานะ ', type: 'select', required: true, isShow: true, placeholder: '' , options: [{ label: 'ว13', value: 'ว13' }, { label: 'ว17', value: 'ว17' }, { label: 'ว21', value: 'ว21' }] },
-      { name: 'position_rank', label: 'ตำแหน่งที่ได้รับวิทยฐานะ', type: 'select', required: true, isShow: true, placeholder: 'เลือกตำแหน่ง', options: [{ label: 'ครู', value: 'ครู' }, { label: 'ผู้บริหาร', value: 'ผู้บริหาร' }] },
+      { name: 'position_rank', label: 'ตำแหน่งที่ได้รับวิทยฐานะ', type: 'select', required: true, isShow: true, placeholder: 'เลือกตำแหน่ง', options: [{ label: 'ครู', value: 'ครู' },  { label: 'รองผู้บริหาร', value: 'รองผู้บริหาร' }, { label: 'ผู้บริหาร', value: 'ผู้บริหาร' } ] },
       { name: 'ranking_type', label: 'วิทยฐานะ', type: 'select', required: true, placeholder: 'เลือกวิทยฐานะ', options: [
-        { label: 'ครูชำนาญการ', value: 'ครูชำนาญการ' },
-        { label: 'ครูชำนาญการพิเศษ', value: 'ครูชำนาญการพิเศษ' },
-        { label: 'ครูเชี่ยวชาญ', value: 'ครูเชี่ยวชาญ' },
-        { label: 'ครูเชี่ยวชาญพิเศษ', value: 'ครูเชี่ยวชาญพิเศษ' },
-        { label: 'รองผู้อำนวยชำนาญการพิเศษ', value: 'รองผู้อำนวยชำนาญการพิเศษ' },
-        { label: 'รองผู้อำนวยเชี่ยวชาญ', value: 'รองผู้อำนวยเชี่ยวชาญ' },
-        { label: 'ผู้อำนวยชำนาญการ', value: 'ผู้อำนวยชำนาญการ' },
-        { label: 'ผู้อำนวยชำนาญการพิเศษ', value: 'ผู้อำนวยชำนาญการพิเศษ' },
-        { label: 'ผู้อำนวยเชี่ยวชาญ', value: 'ผู้อำนวยเชี่ยวชาญ' },
+        { label: 'ชำนาญการ', value: 'ชำนาญการ' },
+        { label: 'ชำนาญการพิเศษ', value: 'ชำนาญการพิเศษ' },
+        { label: 'เชี่ยวชาญ', value: 'เชี่ยวชาญ' },
+        { label: 'เชี่ยวชาญพิเศษ', value: 'เชี่ยวชาญพิเศษ' },
+        // { label: 'รองผู้อำนวยชำนาญการพิเศษ', value: 'รองผู้อำนวยชำนาญการพิเศษ' },
+        // { label: 'รองผู้อำนวยเชี่ยวชาญ', value: 'รองผู้อำนวยเชี่ยวชาญ' },
+        // { label: 'ผู้อำนวยชำนาญการ', value: 'ผู้อำนวยชำนาญการ' },
+        // { label: 'ผู้อำนวยชำนาญการพิเศษ', value: 'ผู้อำนวยชำนาญการพิเศษ' },
+        // { label: 'ผู้อำนวยเชี่ยวชาญ', value: 'ผู้อำนวยเชี่ยวชาญ' },
       ] },
       { name: 'awarded_date', label: 'วันที่ได้รับวิทยฐานะ', type: 'date', required: true, placeholder: 'วว / ดด / ปปปป' },
       { name: FILE_FIELD, label: 'แนบคำสั่ง', type: 'file',required: true, accept: '.pdf,.jpg,.png', multiple: true },
@@ -73,10 +75,10 @@ const academicRankFields: CreateFormSection[][] = [[
   {
     topic: 'เงินเดือน',
     content: [
-      { name: 'reward', label: 'เงินค่าตอบแทน', type: 'number', required: true, placeholder: '' },
-      { name: 'special_reward', label: 'เงินค่าตอบแทนพิเศษรายเดือนรับ', type: 'number', required: true, placeholder: '' },
-      { name: 'position_reward', label: 'เงินประจำตำแหน่ง', type: 'number', required: true, placeholder: '' },
-      { name: 'special-compensation', label: 'เงินค่าตอบแทนพิเศษ', type: 'number', required: true, placeholder: '' },
+      { name: 'reward', label: 'เงินค่าตอบแทน', type: 'number', placeholder: '' },
+      { name: 'special_reward', label: 'เงินค่าตอบแทนพิเศษกรณีเต็มขั้น', type: 'number', placeholder: '', defaultValue: 0 },
+      { name: 'position_reward', label: 'เงินประจำตำแหน่ง', type: 'number', placeholder: '' },
+      { name: 'special-compensation', label: 'เงินค่าตอบแทนพิเศษ', type: 'number',  placeholder: '' },
     ],
   },
 ]]
@@ -100,26 +102,100 @@ function buildAcademicPurpose(values: Partial<AcademicRankRow>, fileField?: stri
   return fileField ? `${basePurpose}_${fileField}` : basePurpose
 }
 
+function getPositionRewardByRankingType(positionRank: string, rankingType: string) {
+  if (positionRank !== 'ครู') return 0
+  if (!rankingType) return 0
+  if (rankingType.includes('ชำนาญการพิเศษ')) return 5600
+  if (rankingType.includes('เชี่ยวชาญพิเศษ')) return 13000
+  if (rankingType.includes('เชี่ยวชาญ')) return 9900
+  if (rankingType.includes('ชำนาญการ')) return 3500
+  return 0
+}
+
+function getSpecialCompensationByRankingType(rankingType: string) {
+  if (!rankingType) return 0
+  if (rankingType.includes('ชำนาญการพิเศษ')) return 5600
+  if (rankingType.includes('เชี่ยวชาญพิเศษ')) {
+    if (rankingType.includes('ผู้อำนวย') || rankingType.includes('รองผู้อำนวย')) return 15600
+    return 13000
+  }
+  if (rankingType.includes('เชี่ยวชาญ')) return 9900
+  return 0
+}
+
+function applyAcademicDefaults(
+  values: AcademicRankFormValue,
+  previousValues?: AcademicRankFormValue,
+): AcademicRankFormValue {
+  const nextValues = { ...values }
+
+  if (
+    nextValues.special_reward === '' ||
+    nextValues.special_reward === null ||
+    nextValues.special_reward === undefined
+  ) {
+    nextValues.special_reward = 0
+  }
+
+  if (
+    nextValues.ranking_type !== previousValues?.ranking_type ||
+    nextValues.position_rank !== previousValues?.position_rank
+  ) {
+    const positionReward = getPositionRewardByRankingType(
+      String(nextValues.position_rank || ''),
+      String(nextValues.ranking_type || ''),
+    )
+    const specialCompensation = getSpecialCompensationByRankingType(
+      String(nextValues.ranking_type || ''),
+    )
+
+    nextValues.position_reward = positionReward
+    nextValues['special-compensation'] = specialCompensation
+  }
+
+  return nextValues
+}
+
 function formatAcademicRecord(record: AcademicRankRow) {
-  return { ...record, awarded_date: record.awarded_date ? formatDateInput(record.awarded_date) : null }
+  return {
+    ...record,
+    awarded_date: record.awarded_date ? formatDateInput(record.awarded_date) : null,
+    approval_date: record.approval_date ? formatDateInput(record.approval_date) : null,
+    special_reward:
+      record.special_reward === '' || record.special_reward === null || record.special_reward === undefined
+        ? 0
+        : record.special_reward,
+  }
 }
 
 function buildAcademicPayload(values: AcademicRankFormValue, currentRecord?: AcademicRankRow, personId?: string) {
   const payload = { ...values }
   delete payload[FILE_FIELD]
+
+  const toNullableNumber = (value: unknown) => {
+    if (value === '' || value === null || value === undefined) return null
+    const parsed = Number(value)
+    return Number.isNaN(parsed) ? null : parsed
+  }
+
   return {
     ...currentRecord,
     ...payload,
     id: currentRecord?.id || values.id || generateUUID(),
-    person_id: personId || currentRecord?.person_id || values.person_id || '',
+    person_id: teacherStore.personId || personId || '',
     awarded_date: values.awarded_date ? formatDateInput(values.awarded_date) : null,
+    approval_date: values.approval_date ? formatDateInput(values.approval_date) : null,
+    reward: toNullableNumber(values.reward),
+    special_reward: toNullableNumber(values.special_reward),
+    position_reward: toNullableNumber(values.position_reward),
+    'special-compensation': toNullableNumber(values['special-compensation']),
     created_at: currentRecord?.created_at || new Date().toISOString(),
     updated_at: currentRecord?.id ? new Date().toISOString() : null,
   }
 }
 
 function resolveAcademicPersonId(values: AcademicRankFormValue, currentRecord?: AcademicRankRow) {
-  return currentRecord?.person_id || values.person_id || academicRankData.value.find((record) => record.person_id)?.person_id || ''
+  return teacherStore.personId || currentRecord?.person_id || values.person_id || ''
 }
 
 function extractAcademicResponse(data: unknown) {
@@ -221,7 +297,7 @@ async function storeAcademicFiles(documentIds: string[], record: AcademicRankRow
         entity_table: ENTITY_TABLE,
         entity_id: record.id || '',
         purpose: buildAcademicPurpose(record, FILE_FIELD),
-        person_id: record.person_id || '',
+        person_id: teacherStore.personId || record.person_id || '',
         created_at: new Date().toISOString(),
       },
       DOCUMENT_CREATE_CONFIG.VIEW_NAME,
@@ -321,10 +397,33 @@ async function persistAcademicRank(index: number, values: AcademicRankFormValue)
 
 function handleSave(index: number, values: Record<string, any>) {
   if (busyEntries.value[index]) return
-  pendingAction.value = { type: 'save', index, values: values as AcademicRankFormValue }
+  const nextValues = applyAcademicDefaults(
+    values as AcademicRankFormValue,
+    academicRankData.value[index],
+  )
+  const nextAcademicRankData = [...academicRankData.value]
+  nextAcademicRankData[index] = nextValues
+  academicRankData.value = nextAcademicRankData
+  pendingAction.value = { type: 'save', index, values: nextValues }
   action.value = academicRankData.value[index]?.id ? 'update' : 'add'
   modalValue.value = `วิทยฐานะ ${values['academic-rank'] || ''}`
   confirmModal.value = true
+}
+
+function handleChange(index: number, values: Record<string, any>) {
+  const currentRecord = academicRankData.value[index] || {}
+  const shouldSyncDefaults =
+    String(values.position_rank || '') !== String(currentRecord.position_rank || '') ||
+    String(values.ranking_type || '') !== String(currentRecord.ranking_type || '')
+
+  if (!shouldSyncDefaults) return
+
+  const nextAcademicRankData = [...academicRankData.value]
+  nextAcademicRankData[index] = applyAcademicDefaults(
+    values as AcademicRankFormValue,
+    academicRankData.value[index],
+  )
+  academicRankData.value = nextAcademicRankData
 }
 
 async function deleteAcademicRankWithFiles(recordId?: string, currentRecord?: AcademicRankFormValue) {
@@ -405,6 +504,7 @@ onMounted(() => {
       :fields="academicRankFields"
       :deferCommitOnSave="true"
       :deferDeleteOnConfirm="true"
+      @change="handleChange"
       @save="handleSave"
       @delete="handleDelete"
     />

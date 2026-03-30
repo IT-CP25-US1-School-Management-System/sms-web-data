@@ -9,6 +9,7 @@ import { createFileDocument, deleteFileDocument, getFileDocumentRows } from '@/s
 import { createDatasetRow, deleteDatasetRow, getDatasetRows, updateDatasetRow } from '@/stores/dataset'
 import type { CreateFileDocumentParams, FileDocument } from '@/types/document'
 import type { DocumentLink } from '@/types/document_request'
+import { useTeacherStore } from '@/stores/teachers'
 import { onMounted, ref } from 'vue'
 import { toast } from 'vue-sonner'
 
@@ -25,12 +26,13 @@ const EDIT_VIEW = 'decorations_update'
 const ENTITY_TABLE = 'decorations'
 const FILE_FIELD = 'announcement-file'
 
-const DATASET_CONFIG = { DATASET_ID: DATASET_EDIT.DATASET_ID, DATASET_VERSION: DATASET_EDIT.DATASET_VERSION_LICENSE, VIEW_NAME: EDIT_VIEW } as const
-const DELETE_CONFIG = { DATASET_ID: DATASET_DELETE.DATASET_ID, DATASET_VERSION: DATASET_DELETE.DATASET_VERSION_LICENSE } as const
+const DATASET_CONFIG = { DATASET_ID: DATASET_EDIT.DATASET_ID, DATASET_VERSION: DATASET_EDIT.DATASET_VERSION_ROYAL_DECORATIONS, VIEW_NAME: EDIT_VIEW } as const
+const DELETE_CONFIG = { DATASET_ID: DATASET_DELETE.DATASET_ID, DATASET_VERSION: DATASET_DELETE.DATASET_VERSION_ROYAL_DECORATIONS } as const
 const DOCUMENT_CREATE_CONFIG = { DATASET_ID: DOCUMENT_EDIT.DATASET_ID, DATASET_VERSION: DOCUMENT_EDIT.DATASET_VERSION_DOCUMENT_LINK, VIEW_NAME: 'file_view' } as const
 const DOCUMENT_DELETE_CONFIG = { DATASET_ID: DOCUMENT_DELETE.DATASET_ID, DATASET_VERSION: DOCUMENT_DELETE.DATASET_VERSION } as const
 
 const authStore = useAuthStore()
+const teacherStore = useTeacherStore()
 
 const loading = ref(false)
 const busyEntries = ref<Record<number, 'save' | 'delete'>>({})
@@ -52,7 +54,7 @@ const royalDecorationFields: CreateFormSection[][] = [[
   {
     content: [
       { name: 'announce_date', label: 'วันที่ประกาศในราชกิจจา', type: 'date', required: true, isShow: true, placeholder: 'วว / ดด / ปปปป' },
-      { name: 'year', label: 'ประจำปี', type: 'text', required: true, isShow: true, placeholder: '' },
+      { name: 'year', label: 'ประจำปี', type: 'number', required: true, isShow: true, placeholder: '' },
       { name: 'class', label: 'ชั้นตรา', type: 'text', required: true, placeholder: '' },
       { name: 'gazette_book_no', label: 'เล่มที่', type: 'text', required: true, placeholder: '' },
       { name: 'gazette_section', label: 'ตอนที่', type: 'text', placeholder: '' },
@@ -86,7 +88,7 @@ function buildRoyalPurpose(values: Partial<RoyalDecorationRow>, fileField?: stri
 function formatRoyalRecord(record: RoyalDecorationRow) {
   return {
     ...record,
-    year: record.year != null ? String(record.year) : '',
+    year: record.year != null ? record.year : 0,
     gazette_publish_date: record.gazette_publish_date ? formatDateInput(record.gazette_publish_date) : null,
     announce_date: record.announce_date ? formatDateInput(record.announce_date) : null,
   }
@@ -99,8 +101,8 @@ function buildRoyalPayload(values: RoyalDecorationFormValue, currentRecord?: Roy
     ...currentRecord,
     ...payload,
     id: currentRecord?.id || values.id || generateUUID(),
-    person_id: personId || currentRecord?.person_id || values.person_id || '',
-    year: values.year || '',
+    person_id: teacherStore.personId || personId || '',
+    year: values.year || 0,
     gazette_publish_date: values.gazette_publish_date ? formatDateInput(values.gazette_publish_date) : null,
     announce_date: values.announce_date ? formatDateInput(values.announce_date) : null,
     created_at: currentRecord?.created_at || new Date().toISOString(),
@@ -109,7 +111,7 @@ function buildRoyalPayload(values: RoyalDecorationFormValue, currentRecord?: Roy
 }
 
 function resolveRoyalPersonId(values: RoyalDecorationFormValue, currentRecord?: RoyalDecorationRow) {
-  return currentRecord?.person_id || values.person_id || royalDecorationData.value.find((record) => record.person_id)?.person_id || ''
+  return teacherStore.personId || currentRecord?.person_id || values.person_id || ''
 }
 
 function extractRoyalResponse(data: unknown) {
@@ -142,7 +144,7 @@ async function getRoyalFiles(record: RoyalDecorationRow, documentLinks: Document
 async function getRoyalDecorationData() {
   loading.value = true
   try {
-    const response = await getDatasetRows<RoyalDecorationRow>(DATASET_GET.DATASET_ID, DATASET_GET.DATASET_VERSION, { view: GET_VIEW, page: 1, per_page: 50 })
+    const response = await getDatasetRows<RoyalDecorationRow>(DATASET_GET.DATASET_ID, DATASET_GET.DATASET_VERSION_ROYAL_DECORATIONS, { view: GET_VIEW, page: 1, per_page: 50 })
     const { records, allDocumentLinks } = extractRoyalResponse(response.data)
     documentLinksByDecoration.value = Object.fromEntries(
       records.filter((record) => Boolean(record.id)).map((record) => [record.id as string, allDocumentLinks.filter((link) => link.entity_id === record.id)]),
@@ -208,7 +210,7 @@ async function storeRoyalFiles(documentIds: string[], record: RoyalDecorationRow
         entity_table: ENTITY_TABLE,
         entity_id: record.id || '',
         purpose: buildRoyalPurpose(record, FILE_FIELD),
-        person_id: record.person_id || '',
+        person_id: teacherStore.personId || record.person_id || '',
         created_at: new Date().toISOString(),
       },
       DOCUMENT_CREATE_CONFIG.VIEW_NAME,

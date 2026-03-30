@@ -20,6 +20,9 @@ type PositionRow = Record<string, any> & {
 
 type PersonalRow = Record<string, any> & {
   department_id?: string
+  roles?: {
+    roles_name?: string
+  } | null
   departments?: {
     departments_name?: string
     departments_created_at?: string
@@ -94,7 +97,7 @@ const positionFields: NormalFormField[] = [
     ],
   },
   { name: 'position', label: 'ตำแหน่ง', type: 'text', disabled: true, placeholder: '' },
-  { name: 'work_status', label: 'สถานการทำงาน', type: 'text', disabled: true, placeholder: '' },
+  { name: 'work_status', label: 'สถานภาพการทำงาน', type: 'text', disabled: true, placeholder: '' },
   { name: 'direct_pay_no', label: 'เลขที่จ่ายตรง', type: 'text', disabled: true, placeholder: '' },
   { name: 'position_number', label: 'เลขที่ตำแหน่ง', type: 'text', disabled: true, placeholder: '' },
   { name: 'appointment_type', label: 'ประเภทการบรรจุ', type: 'text', disabled: true, placeholder: 'เลือกประเภทการบรรจุ' },
@@ -198,9 +201,11 @@ async function getPositionData() {
         per_page: 50,
       }),
     ])
-
+    console.log('Position Response:', positionResponse.data)
+    console.log('Personal Response:', personalResponse.data)
     const records = positionResponse.data?.[0]?.governments || []
     const personalRecord: PersonalRow = personalResponse.data?.[0] || {}
+    const positionName = personalRecord.roles?.roles_name || ''
     const subjectGroup = personalRecord.departments?.departments_name || ''
     personalDepartment.value = personalRecord.departments
       ? {
@@ -215,11 +220,13 @@ async function getPositionData() {
         record
           ? {
               ...record,
+              position: positionName || record.position || '',
               subject_group: subjectGroup,
               work_age_from_appointment: calculateWorkAge(record.government_entry_date),
               work_age_at_school: calculateWorkAge(record.school_entry_date),
             }
           : {
+              position: positionName,
               subject_group: subjectGroup,
               work_age_from_appointment: '',
               work_age_at_school: '',

@@ -5,6 +5,7 @@ import CreateForm from '@/components/form/CreateForm.vue'
 import { DATASET_DELETE, DATASET_EDIT, DATASET_GET, DOCUMENT_DELETE, DOCUMENT_EDIT } from '@/lib/constants'
 import { formatDateInput, generateUUID } from '@/lib/helpers'
 import { useAuthStore } from '@/stores/auth'
+import { useTeacherStore } from '@/stores/teachers'
 import { createFileDocument, deleteFileDocument, getFileDocumentRows } from '@/stores/document'
 import { createDatasetRow, deleteDatasetRow, getDatasetRows, updateDatasetRow } from '@/stores/dataset'
 import type { CreateFileDocumentParams, FileDocument } from '@/types/document'
@@ -20,7 +21,7 @@ type InnovationFormValue = InnovationRow & { 'photo-file'?: InnovationFileItem[]
 type CreateFormField = { name: string; label?: string; type: 'text' | 'date' | 'date-range' | 'select' | 'number' | 'email' | 'textarea' | 'file'; placeholder?: string; required?: boolean; disabled?: boolean; isShow?: boolean; options?: { label: string; value: any }[]; accept?: string; multiple?: boolean }
 type CreateFormSection = { topic?: string; content: CreateFormField[]; subFields?: CreateFormField[] }
 
-const INNOVATION_GET_VIEW = 'innovations_get'
+const INNOVATION_GET_VIEW = 'innovation_get'
 const INNOVATION_EDIT_VIEW = 'innovations_update'
 const INNOVATION_ENTITY_TABLE = 'profession-license'
 const INNOVATION_FILE_FIELDS = ['photo-file', 'certificate-file'] as const
@@ -32,12 +33,14 @@ const DOCUMENT_CREATE_CONFIG = { DATASET_ID: DOCUMENT_EDIT.DATASET_ID, DATASET_V
 const DOCUMENT_DELETE_CONFIG = { DATASET_ID: DOCUMENT_DELETE.DATASET_ID, DATASET_VERSION: DOCUMENT_DELETE.DATASET_VERSION } as const
 
 const authStore = useAuthStore()
-
+const teacherStore = useTeacherStore()
+console.log('Teacher Store:', )
 const loading = ref(false)
 const busyEntries = ref<Record<number, 'save' | 'delete'>>({})
 const innovationData = ref<InnovationFormValue[]>([])
 const documentLinksByInnovation = ref<Record<string, DocumentLinkRow[]>>({})
 const formRenderKey = ref(0)
+const innovationPersonId = ref('')
 
 const confirmModal = ref(false)
 const action = ref('update')
@@ -84,8 +87,8 @@ const innovationFields: CreateFormSection[][] = [[
   {
     topic: 'ข้อมูลผู้ครูที่ดูแล',
     content: [
-      { name: 'teacher_name', label: 'ครูผู้ดูแล', type: 'text', required: true, placeholder: '' },
-      { name: 'learning_group', label: 'กลุ่มสาระการเรียนรู้', type: 'text', required: true, placeholder: '' },
+      { name: 'supervior', label: 'ครูผู้ดูแล', type: 'text', required: true, placeholder: '' },
+      { name: 'subject_group', label: 'กลุ่มสาระการเรียนรู้', type: 'text', required: true, placeholder: '' },
       { name: 'photo_file', label: 'แนบภาพ', type: 'file', accept: '.jpg,.jpeg,.png', multiple: true ,required: true},
       { name: 'certificate_file', label: 'แนบเกียรติบัตร', type: 'file', accept: '.pdf,.jpg,.png', multiple: true ,required: true },
     ],
@@ -107,8 +110,17 @@ function isExistingInnovationFile(file: InnovationFileItem): file is ExistingInn
 }
 
 function buildInnovationPurpose(values: Partial<InnovationRow>, fileField?: string) {
-  const basePurpose = `${values.license_type || 'license'}_${values.license_no || 'unknown'}`
-  return fileField ? `${basePurpose}_${fileField}` : basePurpose
+  const topic = values.project_title || 'ไม่ระบุหัวข้อ'
+
+  if (fileField === 'photo-file') {
+    return `ภาพการอบรม/ศึกษาดูงานสำหรับ ${topic}_${fileField}`
+  }
+
+  if (fileField === 'certificate-file') {
+    return `ใบประกาศนียบัตรของ ${topic}_${fileField}`
+  }
+
+  return String(topic)
 }
 
 function matchesInnovationFileField(link: DocumentLinkRow, fileField: string) {
@@ -129,11 +141,22 @@ function formatInnovationRecord(record: InnovationRow) {
 function buildInnovationPayload(values: InnovationFormValue, currentRecord?: InnovationRow, personId?: string) {
   const payload = { ...values }
   for (const fileField of INNOVATION_FILE_FIELDS) delete payload[fileField]
+  const resolvedPersonId =
+    personId ||
+    teacherStore.personId ||
+    teacherStore.currentTeacher?.id ||
+    authStore.user?.id ||
+    innovationPersonId.value ||
+    currentRecord?.person_id ||
+    values.person_id ||
+    innovationData.value.find((record) => record.person_id)?.person_id ||
+    ''
+
   return {
     ...currentRecord,
     ...payload,
     id: currentRecord?.id || values.id || generateUUID(),
-    person_id: personId || currentRecord?.person_id || values.person_id || '',
+    person_id: resolvedPersonId,
     start_date: values.start_date ? formatDateInput(values.start_date) : null,
     end_date: values.end_date ? formatDateInput(values.end_date) : null,
     created_at: currentRecord?.created_at || new Date().toISOString(),
@@ -143,6 +166,10 @@ function buildInnovationPayload(values: InnovationFormValue, currentRecord?: Inn
 
 function resolveInnovationPersonId(values: InnovationFormValue, currentRecord?: InnovationRow) {
   return (
+    teacherStore.personId ||
+    teacherStore.currentTeacher?.id ||
+    authStore.user?.id ||
+    innovationPersonId.value ||
     currentRecord?.person_id ||
     values.person_id ||
     innovationData.value.find((record) => record.person_id)?.person_id ||
@@ -184,14 +211,14 @@ async function getInnovationFiles(record: InnovationRow, documentLinks: Document
 async function getInnovationData() {
   loading.value = true
   try {
-    const response = await getDatasetRows<InnovationRow>(DATASET_GET.DATASET_ID, DATASET_GET.DATASET_VERSION, {
+    const response = await getDatasetRows<InnovationRow>(DATASET_GET.DATASET_ID, DATASET_GET.DATASET_VERSION_INNOVATIONS, {
       view: INNOVATION_GET_VIEW,
       page: 1,
       per_page: 50,
     })
 
     const { records, allDocumentLinks } = extractInnovationResponse(response.data)
-
+    innovationPersonId.value = (response.data?.[0] as Record<string, any> | undefined)?.person_id || ''
     documentLinksByInnovation.value = Object.fromEntries(
       records.filter((record) => Boolean(record.id)).map((record) => [
         record.id as string,
@@ -213,6 +240,7 @@ async function getInnovationData() {
     toast.error(`โหลดข้อมูลผลงานและนวัตกรรมไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, { position: 'bottom-right' })
     innovationData.value = []
     documentLinksByInnovation.value = {}
+    innovationPersonId.value = ''
     formRenderKey.value += 1
   } finally {
     loading.value = false
@@ -265,7 +293,7 @@ async function storeInnovationFiles(documentIds: string[], record: InnovationRow
         entity_table: INNOVATION_ENTITY_TABLE,
         entity_id: record.id || '',
         purpose: buildInnovationPurpose(record, fileField),
-        person_id: record.person_id || '',
+        person_id: teacherStore.personId || '',
         created_at: new Date().toISOString(),
       },
       DOCUMENT_CREATE_CONFIG.VIEW_NAME,
