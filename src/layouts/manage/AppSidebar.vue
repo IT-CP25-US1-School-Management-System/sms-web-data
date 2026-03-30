@@ -328,7 +328,7 @@ onMounted(async () => {
               <div
                 class="bg-background flex aspect-square h-10 items-center justify-center rounded-lg"
               >
-                <!-- <img src="/" alt="Logo" class="h-9" /> -->
+                <img src="/kp.png" alt="Logo" class="h-9" />
               </div>
               <div class="grid flex-1 text-left text-sm leading-tight">
                 <span class="truncate font-semibold">{{ env.APP_NAME }}</span>
