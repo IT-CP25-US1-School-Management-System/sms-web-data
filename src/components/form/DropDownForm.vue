@@ -48,6 +48,42 @@ const props = defineProps<{
   values?: Record<string, any>
 }>()
 
+function buildNumberValidator(label: string, required?: boolean) {
+  const requiredMessage = `${label} จำเป็นต้องกรอก`
+  const invalidMessage = `${label} ต้องเป็นตัวเลข`
+  const normalizeNumberValue = (value: unknown) => {
+    if (value == null) return undefined
+    if (typeof value === 'number') return Number.isFinite(value) ? value : value
+    if (typeof value === 'string') {
+      const trimmed = value.trim()
+      if (!trimmed) return undefined
+      const normalized = trimmed.replace(/,/g, '')
+      const parsed = Number(normalized)
+      return Number.isFinite(parsed) ? parsed : value
+    }
+    return value
+  }
+
+  if (required) {
+    return z.preprocess(
+      normalizeNumberValue,
+      z.number({
+        required_error: requiredMessage,
+        invalid_type_error: invalidMessage,
+      }),
+    )
+  }
+
+  return z.preprocess(
+    normalizeNumberValue,
+    z
+      .number({
+        invalid_type_error: invalidMessage,
+      })
+      .optional(),
+  )
+}
+
 const schema = computed(() => {
   const shape: Record<string, any> = {}
 
@@ -69,6 +105,11 @@ const schema = computed(() => {
 
       const allowEmptyString = <T extends z.ZodTypeAny>(validator: T) =>
         validator.optional().or(z.literal(''))
+
+      if (field.type === 'number') {
+        shape[field.name] = buildNumberValidator(label, field.required)
+        return
+      }
 
       if (field.required) {
         let validator = z.string().min(1, baseRequiredMessage)
@@ -180,7 +221,7 @@ async function submitForm() {
     // formRef.value.$el?.dispatchEvent(
     //   new Event('submit', { cancelable: true, bubbles: true })
     // )
-    onSubmit(formRef.value.values)
+    onSubmit((result.values as Record<string, any>) || formRef.value.values)
   }
 
   return result.valid && filesValid

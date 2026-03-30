@@ -387,10 +387,10 @@ async function storeFile(documentIds: string[], license: ProfessionalLicenseRow)
     }
 
     const response = await createDatasetRow<DocumentLinkRow>(
-      DOCUMENT_LINK_CREATE_DATASET.DATASET_ID,
-      DOCUMENT_LINK_CREATE_DATASET.DATASET_VERSION,
+      'data_manage',
+      'v0.0.0',
       payload,
-      DOCUMENT_LINK_CREATE_DATASET.VIEW_NAME
+      'document_links',
     )
     createdLinks.push(response.data)
   }
@@ -403,8 +403,8 @@ async function deleteDocumentLinks(documentLinks: DocumentLinkRow[]) {
     const documentLinkKey = link.id || link.document_key
     if (!documentLinkKey) continue
     await deleteDatasetRow(
-      DOCUMENT_LINK_DELETE_DATASET.DATASET_ID,
-      DOCUMENT_LINK_DELETE_DATASET.DATASET_VERSION,
+      'data_manage',
+      'v0.0.0',
       documentLinkKey,
     )
   }

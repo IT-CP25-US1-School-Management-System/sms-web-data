@@ -82,6 +82,42 @@ const props = defineProps<{
 // Per-entry zod schemas (toTypedSchema) for vee-validate
 const schemas = ref<any[]>([])
 
+function buildNumberFieldSchema(label: string, required?: boolean) {
+  const requiredMessage = `กรุณากรอก ${label}`
+  const invalidMessage = `${label} ต้องเป็นตัวเลข`
+  const normalizeNumberValue = (value: unknown) => {
+    if (value == null) return undefined
+    if (typeof value === 'number') return Number.isFinite(value) ? value : value
+    if (typeof value === 'string') {
+      const trimmed = value.trim()
+      if (!trimmed) return undefined
+      const normalized = trimmed.replace(/,/g, '')
+      const parsed = Number(normalized)
+      return Number.isFinite(parsed) ? parsed : value
+    }
+    return value
+  }
+
+  if (required) {
+    return z.preprocess(
+      normalizeNumberValue,
+      z.number({
+        required_error: requiredMessage,
+        invalid_type_error: invalidMessage,
+      }),
+    )
+  }
+
+  return z.preprocess(
+    normalizeNumberValue,
+    z
+      .number({
+        invalid_type_error: invalidMessage,
+      })
+      .optional(),
+  )
+}
+
 function buildSchemas() {
   schemas.value = localEntries.value.map((entry) => {
     const shape: Record<string, any> = {}
@@ -163,6 +199,11 @@ function buildSchemas() {
                   message: `ขนาดไฟล์ต้องไม่เกิน ${Math.floor(MAX_FILE_SIZE / (1024 * 1024))} MB`,
                 })
           }
+          return
+        }
+
+        if (f.type === 'number') {
+          shape[f.name] = buildNumberFieldSchema(label, f.required)
           return
         }
 
