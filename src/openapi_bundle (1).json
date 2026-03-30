@@ -1,0 +1,3810 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Data Management Service (DMS) API — v1 (query-only)",
+    "version": "1 .0.0",
+    "description": "Central DMS focused on Catalog, Introspection, Contracts\nServing (dynamic datasets + CRUD/Query/Export).\n"
+  },
+  "servers": [
+    {
+      "url": "https://dms.company.com/api/v1",
+      "description": "Production"
+    },
+    {
+      "url": "http://localhost:3200/api/v1",
+      "description": "Local Dev"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Health"
+    },
+    {
+      "name": "Introspection"
+    },
+    {
+      "name": "Catalog"
+    },
+    {
+      "name": "Contracts"
+    },
+    {
+      "name": "Serving"
+    },
+    {
+      "name": "Reporting"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Health probe",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/introspect/sources": {
+      "get": {
+        "tags": ["Introspection"],
+        "summary": "List registered physical sources",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "description": "Page number for pagination"
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 10
+            },
+            "description": "Number of items per page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of sources with pagination",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SourcesResponseDTO"
+                      }
+                    },
+                    "page": {
+                      "type": "integer"
+                    },
+                    "per_page": {
+                      "type": "integer"
+                    },
+                    "total_pages": {
+                      "type": "integer"
+                    },
+                    "total_rows": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Introspection"],
+        "summary": "Create a new data source",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SourcesDTO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Source created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "Created source ID"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - source already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/introspect/sources/{id}": {
+      "put": {
+        "tags": ["Introspection"],
+        "summary": "Update a data source",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Source ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSourcesDTO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Source updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "Updated source ID"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Source not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Introspection"],
+        "summary": "Delete a data source",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Source ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Source deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - invalid ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Source not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": ["Introspection"],
+        "summary": "Activate or deactivate a data source",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Source ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "is_active": {
+                    "type": "boolean",
+                    "description": "Set to true to activate, false to deactivate"
+                  }
+                },
+                "required": ["is_active"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Source status updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - invalid ID or request body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Source not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/introspect/schemas": {
+      "get": {
+        "tags": ["Introspection"],
+        "summary": "List schemas in a source",
+        "parameters": [
+          {
+            "name": "source_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Filter by source ID"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "description": "Page number for pagination"
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 10
+            },
+            "description": "Number of items per page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of schemas with pagination",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Schemas"
+                      }
+                    },
+                    "page": {
+                      "type": "integer"
+                    },
+                    "per_page": {
+                      "type": "integer"
+                    },
+                    "total_pages": {
+                      "type": "integer"
+                    },
+                    "total_rows": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/introspect/tables": {
+      "get": {
+        "tags": ["Introspection"],
+        "summary": "List tables in a schema",
+        "parameters": [
+          {
+            "name": "source_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Filter by source ID"
+          },
+          {
+            "name": "schema",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by schema name"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "description": "Page number for pagination"
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 10
+            },
+            "description": "Number of items per page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of tables with pagination",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Tables"
+                      }
+                    },
+                    "page": {
+                      "type": "integer"
+                    },
+                    "per_page": {
+                      "type": "integer"
+                    },
+                    "total_pages": {
+                      "type": "integer"
+                    },
+                    "total_rows": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/introspect/columns": {
+      "get": {
+        "tags": ["Introspection"],
+        "summary": "List columns for a table",
+        "parameters": [
+          {
+            "name": "source_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Filter by source ID"
+          },
+          {
+            "name": "schema",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by schema name"
+          },
+          {
+            "name": "table",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by table name"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "description": "Page number for pagination"
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 10
+            },
+            "description": "Number of items per page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of columns with pagination",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Columns"
+                      }
+                    },
+                    "page": {
+                      "type": "integer"
+                    },
+                    "per_page": {
+                      "type": "integer"
+                    },
+                    "total_pages": {
+                      "type": "integer"
+                    },
+                    "total_rows": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/datasets": {
+      "get": {
+        "tags": ["Catalog"],
+        "summary": "Search datasets",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SearchWord"
+          },
+          {
+            "$ref": "#/components/parameters/Domain"
+          },
+          {
+            "$ref": "#/components/parameters/Tag"
+          },
+          {
+            "$ref": "#/components/parameters/HasPII"
+          },
+          {
+            "$ref": "#/components/parameters/Owner"
+          },
+          {
+            "$ref": "#/components/parameters/Page"
+          },
+          {
+            "$ref": "#/components/parameters/PageSize"
+          },
+          {
+            "$ref": "#/components/parameters/Sort"
+          },
+          {
+            "$ref": "#/components/parameters/SortOrder"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of datasets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Dataset"
+                      }
+                    },
+                    "page": {
+                      "type": "integer"
+                    },
+                    "per_page": {
+                      "type": "integer"
+                    },
+                    "total_pages": {
+                      "type": "integer"
+                    },
+                    "total_rows": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "BadRequest,",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "InternalServerError,",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Catalog"],
+        "summary": "New dataset and Update dataset",
+        "requestBody": {
+          "required": true,
+          "description": "dataset id must contain only lowercase english letters, underscore, and hyphen without spaces",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DatasetUpsert"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Success"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "BadRequest,",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "InternalServerError,",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/datasets/{id}": {
+      "get": {
+        "tags": ["Catalog"],
+        "summary": "Get dataset detail",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DatasetId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dataset",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Catalog"],
+        "summary": "Delete dataset by id",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DatasetId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dataset",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Success"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/datasets/{id}/versions": {
+      "get": {
+        "tags": ["Contracts"],
+        "summary": "Get list of dataset versions (contracts)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Dataset ID"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "description": "Page number for pagination"
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 10
+            },
+            "description": "Number of items per page"
+          },
+          {
+            "name": "source_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Filter by source ID"
+          },
+          {
+            "name": "search_word",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search term"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["active", "preview", "deprecated"]
+            },
+            "description": "Filter by status"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of dataset versions with pagination",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/DatasetVersion"
+                      }
+                    },
+                    "page": {
+                      "type": "integer"
+                    },
+                    "per_page": {
+                      "type": "integer"
+                    },
+                    "total_pages": {
+                      "type": "integer"
+                    },
+                    "total_rows": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Dataset not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Contracts"],
+        "summary": "Create a new dataset version (contract)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Dataset ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InsertDatasetVersionDTO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Dataset version created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Dataset not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Version already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/datasets/{id}/versions/{version}": {
+      "get": {
+        "tags": ["Contracts"],
+        "summary": "Get dataset version by ID (contract details)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Dataset ID"
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Version name/number"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dataset version details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/DatasetVersion"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Dataset or version not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Contracts"],
+        "summary": "Update dataset version (contract)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Dataset ID"
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Version name/number"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDatasetVersionDTO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Dataset version updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Dataset or version not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": ["Contracts"],
+        "summary": "Update dataset version status",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Dataset ID"
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Version name/number"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDatasetVersionStatusDTO"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Dataset version status updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request - validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Dataset or version not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/datasets/{id}/versions/{version}/data": {
+      "get": {
+        "tags": ["Serving"],
+        "summary": "List rows from a dataset version (policy-aware, dynamic)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Dataset ID"
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Dataset version"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "description": "Page number for pagination"
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 10
+            },
+            "description": "Number of items per page"
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "View name to use for data access"
+          },
+          {
+            "name": "where",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "JSON string for filter conditions (array of filter groups)"
+          },
+          {
+            "name": "where_logical_operator",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["AND", "OR", "and", "or"],
+              "default": "AND"
+            },
+            "description": "Logical operator between filter groups"
+          },
+          {
+            "name": "sort_by",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Column name to sort by"
+          },
+          {
+            "name": "sort_order",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["ASC", "DESC", "asc", "desc"],
+              "default": "ASC"
+            },
+            "description": "Sort order"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dataset rows with pagination",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": true
+                      }
+                    },
+                    "page": {
+                      "type": "integer"
+                    },
+                    "per_page": {
+                      "type": "integer"
+                    },
+                    "total_pages": {
+                      "type": "integer"
+                    },
+                    "total_rows": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Dataset or version not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Serving"],
+        "summary": "Create a new row in dataset version",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Dataset ID"
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Dataset version"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "description": "Row data to be created"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Row created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Dataset or version not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict - duplicate key or constraint violation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/datasets/{id}/versions/{version}/data/key/{key}": {
+      "get": {
+        "tags": ["Serving"],
+        "summary": "Get a row by key from dataset version (policy-aware)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Dataset ID"
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Dataset version"
+          },
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Row key"
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "View name to use for data access"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Row data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Row, dataset, or version not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Serving"],
+        "summary": "Update a row by key (replace all fields)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Dataset ID"
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Dataset version"
+          },
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Row key"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "description": "Complete row data for replacement"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Row updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    },
+                    "data": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Row, dataset, or version not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Serving"],
+        "summary": "Delete a row by key (soft delete)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Dataset ID"
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Dataset version"
+          },
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Row key"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Row deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "success"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Row, dataset, or version not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reporting/export/job": {
+      "post": {
+        "tags": ["Reporting"],
+        "summary": "Export a dataset to object storage (csv/xlxs)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportJobCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "job_id": {
+                      "type": "string",
+                      "description": "The ID of the export job"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reporting/export/job/{job_id}/status": {
+      "get": {
+        "tags": ["Reporting"],
+        "summary": "Get status of an export job",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/JobId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Job status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportJobStatus"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reporting/export/job/{job_id}/result": {
+      "get": {
+        "tags": ["Reporting"],
+        "summary": "Get the result of an export job",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/JobId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Job result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportJobResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reporting/import/job": {
+      "post": {
+        "tags": ["Reporting"],
+        "summary": "Import a report",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "The report file to be imported (e.g., CSV, Excel)"
+                  },
+                  "dataset_id": {
+                    "type": "string",
+                    "description": "The ID of the dataset to import the report into"
+                  }
+                },
+                "required": ["file", "dataset_id"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Report import job accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "job_id": {
+                      "type": "string",
+                      "description": "The ID of the import job"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request (e.g., missing parameters, invalid file format)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reporting/import/job/{job_id}/status": {
+      "get": {
+        "tags": ["Reporting"],
+        "summary": "Get status of an import job",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/JobId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Job status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJobStatus"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reporting/import/job/{job_id}/result": {
+      "get": {
+        "tags": ["Reporting"],
+        "summary": "Get the result of an export job",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/JobId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Job result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportJobResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reporting/import/pdf/template": {
+      "post": {
+        "tags": ["Reporting"],
+        "summary": "Import a PDF template",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "The PDF template file to be imported"
+                  },
+                  "data": {
+                    "type": "object",
+                    "description": "Metadata about the PDF template",
+                    "properties": {
+                      "columns": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "description": "List of column names in the template"
+                      },
+                      "position": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "column": {
+                              "type": "string",
+                              "description": "Column name"
+                            },
+                            "x": {
+                              "type": "number",
+                              "description": "X coordinate"
+                            },
+                            "y": {
+                              "type": "number",
+                              "description": "Y coordinate"
+                            }
+                          }
+                        },
+                        "description": "List of positions corresponding to the columns",
+                        "required": ["column", "x", "y"]
+                      },
+                      "dataset_id": {
+                        "type": "string",
+                        "description": "The ID of the dataset associated with the template"
+                      }
+                    }
+                  }
+                },
+                "required": ["file", "data"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "PDF template import accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "template_id": {
+                      "type": "string",
+                      "description": "The ID of the imported PDF template"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request (e.g., missing parameters, invalid file format)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict (e.g., template already exists)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reporting/import/pdf/template/{template_id}": {
+      "get": {
+        "tags": ["Reporting"],
+        "summary": "Get PDF template for Export",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "PDF template retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "template_id": {
+                      "type": "string",
+                      "description": "The ID of the PDF template"
+                    },
+                    "columns": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "List of column names in the template"
+                    },
+                    "position": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "column": {
+                            "type": "string",
+                            "description": "Column name"
+                          },
+                          "x": {
+                            "type": "number",
+                            "description": "X coordinate"
+                          },
+                          "y": {
+                            "type": "number",
+                            "description": "Y coordinate"
+                          }
+                        }
+                      },
+                      "description": "List of positions corresponding to the columns",
+                      "required": ["column", "x", "y"]
+                    },
+                    "dataset_id": {
+                      "type": "string",
+                      "description": "The ID of the dataset associated with the template"
+                    },
+                    "created_at": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "Timestamp when the template was created"
+                    },
+                    "updated_at": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "Timestamp when the template was last updated"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "PDF template not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Reporting"],
+        "summary": "Update a PDF template",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "columns": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "List of column names in the template"
+                  },
+                  "position": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "column": {
+                          "type": "string",
+                          "description": "Column name"
+                        },
+                        "x": {
+                          "type": "number",
+                          "description": "X coordinate"
+                        },
+                        "y": {
+                          "type": "number",
+                          "description": "Y coordinate"
+                        }
+                      }
+                    },
+                    "description": "List of positions corresponding to the columns",
+                    "required": ["column", "x", "y"]
+                  },
+                  "dataset_id": {
+                    "type": "string",
+                    "description": "The ID of the dataset associated with the template"
+                  }
+                },
+                "required": ["columns", "position", "dataset_id"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "PDF template updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "template_id": {
+                      "type": "string",
+                      "description": "The ID of the updated PDF template"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request (e.g., missing parameters, invalid data)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "PDF template not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Reporting"],
+        "summary": "Delete a PDF template",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "PDF template deleted successfully"
+          },
+          "404": {
+            "description": "PDF template not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reporting/export/pdf/template/job": {
+      "post": {
+        "tags": ["Reporting"],
+        "summary": "Export a PDF report based on a template",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "template_id": {
+                    "type": "string",
+                    "description": "The ID of the PDF template to use for the report"
+                  },
+                  "dataset_id": {
+                    "type": "string",
+                    "description": "The ID of the dataset to generate the report from"
+                  },
+                  "key": {
+                    "type": "string",
+                    "description": "The key identifying the specific report instance to generate"
+                  }
+                },
+                "required": ["template_id", "dataset_id", "key"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "job_id": {
+                      "type": "string",
+                      "description": "The ID of the export job"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request (e.g., missing parameters, invalid template ID)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found (e.g., template or dataset not found)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reporting/export/pdf/template/job/{job_id}/status": {
+      "get": {
+        "tags": ["Reporting"],
+        "summary": "Get status of an import job",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/JobId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Job status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "description": "The current status of the job (e.g., pending, in_progress, completed, failed)"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reporting/export/pdf/template/job/{job_id}/result": {
+      "get": {
+        "tags": ["Reporting"],
+        "summary": "Get status of an import job",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/JobId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Job status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "job_id": {
+                      "type": "string",
+                      "description": "The ID of the PDF template export job"
+                    },
+                    "status": {
+                      "type": "string",
+                      "description": "The current status of the job (e.g., pending, in_progress, completed, failed)"
+                    },
+                    "download_url": {
+                      "type": "string",
+                      "description": "The URL to download the generated PDF report (present if status is completed)"
+                    },
+                    "error_message": {
+                      "type": "string",
+                      "description": "Error message if the job failed"
+                    },
+                    "created_at": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "The timestamp when the job was created"
+                    },
+                    "completed_at": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "The timestamp when the job was completed (present if status is completed or failed)"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "SourcesResponseDTO": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Source ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "Source name"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "description": "Source description"
+          },
+          "type": {
+            "type": "string",
+            "description": "Source type"
+          },
+          "is_active": {
+            "type": "boolean",
+            "description": "Whether the source is active"
+          },
+          "sensitivity": {
+            "type": "string",
+            "description": "Data sensitivity level"
+          },
+          "db_type": {
+            "type": "string",
+            "description": "Database type"
+          },
+          "host": {
+            "type": "string",
+            "description": "Database host"
+          },
+          "port": {
+            "type": "integer",
+            "description": "Database port"
+          },
+          "username": {
+            "type": "string",
+            "description": "Database username"
+          },
+          "database_name": {
+            "type": "string",
+            "description": "Database name"
+          },
+          "params": {
+            "type": "string",
+            "nullable": true,
+            "description": "Additional connection parameters"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Creation timestamp"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Last update timestamp"
+          }
+        },
+        "required": [
+          "name",
+          "type",
+          "is_active",
+          "sensitivity",
+          "db_type",
+          "host",
+          "port",
+          "username",
+          "database_name"
+        ]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "description": "Error code"
+              },
+              "message": {
+                "type": "string",
+                "description": "Error message"
+              },
+              "details": {
+                "type": "object",
+                "additionalProperties": true,
+                "description": "Additional error details"
+              }
+            }
+          }
+        },
+        "required": ["error"]
+      },
+      "SourcesDTO": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Source name"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "description": "Source description (optional)"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["jdbc"],
+            "description": "Source type"
+          },
+          "is_active": {
+            "type": "boolean",
+            "description": "Whether the source is active"
+          },
+          "sensitivity": {
+            "type": "string",
+            "enum": ["public", "internal", "confidential", "restricted"],
+            "description": "Data sensitivity level"
+          },
+          "db_type": {
+            "type": "string",
+            "enum": ["postgres", "mysql"],
+            "description": "Database type"
+          },
+          "host": {
+            "type": "string",
+            "description": "Database host"
+          },
+          "port": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Database port"
+          },
+          "username": {
+            "type": "string",
+            "description": "Database username"
+          },
+          "password": {
+            "type": "string",
+            "description": "Database password"
+          },
+          "database_name": {
+            "type": "string",
+            "description": "Database name"
+          },
+          "params": {
+            "type": "string",
+            "nullable": true,
+            "description": "Additional connection parameters (optional)"
+          }
+        },
+        "required": [
+          "name",
+          "type",
+          "is_active",
+          "sensitivity",
+          "db_type",
+          "host",
+          "port",
+          "username",
+          "password",
+          "database_name"
+        ]
+      },
+      "UpdateSourcesDTO": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Source name (optional)"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "description": "Source description (optional)"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["jdbc"],
+            "description": "Source type (optional)"
+          },
+          "is_active": {
+            "type": "boolean",
+            "description": "Whether the source is active (optional)"
+          },
+          "sensitivity": {
+            "type": "string",
+            "enum": ["public", "internal", "confidential", "restricted"],
+            "description": "Data sensitivity level (optional)"
+          },
+          "db_type": {
+            "type": "string",
+            "enum": ["postgres", "mysql"],
+            "description": "Database type (optional)"
+          },
+          "host": {
+            "type": "string",
+            "description": "Database host (optional)"
+          },
+          "port": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Database port (optional)"
+          },
+          "username": {
+            "type": "string",
+            "description": "Database username (optional)"
+          },
+          "database_name": {
+            "type": "string",
+            "description": "Database name (optional)"
+          },
+          "params": {
+            "type": "string",
+            "nullable": true,
+            "description": "Additional connection parameters (optional)"
+          },
+          "is_update_password": {
+            "type": "boolean",
+            "description": "Whether to update the password (optional)"
+          },
+          "password": {
+            "type": "string",
+            "description": "Database password (optional, required if is_update_password is true)"
+          }
+        }
+      },
+      "Schemas": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Schema ID"
+          },
+          "sources_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Source ID"
+          },
+          "schema": {
+            "type": "string",
+            "description": "Schema name"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Creation timestamp"
+          }
+        },
+        "required": ["schema"]
+      },
+      "Tables": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Table ID"
+          },
+          "sources_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Source ID"
+          },
+          "schema": {
+            "type": "string",
+            "description": "Schema name"
+          },
+          "table_name": {
+            "type": "string",
+            "description": "Table name"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Creation timestamp"
+          }
+        },
+        "required": ["schema", "table_name"]
+      },
+      "Columns": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Column ID"
+          },
+          "sources_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Source ID"
+          },
+          "schema": {
+            "type": "string",
+            "description": "Schema name"
+          },
+          "table_name": {
+            "type": "string",
+            "description": "Table name"
+          },
+          "column_name": {
+            "type": "string",
+            "description": "Column name"
+          },
+          "data_type": {
+            "type": "string",
+            "description": "Data type"
+          },
+          "is_nullable": {
+            "type": "boolean",
+            "description": "Whether the column is nullable"
+          },
+          "column_default": {
+            "type": "string",
+            "nullable": true,
+            "description": "Default value"
+          },
+          "ordinal_position": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Column position in table"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Creation timestamp"
+          }
+        },
+        "required": ["schema", "table_name", "column_name", "data_type", "is_nullable"]
+      },
+      "Dataset": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "sensitivity": {
+            "type": "string",
+            "enum": ["public", "internal", "confidential", "restricted"]
+          },
+          "has_pii": {
+            "type": "boolean"
+          },
+          "latest_version": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      },
+      "DatasetUpsert": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "domain",
+          "owner",
+          "sensitivity",
+          "has_pii",
+          "tags",
+          "description"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "mydata"
+          },
+          "name": {
+            "type": "string"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "sensitivity": {
+            "type": "string"
+          },
+          "has_pii": {
+            "type": "boolean"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      },
+      "Success": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "success"
+          }
+        }
+      },
+      "DatasetDetail": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "sensitivity": {
+            "type": "string",
+            "enum": ["public", "internal", "confidential", "restricted"]
+          },
+          "has_pii": {
+            "type": "boolean"
+          },
+          "latest_version": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      },
+      "Schema": {
+        "type": "object",
+        "properties": {
+          "columns": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Column name"
+                },
+                "table_name": {
+                  "type": "string",
+                  "description": "Table name"
+                },
+                "alias": {
+                  "type": "string",
+                  "description": "Column alias (optional)"
+                },
+                "type": {
+                  "type": "string",
+                  "description": "Data type"
+                },
+                "is_nullable": {
+                  "type": "boolean",
+                  "description": "Whether the column is nullable"
+                },
+                "default": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "Default value (optional)"
+                },
+                "enum": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Enum values (optional)"
+                }
+              },
+              "required": ["name", "table_name", "type"]
+            },
+            "minItems": 1,
+            "description": "Column definitions"
+          }
+        },
+        "required": ["columns"]
+      },
+      "AccessPolicy": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "description": "User role"
+          },
+          "scope": {
+            "type": "string",
+            "description": "Access scope"
+          },
+          "can_view": {
+            "type": "boolean",
+            "description": "View permission"
+          },
+          "can_edit": {
+            "type": "boolean",
+            "description": "Edit permission"
+          },
+          "can_delete": {
+            "type": "boolean",
+            "description": "Delete permission"
+          },
+          "allow_view": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "description": "Allowed views/columns"
+          }
+        },
+        "required": ["role", "scope", "allow_view"]
+      },
+      "FromRef": {
+        "type": "object",
+        "required": ["source", "schema", "table"],
+        "properties": {
+          "source": {
+            "type": "string"
+          },
+          "schema": {
+            "type": "string"
+          },
+          "table": {
+            "type": "string"
+          },
+          "alias": {
+            "type": "string"
+          }
+        }
+      },
+      "Expr": {
+        "type": "object",
+        "description": "Column reference or function call",
+        "properties": {
+          "col": {
+            "type": "string",
+            "description": "alias.column"
+          },
+          "func": {
+            "type": "string",
+            "enum": [
+              "max",
+              "min",
+              "sum",
+              "avg",
+              "count",
+              "coalesce",
+              "upper",
+              "lower",
+              "date_trunc"
+            ]
+          },
+          "args": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Expr"
+            }
+          }
+        }
+      },
+      "BoolExpr": {
+        "type": "object",
+        "description": "Boolean expression for joins/where (eq/and/or only)",
+        "properties": {
+          "eq": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "$ref": "#/components/schemas/Expr"
+            }
+          },
+          "and": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BoolExpr"
+            }
+          },
+          "or": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BoolExpr"
+            }
+          }
+        }
+      },
+      "JoinRef": {
+        "type": "object",
+        "required": ["type", "source", "schema", "table", "on"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["inner", "left"]
+          },
+          "source": {
+            "type": "string"
+          },
+          "schema": {
+            "type": "string"
+          },
+          "table": {
+            "type": "string"
+          },
+          "alias": {
+            "type": "string"
+          },
+          "on": {
+            "$ref": "#/components/schemas/BoolExpr"
+          }
+        }
+      },
+      "Projection": {
+        "type": "object",
+        "required": ["as", "expr"],
+        "properties": {
+          "as": {
+            "type": "string"
+          },
+          "expr": {
+            "$ref": "#/components/schemas/Expr"
+          },
+          "type": {
+            "type": "string"
+          },
+          "nullable": {
+            "type": "boolean"
+          }
+        }
+      },
+      "WhereAllow": {
+        "type": "object",
+        "required": ["key", "expr"],
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "expr": {
+            "$ref": "#/components/schemas/Expr"
+          },
+          "ops": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["=", "IN", ">", "<", ">=", "<="]
+            }
+          }
+        }
+      },
+      "OrderAllow": {
+        "type": "object",
+        "properties": {
+          "col": {
+            "type": "string"
+          }
+        }
+      },
+      "QueryPlan": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "$ref": "#/components/schemas/FromRef"
+          },
+          "joins": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JoinRef"
+            }
+          },
+          "projections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Projection"
+            }
+          },
+          "group_by": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Expr"
+            }
+          },
+          "where_allow": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WhereAllow"
+            }
+          },
+          "order_allow": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderAllow"
+            }
+          },
+          "limit_default": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      },
+      "Policies": {
+        "type": "object",
+        "properties": {
+          "runtime": {
+            "type": "object",
+            "properties": {
+              "default_view": {
+                "type": "string",
+                "description": "Default view name"
+              },
+              "key_field": {
+                "type": "string",
+                "description": "Primary key field"
+              },
+              "query": {
+                "$ref": "#/components/schemas/QueryPlan"
+              }
+            },
+            "required": ["default_view", "key_field", "query"]
+          },
+          "views": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "table_name": {
+                    "type": "string",
+                    "description": "Table name"
+                  },
+                  "columns": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "minItems": 1,
+                    "description": "Column names"
+                  }
+                },
+                "required": ["table_name", "columns"]
+              }
+            },
+            "description": "View definitions"
+          },
+          "filters": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Available filters (optional)"
+          },
+          "write": {
+            "type": "object",
+            "properties": {
+              "key_field": {
+                "type": "string",
+                "description": "Key field for write operations"
+              },
+              "allow_edit": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1,
+                "description": "Editable fields"
+              },
+              "query": {
+                "$ref": "#/components/schemas/QueryPlan"
+              }
+            },
+            "required": ["key_field", "allow_edit", "query"],
+            "description": "Write policy (optional)"
+          },
+          "delete": {
+            "type": "object",
+            "properties": {
+              "key_field": {
+                "type": "string",
+                "description": "Key field for delete operations"
+              },
+              "query": {
+                "$ref": "#/components/schemas/QueryPlan"
+              }
+            },
+            "required": ["key_field", "query"],
+            "description": "Delete policy (optional)"
+          }
+        },
+        "required": ["views"]
+      },
+      "DatasetVersion": {
+        "type": "object",
+        "properties": {
+          "dataset_id": {
+            "type": "string",
+            "description": "Parent dataset ID"
+          },
+          "version": {
+            "type": "string",
+            "description": "Version name/number"
+          },
+          "source_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Source ID (UUID)"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["active", "preview", "deprecated"],
+            "description": "Version status"
+          },
+          "schema": {
+            "$ref": "#/components/schemas/Schema"
+          },
+          "access_policies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AccessPolicy"
+            },
+            "description": "Access policies for this version"
+          },
+          "policies": {
+            "$ref": "#/components/schemas/Policies"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Creation timestamp"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
+            "description": "Last update timestamp"
+          }
+        },
+        "required": ["dataset_id", "version", "status", "schema", "access_policies", "policies"]
+      },
+      "InsertDatasetVersionDTO": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string",
+            "description": "Version name/number"
+          },
+          "source_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Source ID (UUID)"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["active", "preview", "deprecated"],
+            "description": "Version status"
+          },
+          "schema": {
+            "$ref": "#/components/schemas/Schema"
+          },
+          "access_policies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AccessPolicy"
+            },
+            "minItems": 1,
+            "description": "Access policies for this version"
+          },
+          "policies": {
+            "$ref": "#/components/schemas/Policies"
+          }
+        },
+        "required": ["version", "source_id", "status", "schema", "access_policies", "policies"]
+      },
+      "UpdateDatasetVersionDTO": {
+        "type": "object",
+        "properties": {
+          "source_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Source ID (UUID)"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["active", "preview", "deprecated"],
+            "description": "Version status"
+          },
+          "schema": {
+            "$ref": "#/components/schemas/Schema"
+          },
+          "access_policies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AccessPolicy"
+            },
+            "minItems": 1,
+            "description": "Access policies for this version"
+          },
+          "policies": {
+            "$ref": "#/components/schemas/Policies"
+          }
+        },
+        "required": ["source_id", "status", "schema", "access_policies", "policies"]
+      },
+      "UpdateDatasetVersionStatusDTO": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["active", "preview", "deprecated"],
+            "description": "New status for the dataset version"
+          }
+        },
+        "required": ["status"]
+      },
+      "ExportJobCreate": {
+        "type": "object",
+        "properties": {
+          "dataset_id": {
+            "type": "string"
+          },
+          "columns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "filter": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string",
+            "enum": ["parquet", "csv"],
+            "default": "parquet"
+          },
+          "destination_uri": {
+            "type": "string"
+          }
+        }
+      },
+      "ExportJobStatus": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["pending", "in_progress", "completed", "failed"]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "destination_uri": {
+            "type": "string"
+          },
+          "error_message": {
+            "type": "string"
+          }
+        }
+      },
+      "ExportJobResult": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["pending", "in_progress", "completed", "failed"]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "destination_uri": {
+            "type": "string"
+          },
+          "error_message": {
+            "type": "string"
+          }
+        }
+      },
+      "ImportJobStatus": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["pending", "in_progress", "completed", "failed"]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "error_message": {
+            "type": "string"
+          }
+        }
+      },
+      "ImportJobResult": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["pending", "in_progress", "completed", "failed"]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "error_message": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "parameters": {
+      "SearchWord": {
+        "name": "search_word",
+        "in": "query",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "Domain": {
+        "name": "domain",
+        "in": "query",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "Tag": {
+        "name": "tag",
+        "in": "query",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "HasPII": {
+        "name": "has_pii",
+        "in": "query",
+        "schema": {
+          "type": "boolean"
+        }
+      },
+      "Owner": {
+        "name": "owner",
+        "in": "query",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "Page": {
+        "name": "page",
+        "in": "query",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1
+        }
+      },
+      "PageSize": {
+        "name": "per_page",
+        "in": "query",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 20
+        }
+      },
+      "Sort": {
+        "name": "sort_by",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "description": "field or -field"
+        }
+      },
+      "SortOrder": {
+        "name": "sort_order",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "enum": ["asc", "desc"],
+          "description": "Sort order: 'asc' for ascending, 'desc' for descending"
+        }
+      },
+      "DatasetId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "JobId": {
+        "name": "job_id",
+        "in": "path",
+        "required": true,
+        "description": "The ID of the export job",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    }
+  }
+}

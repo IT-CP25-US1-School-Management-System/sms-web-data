@@ -1,10 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
-import { env } from '@/lib/env'
-import { ROUTE_NAMES } from '@/lib/constants'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { ref, computed, onMounted } from 'vue'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,7 +24,6 @@ import {
   SidebarMenuSubItem,
 } from '@/components/ui/sidebar'
 import {
-  Settings,
   User,
   ChevronsUpDown,
   LogOut,
@@ -38,7 +32,14 @@ import {
   Notebook,
   TicketSlash,
 } from 'lucide-vue-next'
-
+import { useRouter, useRoute } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import { useTeacherStore } from '@/stores/teachers'
+import { env } from '@/lib/env'
+import { DATASET_GET, ROUTE_NAMES } from '@/lib/constants'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { getTeacherById } from '@/stores/teachers'
+import { getDatasetRows } from '@/stores/dataset'
 import { getImgInitials } from '@/lib/helpers'
 
 interface MenuChild {
@@ -60,6 +61,44 @@ interface MenuItem {
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const teacherStore = useTeacherStore()
+
+async function loadCurrentTeacher() {
+  try {
+    const response = await getDatasetRows(DATASET_GET.DATASET_ID, DATASET_GET.DATASET_VERSION, {
+      view: 'personal_get',
+      page: 1,
+      per_page: 50,
+    })
+
+    if (response.data?.[0]) {
+      teacherStore.setCurrentTeacher(response.data[0])
+    }
+  } catch (error) {
+    console.error('Failed to load current teacher data:', error)
+  }
+}
+
+onMounted(async () => {
+  const idFromUrl = route.query.id as string
+
+  if (teacherStore.currentTeacher?.id) return
+
+  if (idFromUrl) {
+    try {
+      const response = await getTeacherById(idFromUrl)
+      if (response.data) {
+        teacherStore.setCurrentTeacher(response.data)
+      }
+    } catch (error) {
+      console.error('Failed to load teacher data:', error)
+    }
+
+    return
+  }
+
+  await loadCurrentTeacher()
+})
 
 const menuConfig: {
   main: MenuItem[]
@@ -119,34 +158,35 @@ const menuConfig: {
           label: 'ข้อมูลการดำรงตำแหน่ง',
           icon: null,
           routeName: ROUTE_NAMES.POSITION_HISTORY,
+          showCondition: () => isGovernment.value, // only for government staff
         },
         {
           id: 'royal-decorations',
           label: 'ประวัติเครื่องราชอิสริยาภรณ์',
           icon: null,
           routeName: ROUTE_NAMES.ROYAL_DECORATIONS,
-          showCondition: () => true, // optional condition
+          showCondition: () => isGovernment.value, // only for government staff
         },
         {
           id: 'academic-rank-history',
           label: 'ประวัติวิทยฐานะ',
           icon: null,
           routeName: ROUTE_NAMES.ACADEMIC_RANK_HISTORY,
-          showCondition: () => true, // optional condition
+          showCondition: () => isGovernment.value, // only for government staff
         },
         {
           id: 'employment',
           label: 'ข้อมูลการจ้าง',
           icon: null,
           routeName: ROUTE_NAMES.EMPLOYMENT,
-          showCondition: () => true, // optional condition
+          showCondition: () => !isGovernment.value, // show for non-government (contract) staff
         },
         {
           id: 'contract-position',
-          label: 'ประวัติการดำรงตำแหน่ง (อัตราจ้าง)',
+          label: 'ประวัติการดำรงตำแหน่ง',
           icon: null,
           routeName: ROUTE_NAMES.CONTRACT_POSITION,
-          showCondition: () => true, // optional condition
+          showCondition: () => !isGovernment.value, // show for non-government (contract) staff
         },
       ],
     },
@@ -162,18 +202,18 @@ const menuConfig: {
           icon: null,
           routeName: ROUTE_NAMES.TRAINING,
         },
-        {
-          id: 'achievements-innovations',
-          label: 'ข้อมูลผลงาน/นวัตกรรม',
-          icon: null,
-          routeName: ROUTE_NAMES.ACHIEVEMENTS_INNOVATIONS,
-          showCondition: () => true, // optional condition
-        },
+        // {
+        //   id: 'achievements-innovations',
+        //   label: 'ข้อมูลผลงาน/นวัตกรรม',
+        //   icon: null,
+        //   routeName: ROUTE_NAMES.ACHIEVEMENTS_INNOVATIONS,
+        //   showCondition: () => true, // optional condition
+        // },
       ],
     },
     {
       id: 'documents',
-      label: 'คำร้อง',
+      label: 'คำร้อง และ การประเมิน PA',
       icon: TicketSlash,
       routeName: null,
       children: [
@@ -182,6 +222,18 @@ const menuConfig: {
           label: 'ยื่นคำร้อง',
           icon: null,
           routeName: ROUTE_NAMES.SUBMIT_DOCUMENTS,
+        },
+        {
+          id: 'pa-document',
+          label: 'การส่งเอกสาร PA',
+          icon: null,
+          routeName: ROUTE_NAMES.PA_DOCUMENT,
+        },
+        {
+          id: 'evaluation-pa',
+          label: 'การประเมิน PA',
+          icon: null,
+          routeName: ROUTE_NAMES.EVALUATION_PA,
         },
         {
           id: 'track-documents',
@@ -216,13 +268,6 @@ const menuConfig: {
     // },
   ],
   settings: [
-    {
-      id: 'settings',
-      label: 'ตั้งค่าระบบ',
-      icon: Settings,
-      routeName: ROUTE_NAMES.SETTINGS,
-      children: null,
-    },
     {
       id: 'profile',
       label: 'โปรไฟล์',
@@ -262,6 +307,23 @@ const mockAuth = {
   isLoading: authStore.loading,
 }
 
+// Determine whether the current user is government staff. The user object
+// coming from the auth store may vary in shape (some backends nest attributes),
+// so check common locations where `is_government` might appear.
+const isGovernment = computed(() => {
+  const u: any = teacherStore.currentTeacher || authStore.user
+  if (!u) return false
+
+  const rawValue =
+    u.is_government ??
+    u.profile?.is_government ??
+    u.attributes?.is_government ??
+    u.isGovernment ??
+    false
+
+  return rawValue === true || rawValue === 'true'
+})
+
 const isActiveRoute = (routeName: string | null) => {
   if (!routeName) return false
   return route.name === routeName || route.name?.toString().startsWith(routeName)
@@ -289,7 +351,7 @@ const handleLogout = async () => {
               <div
                 class="bg-background flex aspect-square h-10 items-center justify-center rounded-lg"
               >
-                <!-- <img src="/" alt="Logo" class="h-9" /> -->
+                <img src="/kp.png" alt="Logo" class="h-9" />
               </div>
               <div class="grid flex-1 text-left text-sm leading-tight">
                 <span class="truncate font-semibold">{{ env.APP_NAME }}</span>
@@ -432,10 +494,6 @@ const handleLogout = async () => {
                 <DropdownMenuItem @click="router.push({ name: ROUTE_NAMES.PROFILE })">
                   <User class="mr-2 h-4 w-4" />
                   โปรไฟล์
-                </DropdownMenuItem>
-                <DropdownMenuItem @click="router.push({ name: ROUTE_NAMES.SETTINGS })">
-                  <Settings class="mr-2 h-4 w-4" />
-                  ตั้งค่า
                 </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />

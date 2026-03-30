@@ -11,14 +11,7 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar'
-import {
-  Home,
-  Settings,
-  Users,
-  User,
-  Database,
-  FileText,
-} from 'lucide-vue-next'
+import { Home, Settings, Users, User, Database, FileText, UserPlus } from 'lucide-vue-next'
 import AppSidebar from '@/layouts/manage/AppSidebar.vue'
 import ModeToggle from '@/components/ModeToggle.vue'
 
@@ -29,9 +22,11 @@ const breadcrumbConfig = {
   Settings: { label: 'ตั้งค่าระบบ', icon: Settings },
   Profile: { label: 'โปรไฟล์', icon: User },
   ManageTeachers: { label: 'รายชื่อคุณครู', icon: Users },
+  AddTeacher: { label: 'ข้อมูลบุคคล', icon: UserPlus },
   ManageStudents: { label: 'รายชื่อนักเรียน', icon: Users },
   ImportData: { label: 'นำเข้าข้อมูล', icon: Database },
-  Requests: { label: 'คำร้อง', icon: FileText },
+  RequestList: { label: 'คำร้องเอกสาร', icon: FileText },
+  RequestEdit: { label: 'แก้ไขคำร้อง', icon: FileText },
 }
 
 const currentBreadcrumbs = computed(() => {
@@ -55,15 +50,6 @@ const currentBreadcrumbs = computed(() => {
       breadcrumbs[0].isLast = true
     }
     return breadcrumbs
-  }
-
-  if (routeName === ROUTE_NAMES.SETTINGS) {
-    breadcrumbs.push({
-      label: breadcrumbConfig.Settings.label,
-      icon: breadcrumbConfig.Settings.icon,
-      to: { name: ROUTE_NAMES.SETTINGS },
-      isLast: true,
-    })
   } else if (routeName === ROUTE_NAMES.PROFILE) {
     breadcrumbs.push({
       label: breadcrumbConfig.Profile.label,
@@ -76,6 +62,22 @@ const currentBreadcrumbs = computed(() => {
       label: breadcrumbConfig.ManageTeachers.label,
       icon: breadcrumbConfig.ManageTeachers.icon,
       to: { name: ROUTE_NAMES.MANAGE_TEACHERS },
+      isLast: true,
+    })
+  } else if (routeName?.startsWith('AddTeacher')) {
+    const addTeacherLabel = route.meta.label?.toString() || breadcrumbConfig.AddTeacher.label
+
+    breadcrumbs.push({
+      label: breadcrumbConfig.ManageTeachers.label,
+      icon: breadcrumbConfig.ManageTeachers.icon,
+      to: { name: ROUTE_NAMES.MANAGE_TEACHERS },
+      isLast: false,
+    })
+
+    breadcrumbs.push({
+      label: addTeacherLabel,
+      icon: breadcrumbConfig.AddTeacher.icon,
+      to: null,
       isLast: true,
     })
   } else if (routeName === ROUTE_NAMES.MANAGE_STUDENTS) {
@@ -92,11 +94,24 @@ const currentBreadcrumbs = computed(() => {
       to: { name: ROUTE_NAMES.IMPORT_DATA },
       isLast: true,
     })
-  } else if (routeName === ROUTE_NAMES.REQUESTS) {
+  } else if (routeName === ROUTE_NAMES.REQUEST_LIST) {
     breadcrumbs.push({
-      label: breadcrumbConfig.Requests.label,
-      icon: breadcrumbConfig.Requests.icon,
-      to: { name: ROUTE_NAMES.REQUESTS },
+      label: breadcrumbConfig.RequestList.label,
+      icon: breadcrumbConfig.RequestList.icon,
+      to: { name: ROUTE_NAMES.REQUEST_LIST },
+      isLast: true,
+    })
+  } else if (routeName === ROUTE_NAMES.REQUEST_EDIT) {
+    breadcrumbs.push({
+      label: breadcrumbConfig.RequestList.label,
+      icon: breadcrumbConfig.RequestList.icon,
+      to: { name: ROUTE_NAMES.REQUEST_LIST },
+      isLast: false,
+    })
+    breadcrumbs.push({
+      label: breadcrumbConfig.RequestEdit.label,
+      icon: breadcrumbConfig.RequestEdit.icon,
+      to: null,
       isLast: true,
     })
   } else {
@@ -135,7 +150,7 @@ onUnmounted(() => {
       <!-- Header -->
       <header
         :class="[
-          'sticky top-0 z-50 flex h-16 shrink-0 items-center gap-2 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 transition-all duration-300',
+          'bg-background/95 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 flex h-16 shrink-0 items-center gap-2 border-b px-4 backdrop-blur transition-all duration-300',
           isScrolled ? 'mx-0 mt-0 rounded-none shadow-md' : 'rounded-t-lg shadow-sm',
         ]"
       >
@@ -148,12 +163,12 @@ onUnmounted(() => {
                 <BreadcrumbItem v-for="(crumb, index) in currentBreadcrumbs" :key="index">
                   <BreadcrumbLink v-if="crumb.to && !crumb.isLast" as-child>
                     <RouterLink :to="crumb.to" class="flex items-center">
-                      <component :is="crumb.icon" class="size-4 mr-2" v-if="crumb.icon" />
+                      <component :is="crumb.icon" class="mr-2 size-4" v-if="crumb.icon" />
                       {{ crumb.label }}
                     </RouterLink>
                   </BreadcrumbLink>
                   <BreadcrumbPage v-else class="flex items-center font-semibold">
-                    <component :is="crumb.icon" class="size-4 mr-2" v-if="crumb.icon" />
+                    <component :is="crumb.icon" class="mr-2 size-4" v-if="crumb.icon" />
                     {{ crumb.label }}
                   </BreadcrumbPage>
                   <BreadcrumbSeparator v-if="!crumb.isLast" />

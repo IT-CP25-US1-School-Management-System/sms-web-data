@@ -4,6 +4,7 @@ import type {
   AuthTokens,
   OAuth2CallbackRequest,
   SessionResponse,
+  CreateUserResponse,
 } from '@/types/auth'
 import router from '@/router'
 import { ROUTE_NAMES } from '@/lib/constants'
@@ -186,4 +187,22 @@ export async function logout(): Promise<void> {
   await logoutFromServer()
   setTokens(null)
   router.push({ name: ROUTE_NAMES.LOGIN })
+}
+
+export async function createUser(userData: {
+  email: string
+  first_name: string
+  last_name: string
+}): Promise<CreateUserResponse> {
+  const response = await authApiInstance.post<CreateUserResponse>('/v1/auth/users', userData)
+  return response.data
+}
+
+/**
+ * Delete user account by id
+ */
+export async function deleteUser(userId: string): Promise<any> {
+  if (!userId) throw new Error('Missing user id for deleting user')
+  const response = await authApiInstance.delete(`/v1/auth/users/${userId}`)
+  return response.data
 }

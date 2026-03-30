@@ -94,9 +94,9 @@ export interface DatasetVersionSearchResponse {
 // ============================================================
 
 export interface DatasetQueryParams {
-  view_name?: string
-  filter?: any // JSON string or object
-  filter_logic?: 'AND' | 'OR'
+  view?: string
+  where_logical_operator?: 'AND' | 'OR'
+  where?: any // JSON string or object for advanced filtering
   page?: number
   per_page?: number
   sort_by?: string
@@ -113,6 +113,7 @@ export interface DatasetListResponse<T = Record<string, any>> {
 
 export interface DatasetRowResponse<T = Record<string, any>> {
   data: T
+  message?: string
 }
 
 // ============================================================

@@ -2,14 +2,10 @@
  * Teacher/Person data types matching database schema
  */
 
+import type { DocumentLink } from '@/types/document_request'
+
 export type Gender = 'ชาย' | 'หญิง' | 'อื่นๆ'
 export type BloodType = 'A' | 'B' | 'AB' | 'O'
-
-export interface Prefix {
-  id: number
-  name_th: string // คำนำหน้า เช่น นาย, นาง, นางสาว
-  name_en: string // คำนำหน้า ENG เช่น MR, Miss, Mrs
-}
 
 export interface Role {
   id: string
@@ -26,21 +22,22 @@ export interface AppointmentType {
 
 export interface PersonData {
   id: string
-  prefix_id: number
+  prefix_id: number | string
   role_id: string
-  is_government: boolean // ข้าราชการ หรือ ครูอัตราจ้าง
-  
+  is_government: boolean | string // ข้าราชการ หรือ ครูอัตราจ้าง (API returns as string "true"/"false")
+
   first_name_th: string
   middle_name_th?: string
   last_name_th: string
-  
+
   first_name_en?: string
   middle_name_en?: string
   last_name_en?: string
-  
+
   national_id?: string // เลขบัตรประชาชน
   passport_id?: string // เลขpassport
-  
+  department_id?: number | null // กลุ่มสาระ (มีเมื่อเป็นครูอัตราจ้าง)
+
   gender?: Gender
   religion?: string // ศาสนา
   nationality?: string // สัญชาติ
@@ -51,16 +48,86 @@ export interface PersonData {
   personal_email?: string // อีเมลส่วนตัว
   birth_date?: string
   appointment_type_id?: number // ประเภทการบรรจุ
-  
+  line_id?: string // ไลน์ไอดี
   marital_status?: string // สถานะภาพ เช่น สมรส โสด หย่า ร้าง และ หม้าย
   spouse_name?: string // ชื่อคู่สมรส
-  
+
   // Relations (loaded from API when needed)
   governments?: Government[] // มีเมื่อเป็นข้าราชการ
   employment_contract?: EmploymentContract[] // มีเมื่อเป็นครูอัตราจ้าง
-  
+  prefixes?: {
+    prefixes_name_th: string
+    prefixes_name_en: string
+  }
   created_at: string
   updated_at?: string
+}
+
+export interface FamilyMember {
+  id: string
+  person_id: string
+  relation_type: string
+  prefix_id: number | string
+  first_name_th: string
+  middle_name_th?: string
+  last_name_th: string
+  former_last_name_th?: string
+  national_id?: string
+  gender?: Gender
+  is_alive: boolean
+  birth_date?: string
+  phone?: string
+  email?: string
+  marital_status?: string
+  is_emergency_contact?: boolean
+  house_no?: string
+  moo?: string
+  building?: string
+  soi?: string
+  road?: string
+  subdistrict_code?: string
+  subdistrict?: string
+  district_code?: string
+  district?: string
+  province_code?: string
+  province?: string
+  postal_code?: string
+  created_at: string
+  updated_at?: string
+}
+
+export interface EducationRecord {
+  id: string
+  person_id: string
+  education_level: string
+  qualification: string
+  qualification_name: string
+  major_group?: string
+  minor_group?: string
+  institution: string
+  country: string
+  start_date?: string
+  graduation_date?: string
+  honor_type?: string
+  is_used_for_first_appointment?: boolean | null
+  is_highest_degree?: boolean | null
+  is_meets_position_standard?: boolean | null
+  is_recognized_by_kksa?: boolean | null
+  is_recognized_by_ocsc?: boolean | null
+  created_at?: string
+  updated_at?: string
+}
+
+export interface ProfessionalLicense {
+  id: string
+  person_id: string
+  license_type: string
+  license_no: string
+  issue_date?: string | null
+  expiry_date?: string | null
+  document_links?: DocumentLink[]
+  created_at?: string | null
+  updated_at?: string | null
 }
 
 export interface Government {
@@ -69,13 +136,13 @@ export interface Government {
   work_status: string // ทำงาน/ย้าย/เกษียณอายุราชการ/ช่วยราชการ/ลาออก/เสียชีวิต
   executive_group?: string // กลุ่มงาน เช่น งานบุคคล
   department_id?: number // กลุ่มสาระ
-  
+
   salary?: number // เงินเดือน
   retirement_date?: string // วันเกษียณ
   government_entry_date?: string // วันเดือนปีเข้ารับราชการ
   direct_pay_no?: string // เลขที่จ่ายตรง
   position_number?: string // เลขที่ตำแหน่ง
-  
+
   created_at: string
   updated_at?: string
 }
@@ -86,28 +153,29 @@ export interface EmploymentContract {
   contract_action: string // ทำสัญญาครั้งแรก, ต่อสัญญา
   hiring_nature: string // จ้างใหม่, ต่อเนื่อง
   department_id?: number
-  
+
   salary: number // เงินค่าจ้าง/เดือน
   social_security: string // มาตรา 33, 39, 40, อื่นๆ
   period_start: string
   period_end: string
   first_contract_start?: string
-  
+
   order_no?: string
   contract_sequence?: number
   budget_type: string // เงินงบประมาณ, เงินรายได้สถานศึกษา
   school_revenue_type?: string // ลูกจ้างชั่วคราว, เหมาบริการ
   work_status: string // ทำงาน/ลาออก/ย้าย
-  
+
   created_at: string
   updated_at?: string
 }
 
 // For API operations
 export interface TeacherCreateDTO {
-  prefix_id: number
+  id?: string
+  prefix_id: number | string
   role_id: string
-  is_government: boolean
+  is_government: boolean | string
   first_name_th: string
   last_name_th: string
   middle_name_th?: string
@@ -123,17 +191,102 @@ export interface TeacherCreateDTO {
   nationality?: string
   ethnicity?: string
   blood_type?: BloodType
+  physical_status?: string
   marital_status?: string
+  spouse_name?: string
   appointment_type_id?: number
+  line_id?: string
+  created_at?: string
+  updated_at?: string
 }
 
 export interface TeacherUpdateDTO extends Partial<TeacherCreateDTO> {}
 
-// Simplified view for listing
-export interface TeacherListItem {
-  id: string
+export interface PersonAddressCreateDTO {
+  id?: string
+  person_id: string
+  house_registry_no?: string
+  house_no?: string
+  moo?: string
+  building?: string
+  soi?: string
+  road?: string
+  subdistrict_code?: string
+  subdistrict?: string
+  district_code?: string
+  district?: string
+  province_code?: string
+  province?: string
+  postal_code?: string
+  is_house_registered?: boolean
+  is_current?: boolean
+  is_retired_residence?: boolean
+  created_at?: string
+  updated_at?: string
+}
+
+export interface FamilyMemberCreateDTO {
+  id?: string
+  person_id: string
+  relation_type: string
+  prefix_id?: number | string
   first_name_th: string
+  middle_name_th?: string
   last_name_th: string
-  is_government: boolean
-  work_status?: string
+  former_last_name_th?: string
+  national_id?: string
+  gender?: string
+  is_alive?: boolean
+  birth_date?: string
+  phone?: string
+  email?: string
+  marital_status?: string
+  is_emergency_contact?: boolean
+  house_no?: string
+  moo?: string
+  building?: string
+  soi?: string
+  road?: string
+  subdistrict_code?: string
+  subdistrict?: string
+  district_code?: string
+  district?: string
+  province_code?: string
+  province?: string
+  postal_code?: string
+  created_at?: string
+  updated_at?: string
+}
+
+export interface EducationRecordCreateDTO {
+  id?: string
+  person_id: string
+  education_level: string
+  qualification: string
+  qualification_name: string
+  major_group?: string
+  minor_group?: string
+  institution: string
+  country: string
+  start_date?: string
+  graduation_date?: string
+  honor_type?: string
+  is_used_for_first_appointment?: boolean
+  is_highest_degree?: boolean
+  is_meets_position_standard?: boolean
+  is_recognized_by_kksa?: boolean
+  is_recognized_by_ocsc?: boolean
+  created_at?: string
+  updated_at?: string
+}
+
+export interface ProfessionalLicenseCreateDTO {
+  id?: string
+  person_id: string
+  license_type: string
+  license_no: string
+  issue_date?: string | null
+  expiry_date?: string | null
+  created_at?: string | null
+  updated_at?: string | null
 }

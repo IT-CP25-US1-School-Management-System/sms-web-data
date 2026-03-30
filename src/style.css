@@ -1,7 +1,7 @@
-@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@100..900&display=swap");
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@100..900&display=swap');
 
-@import "tailwindcss";
-@import "tw-animate-css";
+@import 'tailwindcss';
+@import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -13,7 +13,8 @@
   --card-foreground: oklch(0.141 0.005 285.823);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.141 0.005 285.823);
-  --primary: #1C509F;
+  /* --primary: oklch(0.3548 0.209 264.06); */
+  --primary: #1c509f;
   --primary-foreground: oklch(0.97 0.014 254.604);
   --secondary: oklch(0.967 0.001 286.375);
   --secondary-foreground: oklch(0.21 0.006 285.885);
@@ -47,7 +48,8 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.21 0.006 285.885);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: #1C509F;
+  /* --primary: oklch(0.3548 0.209 264.06); */
+  --primary: #1c509f;
   --primary-foreground: oklch(0.97 0.014 254.604);
   --secondary: oklch(0.274 0.006 286.033);
   --secondary-foreground: oklch(0.985 0 0);
@@ -115,8 +117,7 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
-    font-family: "Noto Sans Thai", system-ui, Avenir, Helvetica, Arial,
-      sans-serif;
+    font-family: 'Noto Sans Thai', system-ui, Avenir, Helvetica, Arial, sans-serif;
   }
   body {
     @apply bg-background text-foreground;
