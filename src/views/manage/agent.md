@@ -899,6 +899,16 @@ onMounted(() => {
 For questions, modifications, or bug reports, refer to this documentation and the component source code.
 
 ---
+## March 30, 2026
+
+### Add Teacher - EducationInfo uses teacher.ts with admin NormalForm flow
+- `src/views/manage/add-edit-teacher/personal/EducationInfo.vue` now fetches education data via `getEducationById()` from `src/stores/teachers.ts`.
+- The page stays in the manage/admin `NormalForm` style and does not switch to `CreateForm`.
+- Saving now uses teacher-side helpers:
+  - `updateEducationRecord()` for existing rows
+  - `createEducationRecord()` when the teacher has no education row yet
+- Required education fields now match the schema for `education_level`, `qualification`, `qualification_name`, `institution`, and `country`.
+- The page resolves the target teacher from URL query/store so admin edits the selected teacher, not the current web user.
 
 # DMS API Knowledge Base
 
@@ -1123,3 +1133,22 @@ Add a new teacher with minimal data:
 **Actual**: 400, "config error: field 'building' in AllowEdit not found in schema..."
 
 ---
+
+## March 30, 2026
+### Add Teacher - ProfessionalLicense uses teacher.ts with manage admin flow
+
+- `src/views/manage/add-edit-teacher/personal/ProfessionalLicense.vue` now resolves `personId` from the route query and `useTeacherStore()` like the other manage add-edit-teacher pages.
+- The page fetches professional license records via `getProfessionalLicensesByTeacherId()` from `src/stores/teachers.ts`.
+- The store now uses the same row-by-key pattern as the other personal sections via `getDatasetRowByKey(..., teacherId, 'personal_professional_license')`.
+- License record persistence now uses the teacher helpers:
+  - `createProfessionalLicense()`
+  - `updateProfessionalLicense()`
+  - `deleteProfessionalLicense()`
+- The page keeps the existing admin `CreateForm` UX because this step still supports file attachments and multiple license entries.
+- Document uploads and document-link row management remain in the view layer so the page can:
+  - upload new files
+  - attach uploaded files to the saved license row
+- Only the document-link handling now mirrors `src/views/web/personal/ProfessionalLicense.vue`, including the `storeFile()` payload shape and the objects passed into `storeFile()` during create/update.
+- When creating document links, the manage page now prefers `person_id` from the saved license record over the local payload to reduce FK failures on `document_links.person_id`.
+  - delete detached files and links during edit/delete flows
+- Admin placeholders were updated, including the `license_no` field and the loading-state messaging on the page.

@@ -13,6 +13,8 @@ import type { DatasetListResponse, DatasetRowResponse, DatasetQueryParams } from
 import type {
   PersonData,
   FamilyMember,
+  EducationRecord,
+  ProfessionalLicense,
   TeacherCreateDTO,
   TeacherUpdateDTO,
   PersonAddressCreateDTO,
@@ -27,10 +29,10 @@ const ADDRESS_DATASET_ID = 'data_manage'
 const ADDRESS_DATASET_VERSION = 'v2.0.1'
 const FAMILY_DATASET_ID = 'data_manage'
 const FAMILY_DATASET_VERSION = 'v4.0.0'
-const EDUCATION_DATASET_ID = DATASET_ID
-const EDUCATION_DATASET_VERSION = 'v4.0.0'
-const LICENSE_DATASET_ID = DATASET_ID
-const LICENSE_DATASET_VERSION = 'v5.0.0'
+const EDUCATION_DATASET_ID = 'data_manage'
+const EDUCATION_DATASET_VERSION = 'v5.0.0'
+const LICENSE_DATASET_ID = 'data_manage'
+const LICENSE_DATASET_VERSION = 'v6.0.0'
 
 /**
  * Get list of teachers with pagination and filters
@@ -76,6 +78,34 @@ export async function getFamilyById(
     DATASET_VERSION,
     teacherId,
     'personal_family',
+  )
+}
+
+/**
+ * Get education data for a single teacher by ID
+ */
+export async function getEducationById(
+  teacherId: string,
+): Promise<DatasetRowResponse<{ education_records?: EducationRecord[] }>> {
+  return getDatasetRowByKey<{ education_records?: EducationRecord[] }>(
+    DATASET_ID,
+    DATASET_VERSION,
+    teacherId,
+    'personal_education',
+  )
+}
+
+/**
+ * Get professional licenses for a single teacher by ID
+ */
+export async function getProfessionalLicensesByTeacherId(
+  teacherId: string,
+): Promise<DatasetRowResponse<{ professional_licenses?: ProfessionalLicense[] }>> {
+  return getDatasetRowByKey<{ professional_licenses?: ProfessionalLicense[] }>(
+    DATASET_ID,
+    DATASET_VERSION,
+    teacherId,
+    'personal_profession_license',
   )
 }
 
@@ -153,8 +183,23 @@ export async function updateFamilyMember(
  */
 export async function createEducationRecord(
   data: EducationRecordCreateDTO,
-): Promise<DatasetRowResponse<any>> {
-  return createDatasetRow(EDUCATION_DATASET_ID, EDUCATION_DATASET_VERSION, data)
+): Promise<DatasetRowResponse<EducationRecord>> {
+  return createDatasetRow<EducationRecord>(EDUCATION_DATASET_ID, EDUCATION_DATASET_VERSION, data)
+}
+
+/**
+ * Update an education record by row ID
+ */
+export async function updateEducationRecord(
+  educationRecordId: string,
+  data: Partial<EducationRecordCreateDTO> & Partial<EducationRecord>,
+): Promise<DatasetRowResponse<EducationRecord>> {
+  return updateDatasetRow<EducationRecord>(
+    EDUCATION_DATASET_ID,
+    EDUCATION_DATASET_VERSION,
+    educationRecordId,
+    data,
+  )
 }
 
 /**
@@ -162,8 +207,30 @@ export async function createEducationRecord(
  */
 export async function createProfessionalLicense(
   data: ProfessionalLicenseCreateDTO,
-): Promise<DatasetRowResponse<any>> {
-  return createDatasetRow(LICENSE_DATASET_ID, LICENSE_DATASET_VERSION, data)
+): Promise<DatasetRowResponse<ProfessionalLicense>> {
+  return createDatasetRow<ProfessionalLicense>(LICENSE_DATASET_ID, LICENSE_DATASET_VERSION, data)
+}
+
+/**
+ * Update a professional license by row ID
+ */
+export async function updateProfessionalLicense(
+  licenseId: string,
+  data: Partial<ProfessionalLicenseCreateDTO> & Partial<ProfessionalLicense>,
+): Promise<DatasetRowResponse<ProfessionalLicense>> {
+  return updateDatasetRow<ProfessionalLicense>(
+    LICENSE_DATASET_ID,
+    LICENSE_DATASET_VERSION,
+    licenseId,
+    data,
+  )
+}
+
+/**
+ * Delete a professional license by row ID
+ */
+export async function deleteProfessionalLicense(licenseId: string): Promise<void> {
+  return deleteDatasetRow(LICENSE_DATASET_ID, LICENSE_DATASET_VERSION, licenseId)
 }
 
 /**

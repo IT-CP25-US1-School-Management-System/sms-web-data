@@ -2,6 +2,8 @@
  * Teacher/Person data types matching database schema
  */
 
+import type { DocumentLink } from '@/types/document_request'
+
 export type Gender = 'ชาย' | 'หญิง' | 'อื่นๆ'
 export type BloodType = 'A' | 'B' | 'AB' | 'O'
 
@@ -92,6 +94,40 @@ export interface FamilyMember {
   postal_code?: string
   created_at: string
   updated_at?: string
+}
+
+export interface EducationRecord {
+  id: string
+  person_id: string
+  education_level: string
+  qualification: string
+  qualification_name: string
+  major_group?: string
+  minor_group?: string
+  institution: string
+  country: string
+  start_date?: string
+  graduation_date?: string
+  honor_type?: string
+  is_used_for_first_appointment?: boolean | null
+  is_highest_degree?: boolean | null
+  is_meets_position_standard?: boolean | null
+  is_recognized_by_kksa?: boolean | null
+  is_recognized_by_ocsc?: boolean | null
+  created_at?: string
+  updated_at?: string
+}
+
+export interface ProfessionalLicense {
+  id: string
+  person_id: string
+  license_type: string
+  license_no: string
+  issue_date?: string | null
+  expiry_date?: string | null
+  document_links?: DocumentLink[]
+  created_at?: string | null
+  updated_at?: string | null
 }
 
 export interface Government {
@@ -226,9 +262,11 @@ export interface FamilyMemberCreateDTO {
 }
 
 export interface EducationRecordCreateDTO {
+  id?: string
   person_id: string
   education_level: string
   qualification: string
+  qualification_name: string
   major_group?: string
   minor_group?: string
   institution: string
@@ -241,12 +279,17 @@ export interface EducationRecordCreateDTO {
   is_meets_position_standard?: boolean
   is_recognized_by_kksa?: boolean
   is_recognized_by_ocsc?: boolean
+  created_at?: string
+  updated_at?: string
 }
 
 export interface ProfessionalLicenseCreateDTO {
+  id?: string
   person_id: string
   license_type: string
   license_no: string
-  issue_date: string
-  expiry_date: string
+  issue_date?: string | null
+  expiry_date?: string | null
+  created_at?: string | null
+  updated_at?: string | null
 }

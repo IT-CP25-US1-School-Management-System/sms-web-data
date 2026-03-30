@@ -11,7 +11,7 @@ import {
   getReportImportJobStatus,
 } from '@/stores/reporting'
 import type { ImportFileFormat, ImportJobState } from '@/types/reporting'
-import { CalendarDays, Download, GraduationCap, Loader2, Upload, Users, X } from 'lucide-vue-next'
+import { Download, GraduationCap, Loader2, Upload, Users, X } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
 
 type ImportTargetKey = 'teacher' | 'student' | 'leave'

@@ -134,3 +134,34 @@
 ✅ **Disabled Menu**: Menu items ถูก disable จนกว่าจะสร้าง personal data (ได้ ID)
 ✅ **Delete Modal**: Delete ใช้ confirm modal แทน browser confirm()
 ✅ **Edit Feature**: Edit mode ใช้ query parameter เพื่อ load data และ populate form, unified CREATE/UPDATE logic
+## March 30, 2026 - EducationInfo admin flow update
+
+- `src/views/manage/add-edit-teacher/personal/EducationInfo.vue` now fetches teacher-specific education data through `src/stores/teachers.ts`.
+- The manage Education page keeps the admin-oriented `NormalForm` pattern instead of switching to `CreateForm`.
+- The page now resolves `personId` from URL query and `useTeacherStore()` like the other manage add-edit-teacher steps.
+- Save behavior now follows the manage/admin flow:
+  - load the selected teacher via `getEducationById()`
+  - update existing rows with `updateEducationRecord()`
+  - create the first row with `createEducationRecord()` when no education record exists yet
+- Required education fields now follow the schema for `education_level`, `qualification`, `qualification_name`, `institution`, and `country`.
+- The field `qualification-used` stays on the form and is mapped back to:
+  - `is_used_for_first_appointment`
+  - `is_highest_degree`
+
+## March 30, 2026 - ProfessionalLicense manage flow update
+
+- `src/views/manage/add-edit-teacher/personal/ProfessionalLicense.vue` now resolves the selected teacher from URL query plus `useTeacherStore()`.
+- Professional license fetching now goes through `getProfessionalLicensesByTeacherId()` from `src/stores/teachers.ts` using the same row-by-key pattern as the other personal sections.
+- The store now reads the selected teacher via `getDatasetRowByKey(..., teacherId, 'personal_professional_license')`.
+- Create, update, and delete license records now use the teacher store helpers:
+  - `createProfessionalLicense()`
+  - `updateProfessionalLicense()`
+  - `deleteProfessionalLicense()`
+- The manage page still keeps the admin-side `CreateForm` and document upload flow for license attachments.
+- File document linking remains in the view because it still needs to:
+  - upload new files to the document service
+  - create document-link rows
+  - remove deleted file links and underlying files during updates/deletes
+- Only the document-link handling is now aligned with `src/views/web/personal/ProfessionalLicense.vue`, including the `storeFile()` payload shape and the object passed into `storeFile()` during create/update.
+- When creating document links, the manage page now prefers `person_id` from the saved license record over the local payload to avoid FK failures on `document_links.person_id`.
+- The form placeholders were updated for the admin flow, including a clearer placeholder for `license_no`.
