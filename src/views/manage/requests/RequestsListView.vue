@@ -20,16 +20,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Search, Plus, MoreHorizontal, Pencil, Trash2, Loader2 } from 'lucide-vue-next'
+import { Search, MoreHorizontal, Pencil, Trash2, Loader2 } from 'lucide-vue-next'
 import { usePagination } from '@/composables/usePagination'
 import type { PaginationData } from '@/composables/usePagination'
 import { toast } from 'vue-sonner'
 import type { DocumentRequest } from '@/types/document_request'
-import {
-  getDocumentRequests,
-  deleteDocumentRequest,
-  createDocumentRequest,
-} from '@/stores/document_request'
+import { getDocumentRequests, deleteDocumentRequest } from '@/stores/document_request'
 import { ROUTE_NAMES } from '@/lib/constants'
 import { getPrefixName } from '@/lib/helpers'
 
@@ -156,35 +152,35 @@ const cancelDelete = () => {
   requestToDelete.value = null
 }
 
-const handleAddRequest = async () => {
-  // Create a simple new request and POST to API
-  const startDate = new Date()
-  const endDate = new Date(startDate.getTime() + 7 * 24 * 60 * 60 * 1000) // 7 days later
+// const handleAddRequest = async () => {
+//   // Create a simple new request and POST to API
+//   const startDate = new Date()
+//   const endDate = new Date(startDate.getTime() + 7 * 24 * 60 * 60 * 1000) // 7 days later
 
-  const newRequestData: Omit<DocumentRequest, 'id' | 'created_at' | 'updated_at'> = {
-    person_id: 'ea77ec78-1d48-4d76-b826-089c5cd8e764',
-    document_type: 'ใบการศึกษา',
-    title: 'คำร้องเอกสารใหม่',
-    description: 'คำร้องใหม่',
-    start_date: startDate.toISOString().split('T')[0],
-    end_date: endDate.toISOString().split('T')[0],
-    quantity: 1,
-    status: 'กำลังดำเนินการ',
-  }
+//   const newRequestData: Omit<DocumentRequest, 'id' | 'created_at' | 'updated_at'> = {
+//     person_id: 'ea77ec78-1d48-4d76-b826-089c5cd8e764',
+//     document_type: 'ใบการศึกษา',
+//     title: 'คำร้องเอกสารใหม่',
+//     description: 'คำร้องใหม่',
+//     start_date: startDate.toISOString().split('T')[0],
+//     end_date: endDate.toISOString().split('T')[0],
+//     quantity: 1,
+//     status: 'กำลังดำเนินการ',
+//   }
 
-  try {
-    await createDocumentRequest(newRequestData)
-    toast.success('สำเร็จ', {
-      description: 'เพิ่มคำร้องเอกสารใหม่',
-    })
-    fetchRequests() // Reload data
-  } catch (error: any) {
-    console.error('Failed to create request:', error)
-    toast.error('เกิดข้อผิดพลาด', {
-      description: error.message || 'ไม่สามารถเพิ่มคำร้องเอกสารได้',
-    })
-  }
-}
+//   try {
+//     await createDocumentRequest(newRequestData)
+//     toast.success('สำเร็จ', {
+//       description: 'เพิ่มคำร้องเอกสารใหม่',
+//     })
+//     fetchRequests() // Reload data
+//   } catch (error: any) {
+//     console.error('Failed to create request:', error)
+//     toast.error('เกิดข้อผิดพลาด', {
+//       description: error.message || 'ไม่สามารถเพิ่มคำร้องเอกสารได้',
+//     })
+//   }
+// }
 
 function formatDate(dateString: string) {
   return new Date(dateString).toLocaleDateString('th-TH', {
@@ -222,19 +218,19 @@ function getStatusColor(
             <Input
               v-model="searchQuery"
               type="text"
-              placeholder="ค้นหากำลังตรวจสอบ"
+              placeholder="ค้นหาคำร้องเอกสาร..."
               class="pl-10"
               :disabled="loading"
             />
           </div>
-          <Button
+          <!-- <Button
             class="bg-green-600 hover:bg-green-700"
             @click="handleAddRequest"
             :disabled="loading"
           >
             <Plus class="mr-2 h-4 w-4" />
             เพิ่มคำร้องใหม่
-          </Button>
+          </Button> -->
         </div>
       </div>
 
