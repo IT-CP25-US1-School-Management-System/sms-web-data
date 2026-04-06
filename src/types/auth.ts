@@ -42,3 +42,14 @@ export interface SessionResponse extends AuthTokens {}
 export interface User {
   id: string
 }
+
+
+export interface CreateUserResponse {
+  message: string
+  data: {
+    keycloak_id: string
+    email: string
+    first_name: string
+    last_name: string
+  }
+}

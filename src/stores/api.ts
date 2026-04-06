@@ -4,6 +4,7 @@ import type {
   AuthTokens,
   OAuth2CallbackRequest,
   SessionResponse,
+  CreateUserResponse,
 } from '@/types/auth'
 import router from '@/router'
 import { ROUTE_NAMES } from '@/lib/constants'
@@ -188,15 +189,12 @@ export async function logout(): Promise<void> {
   router.push({ name: ROUTE_NAMES.LOGIN })
 }
 
-/**
- * Create a new user account
- */
 export async function createUser(userData: {
   email: string
   first_name: string
   last_name: string
-}): Promise<any> {
-  const response = await authApiInstance.post('/v1/auth/users', userData)
+}): Promise<CreateUserResponse> {
+  const response = await authApiInstance.post<CreateUserResponse>('/v1/auth/users', userData)
   return response.data
 }
 

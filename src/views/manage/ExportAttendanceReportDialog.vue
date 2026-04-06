@@ -166,11 +166,19 @@ async function pollExportJob(jobId: string) {
     }
 
     if (job.status === 'failed') {
-      exportErrorMessage.value = job.error_message || 'ออกรายงานไม่สำเร็จ'
-      exportStatusText.value = ''
-      toast.error('ออกรายงานไม่สำเร็จ', {
-        description: exportErrorMessage.value,
-      })
+      if (job.error_message != 'data not found for the provided key') {
+        exportErrorMessage.value = job.error_message || 'ออกรายงานไม่สำเร็จ'
+        exportStatusText.value = ''
+        toast.error('ออกรายงานไม่สำเร็จ', {
+          description: exportErrorMessage.value,
+        })
+      } else {
+        exportErrorMessage.value = 'ไม่พบข้อมูลสำหรับวันที่เลือก'
+        exportStatusText.value = ''
+        toast.error('ออกรายงานไม่สำเร็จ', {
+          description: exportErrorMessage.value,
+        })
+      }
       return
     }
 

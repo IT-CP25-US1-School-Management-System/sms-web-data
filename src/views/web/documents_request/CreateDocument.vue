@@ -1117,19 +1117,6 @@ async function submitDocForm() {
   formRef.value?.setFieldValue('chkDivorce', chkDivorce.value)
   formRef.value?.setFieldValue('chkLetter4', chkLetter4.value)
 
-  // Sync education fields for type 5
-  formRef.value?.setFieldValue('education_level', educationData.value.education_level)
-  formRef.value?.setFieldValue('qualification', educationData.value.qualification)
-  formRef.value?.setFieldValue('qualification_name', educationData.value.qualification_name)
-  formRef.value?.setFieldValue('major_group', educationData.value.major_group)
-  formRef.value?.setFieldValue('minor_group', educationData.value.minor_group)
-  formRef.value?.setFieldValue('institution', educationData.value.institution)
-  formRef.value?.setFieldValue('start_date', educationData.value.start_date)
-  formRef.value?.setFieldValue('graduation_date', educationData.value.graduation_date)
-  formRef.value?.setFieldValue('country', educationData.value.country)
-  formRef.value?.setFieldValue('honor_type', educationData.value.honor_type)
-  formRef.value?.setFieldValue('qualification-used', educationData.value['qualification-used'])
-
   Object.keys(fileCountFieldMap).forEach((key) => {
     const length = fileMap.value[key]?.length || 0
     syncFileCountField(key, length, true)

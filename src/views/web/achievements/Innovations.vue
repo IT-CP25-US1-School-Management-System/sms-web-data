@@ -35,14 +35,25 @@ type ExistingInnovationFile = {
   document_link_id?: string
 }
 type InnovationFileItem = File | ExistingInnovationFile
+type InnovationStudentAwardRow = {
+  id?: string
+  innovation_id?: string
+  student_name?: string
+  class_level?: string
+  class_room?: string
+  created_at?: string | null
+  updated_at?: string | null
+}
 type InnovationRow = Record<string, any> & {
   id?: string
   person_id?: string
   document_links?: DocumentLinkRow[]
+  innovation_student_awards?: InnovationStudentAwardRow[]
 }
 type InnovationFormValue = InnovationRow & {
   'photo-file'?: InnovationFileItem[]
   'certificate-file'?: InnovationFileItem[]
+  innovation_student_awards?: InnovationStudentAwardRow[]
 }
 type CreateFormField = {
   name: string
@@ -60,6 +71,7 @@ type CreateFormSection = {
   topic?: string
   content: CreateFormField[]
   subFields?: CreateFormField[]
+  subEntryFieldName?: string
 }
 
 const INNOVATION_GET_VIEW = 'innovation_get'
@@ -72,10 +84,14 @@ const DATASET_CONFIG = {
   DATASET_ID: DATASET_EDIT.DATASET_ID,
   DATASET_VERSION: DATASET_EDIT.DATASET_VERSION_INNOVATIONS,
   VIEW_NAME: INNOVATION_EDIT_VIEW,
+  DATASET_STUDENTS: DATASET_EDIT.DATASET_VERSION_INNOVATIONS_STUDENTS,
+  VIEW_NAME_STUDENTS: 'student_update',
 } as const
 const DELETE_CONFIG = {
   DATASET_ID: DATASET_DELETE.DATASET_ID,
   DATASET_VERSION: DATASET_DELETE.DATASET_VERSION_INNOVATIONS,
+  DATASET_VERSION_STUDENTS: DATASET_DELETE.DATASET_VERSION_INNOVATIONS_STUDENTS,
+  VIEW_NAME_STUDENTS: 'student_delete',
 } as const
 const DOCUMENT_CREATE_CONFIG = {
   DATASET_ID: DOCUMENT_EDIT.DATASET_ID,
@@ -156,7 +172,7 @@ const innovationFields: CreateFormSection[][] = [
       topic: 'ข้อมูลผลงาน',
       content: [
         {
-          name: 'achivement_level',
+          name: 'achievement_level',
           label: 'ผลงานระดับ',
           type: 'select',
           required: true,
@@ -173,6 +189,7 @@ const innovationFields: CreateFormSection[][] = [
     {
       topic: 'ข้อมูลนักเรียนผู้เข้าร่วม',
       content: [],
+      subEntryFieldName: 'innovation_student_awards',
       subFields: [
         {
           name: 'student_name',
@@ -188,7 +205,7 @@ const innovationFields: CreateFormSection[][] = [
     {
       topic: 'ข้อมูลผู้ครูที่ดูแล',
       content: [
-        { name: 'supervior', label: 'ครูผู้ดูแล', type: 'text', required: true, placeholder: '' },
+        { name: 'supervisor', label: 'ครูผู้ดูแล', type: 'text', required: true, placeholder: '' },
         {
           name: 'subject_group',
           label: 'กลุ่มสาระการเรียนรู้',
@@ -197,7 +214,7 @@ const innovationFields: CreateFormSection[][] = [
           placeholder: '',
         },
         {
-          name: 'photo_file',
+          name: 'photo-file',
           label: 'แนบภาพ',
           type: 'file',
           accept: '.jpg,.jpeg,.png',
@@ -205,7 +222,7 @@ const innovationFields: CreateFormSection[][] = [
           required: true,
         },
         {
-          name: 'certificate_file',
+          name: 'certificate-file',
           label: 'แนบเกียรติบัตร',
           type: 'file',
           accept: '.pdf,.jpg,.png',
@@ -217,10 +234,56 @@ const innovationFields: CreateFormSection[][] = [
   ],
 ]
 
+// const innovationFormFields = innovationFields.map((entry) =>
+//   entry.filter((section) => section.content.length > 0),
+// )
+
+const innovationFormSnapshots = ref<InnovationFormValue[]>([])
+const innovationStudentEntries = ref<InnovationStudentAwardRow[][]>([])
+const innovationStudentDirty = ref<boolean[]>([])
+
 function getCurrentUserName() {
   return (
     authStore.user?.name || authStore.user?.given_name || authStore.user?.email || 'current-user'
   )
+}
+
+function createEmptyInnovationForm(): InnovationFormValue {
+  return {
+    academic_year: '',
+    achievement_level: '',
+    project_title: '',
+    start_date: '',
+    end_date: '',
+    organizer: '',
+    location: '',
+    supervisor: '',
+    subject_group: '',
+    'photo-file': [],
+    'certificate-file': [],
+    innovation_student_awards: [],
+  }
+}
+
+function cloneInnovationStudents(students?: InnovationStudentAwardRow[] | null) {
+  return Array.isArray(students) ? students.map((student) => ({ ...(student || {}) })) : []
+}
+
+function syncInnovationEntryState(entries: InnovationFormValue[]) {
+  innovationFormSnapshots.value = entries.map((entry) => ({ ...entry }))
+  innovationStudentEntries.value = entries.map((entry) =>
+    cloneInnovationStudents(entry.innovation_student_awards),
+  )
+  innovationStudentDirty.value = entries.map(() => false)
+}
+
+function buildInnovationSaveValues(index: number, values?: InnovationFormValue) {
+  return {
+    ...(innovationData.value[index] || createEmptyInnovationForm()),
+    ...(innovationFormSnapshots.value[index] || {}),
+    ...(values || {}),
+    innovation_student_awards: cloneInnovationStudents(innovationStudentEntries.value[index]),
+  }
 }
 
 function normalizeInnovationFiles(value: unknown): InnovationFileItem[] {
@@ -270,8 +333,6 @@ function buildInnovationPayload(
   currentRecord?: InnovationRow,
   personId?: string,
 ) {
-  const payload = { ...values }
-  for (const fileField of INNOVATION_FILE_FIELDS) delete payload[fileField]
   const resolvedPersonId =
     personId ||
     teacherStore.personId ||
@@ -282,17 +343,47 @@ function buildInnovationPayload(
     values.person_id ||
     innovationData.value.find((record) => record.person_id)?.person_id ||
     ''
+  const innovationId = currentRecord?.id || values.id || generateUUID()
+  const createdAt = currentRecord?.created_at || values.created_at || new Date().toISOString()
 
   return {
-    ...currentRecord,
-    ...payload,
-    id: currentRecord?.id || values.id || generateUUID(),
-    person_id: resolvedPersonId,
-    start_date: values.start_date ? formatDateInput(values.start_date) : null,
+    academic_year: values.academic_year || currentRecord?.academic_year || '',
+    achievement_level: values.achievement_level || currentRecord?.achievement_level || null,
+    created_at: createdAt,
+    document_links: currentRecord?.document_links || values.document_links || [],
     end_date: values.end_date ? formatDateInput(values.end_date) : null,
-    created_at: currentRecord?.created_at || new Date().toISOString(),
+    id: innovationId,
+    location: values.location || currentRecord?.location || null,
+    organizer: values.organizer || currentRecord?.organizer || '',
+    person_id: resolvedPersonId,
+    project_title: values.project_title || currentRecord?.project_title || '',
+    start_date: values.start_date ? formatDateInput(values.start_date) : null,
+    subject_group: values.subject_group || currentRecord?.subject_group || '',
+    supervisor: values.supervisor || currentRecord?.supervisor || null,
     updated_at: currentRecord?.id ? new Date().toISOString() : null,
   }
+}
+
+function buildInnovationStudentPayloads(
+  values: InnovationFormValue,
+  innovationId: string,
+  personId: string,
+  currentRecord?: InnovationRow,
+) {
+  const now = new Date().toISOString()
+
+  return Array.isArray(values.innovation_student_awards)
+    ? values.innovation_student_awards.map((student) => ({
+        id: student.id || generateUUID(),
+        innovation_id: innovationId,
+        person_id: personId,
+        student_name: student.student_name || '',
+        class_level: student.class_level || '',
+        class_room: student.class_room || '',
+        created_at: student.created_at || now,
+        updated_at: currentRecord?.id ? now : null,
+      }))
+    : []
 }
 
 function resolveInnovationPersonId(values: InnovationFormValue, currentRecord?: InnovationRow) {
@@ -407,6 +498,7 @@ async function getInnovationData() {
         ),
       })),
     )
+    syncInnovationEntryState(innovationData.value)
 
     formRenderKey.value += 1
   } catch (error: any) {
@@ -418,6 +510,7 @@ async function getInnovationData() {
     innovationData.value = []
     documentLinksByInnovation.value = {}
     innovationPersonId.value = ''
+    syncInnovationEntryState([])
     formRenderKey.value += 1
   } finally {
     loading.value = false
@@ -450,6 +543,29 @@ async function deleteInnovationFiles(documentKeys: string[]) {
       throw error
     }
   }
+}
+
+async function createInnovationStudent(payload: Record<string, any>) {
+  return createDatasetRow<InnovationRow>(
+    DATASET_CONFIG.DATASET_ID,
+    DATASET_CONFIG.DATASET_STUDENTS,
+    payload,
+    DATASET_CONFIG.VIEW_NAME_STUDENTS,
+  )
+}
+
+async function updateInnovationStudent(recordId: string, payload: Record<string, any>) {
+  return updateDatasetRow<InnovationRow>(
+    DATASET_CONFIG.DATASET_ID,
+    DATASET_CONFIG.DATASET_STUDENTS,
+    recordId,
+    payload,
+    DATASET_CONFIG.VIEW_NAME_STUDENTS,
+  )
+}
+
+async function deleteInnovationStudent(studentId: string) {
+  return deleteDatasetRow(DATASET_CONFIG.DATASET_ID, DATASET_CONFIG.DATASET_STUDENTS, studentId)
 }
 
 async function createInnovationData(payload: Record<string, any>) {
@@ -512,6 +628,47 @@ async function deleteInnovationDocumentLinks(documentLinks: DocumentLinkRow[]) {
   }
 }
 
+async function persistInnovationStudents(
+  values: InnovationFormValue,
+  innovationId: string,
+  personId: string,
+  currentRecord?: InnovationRow,
+) {
+  const sourceStudents = Array.isArray(values.innovation_student_awards)
+    ? values.innovation_student_awards
+    : []
+  const existingStudentIds = new Set(
+    (currentRecord?.innovation_student_awards || [])
+      .map((student) => student.id)
+      .filter((studentId): studentId is string => Boolean(studentId)),
+  )
+  const keptStudentIds = new Set(
+    sourceStudents
+      .map((student) => student.id)
+      .filter((studentId): studentId is string => Boolean(studentId)),
+  )
+  const studentPayloads = buildInnovationStudentPayloads(
+    values,
+    innovationId,
+    personId,
+    currentRecord,
+  )
+
+  for (const [index, studentPayload] of studentPayloads.entries()) {
+    if (currentRecord?.id && sourceStudents[index]?.id) {
+      await updateInnovationStudent(studentPayload.id, studentPayload)
+      continue
+    }
+
+    await createInnovationStudent(studentPayload)
+  }
+
+  for (const studentId of existingStudentIds) {
+    if (keptStudentIds.has(studentId)) continue
+    await deleteInnovationStudent(studentId)
+  }
+}
+
 async function persistInnovation(index: number, values: InnovationFormValue) {
   const currentRecord = innovationData.value[index]
   const personId = resolveInnovationPersonId(values, currentRecord)
@@ -550,6 +707,7 @@ async function persistInnovation(index: number, values: InnovationFormValue) {
     if (!currentRecord?.id) {
       const createdRecord = await createInnovationData(payload)
       createdRecordId = createdRecord.data?.id || ''
+      await persistInnovationStudents(values, createdRecordId || payload.id, personId)
 
       for (const fileField of INNOVATION_FILE_FIELDS) {
         const uploadedKeys = await uploadInnovationFiles(newFilesByField[fileField])
@@ -572,6 +730,7 @@ async function persistInnovation(index: number, values: InnovationFormValue) {
 
     if (!hasFileChanges) {
       await updateInnovationData(currentRecord.id, payload)
+      await persistInnovationStudents(values, currentRecord.id, personId, currentRecord)
       toast.success('บันทึกข้อมูลผลงานและนวัตกรรมสำเร็จ', { position: 'bottom-right' })
       await getInnovationData()
       return
@@ -592,6 +751,7 @@ async function persistInnovation(index: number, values: InnovationFormValue) {
     }
 
     await updateInnovationData(currentRecord.id, payload)
+    await persistInnovationStudents(values, currentRecord.id, personId, currentRecord)
 
     if (removedLinks.length) {
       await deleteInnovationDocumentLinks(removedLinks)
@@ -632,14 +792,67 @@ async function persistInnovation(index: number, values: InnovationFormValue) {
     )
   }
 }
+/*
+function handleInnovationFormChange(index: number, values: Record<string, any>) {
+  innovationFormSnapshots.value[index] = buildInnovationSaveValues(index, values as InnovationFormValue)
+}
 
+function addInnovationEntry() {
+  innovationData.value = [...innovationData.value, createEmptyInnovationForm()]
+  innovationFormSnapshots.value = [...innovationFormSnapshots.value, createEmptyInnovationForm()]
+  innovationStudentEntries.value = [...innovationStudentEntries.value, []]
+  innovationStudentDirty.value = [...innovationStudentDirty.value, false]
+  formRenderKey.value += 1
+}
+
+function addInnovationStudentRow(index: number) {
+  innovationStudentEntries.value[index] = [...(innovationStudentEntries.value[index] || []), {}]
+  innovationStudentDirty.value[index] = true
+}
+
+function updateInnovationStudentField(
+  index: number,
+  studentIndex: number,
+  field: keyof InnovationStudentAwardRow,
+  value: string,
+) {
+  const nextStudents = cloneInnovationStudents(innovationStudentEntries.value[index])
+  nextStudents[studentIndex] = {
+    ...(nextStudents[studentIndex] || {}),
+    [field]: value,
+  }
+  innovationStudentEntries.value[index] = nextStudents
+  innovationStudentDirty.value[index] = true
+}
+
+function removeInnovationStudentRow(index: number, studentIndex: number) {
+  const nextStudents = cloneInnovationStudents(innovationStudentEntries.value[index])
+  nextStudents.splice(studentIndex, 1)
+  innovationStudentEntries.value[index] = nextStudents
+  innovationStudentDirty.value[index] = true
+}
+
+function requestInnovationStudentSave(index: number) {
+  queueInnovationSave(index, buildInnovationSaveValues(index))
+}
+*/
 function handleSave(index: number, values: Record<string, any>) {
   if (busyEntries.value[index]) return
-  pendingAction.value = { type: 'save', index, values: values as InnovationFormValue }
+  const mergedValues = buildInnovationSaveValues(index, values as InnovationFormValue)
+  pendingAction.value = { type: 'save', index, values: mergedValues }
   action.value = innovationData.value[index]?.id ? 'update' : 'add'
   modalValue.value = `ผลงานและนวัตกรรม ${values['course-title'] || ''}`
   confirmModal.value = true
 }
+
+// function queueInnovationSave(index: number, values: Record<string, any>) {
+//   if (busyEntries.value[index]) return
+//   const mergedValues = buildInnovationSaveValues(index, values as InnovationFormValue)
+//   pendingAction.value = { type: 'save', index, values: mergedValues }
+//   action.value = innovationData.value[index]?.id ? 'update' : 'add'
+//   modalValue.value = `ข้อมูลผลงานและนวัตกรรม`
+//   confirmModal.value = true
+// }
 
 async function deleteInnovationWithFiles(recordId?: string, currentRecord?: InnovationFormValue) {
   try {
@@ -736,3 +949,9 @@ onMounted(() => {
     @confirm="updateData"
   />
 </template>
+
+<style scoped>
+.innovation-entry-form > div:first-child {
+  display: none;
+}
+</style>

@@ -8,6 +8,7 @@ import {
   DATASET_GET,
   DOCUMENT_DELETE,
   DOCUMENT_EDIT,
+  MANAGE_DROPDOWN_DATASETS,
 } from '@/lib/constants'
 import { formatDateInput, generateUUID } from '@/lib/helpers'
 import { useAuthStore } from '@/stores/auth'
@@ -20,7 +21,7 @@ import {
 } from '@/stores/dataset'
 import type { CreateFileDocumentParams, FileDocument } from '@/types/document'
 import type { DocumentLink } from '@/types/document_request'
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { toast } from 'vue-sonner'
 
 type DocumentLinkRow = DocumentLink & { id?: string }
@@ -37,10 +38,16 @@ type ContractFileItem = File | ExistingContractFile
 type ContractRow = Record<string, any> & {
   id?: string
   person_id?: string
+  role_id?: string
+  roles?: {
+    roles_description?: string
+    roles_name?: string
+  } | null
   document_links?: DocumentLinkRow[]
 }
 type ContractFormValue = ContractRow & { file?: ContractFileItem[] }
 type PersonalRow = Record<string, any> & { roles?: { roles_name?: string } | null }
+type RoleOption = { label: string; value: string; description?: string }
 type CreateFormField = {
   name: string
   label?: string
@@ -54,7 +61,7 @@ type CreateFormField = {
   multiple?: boolean
 }
 type CreateFormSection = { topic?: string; content: CreateFormField[] }
-
+const roles = ref<RoleOption[]>([])
 const GET_VIEW = 'contract_get'
 const EDIT_VIEW = 'contract_update'
 const ENTITY_TABLE = 'history_position'
@@ -98,7 +105,7 @@ const pendingAction = ref<
   | null
 >(null)
 
-const contractFields: CreateFormSection[][] = [
+const contractFields = computed<CreateFormSection[][]>(() => [
   [
     {
       content: [
@@ -107,13 +114,13 @@ const contractFields: CreateFormSection[][] = [
           label: 'วันเดือนปี',
           type: 'date',
           required: true,
-          placeholder: '',
+          placeholder: 'เลือกวันที่',
           disabled: false,
         },
         {
           name: 'position',
           label: 'ตำแหน่ง',
-          type: 'text',
+          type: 'select',
           required: true,
           placeholder: '',
           disabled: false,
@@ -145,7 +152,7 @@ const contractFields: CreateFormSection[][] = [
       ],
     },
   ],
-]
+])
 
 function getCurrentUserName() {
   return (
@@ -164,15 +171,64 @@ function isExistingContractFile(file: ContractFileItem): file is ExistingContrac
 }
 
 function buildContractPurpose(values: Partial<ContractRow>, fileField?: string) {
-  const basePurpose = `${values.license_type || 'license'}_${values.license_no || 'unknown'}`
+  const roleName =
+    values.roles?.roles_name ||
+    getRoleByValueOrLabel(values.role_id)?.label ||
+    getRoleByValueOrLabel(values.position)?.label ||
+    values.position ||
+    ''
+  const basePurpose = `เอกสารสัญญาจ้างตำแหน่ง${roleName || 'ไม่ระบุตำแหน่ง'}`
   return fileField ? `${basePurpose}_${fileField}` : basePurpose
 }
 
+const resolvedContractFields = computed<CreateFormSection[][]>(() => {
+  const nextFields = JSON.parse(JSON.stringify(contractFields.value || [])) as CreateFormSection[][]
+  const positionField = nextFields[0]?.[0]?.content?.find((field) => field.name === 'position')
+  const dateField = nextFields[0]?.[0]?.content?.find((field) => field.name === 'date')
+
+  if (dateField) {
+    dateField.placeholder = ''
+  }
+
+  if (positionField) {
+    positionField.type = 'select'
+    positionField.placeholder = 'เลือกตำแหน่ง'
+    positionField.options = roles.value
+  }
+
+  return nextFields
+})
+
+function getRoleByValueOrLabel(value?: unknown) {
+  const normalizedValue = String(value || '')
+  if (!normalizedValue) return null
+
+  return (
+    roles.value.find((role) => role.value === normalizedValue) ||
+    roles.value.find((role) => role.label === normalizedValue) ||
+    null
+  )
+}
+
 function formatContractRecord(record: ContractRow) {
+  const matchedRole =
+    getRoleByValueOrLabel(record.role_id) ||
+    getRoleByValueOrLabel(record.roles?.roles_name) ||
+    getRoleByValueOrLabel(record.position)
+
   return {
     ...record,
     date: record.date ? formatDateInput(record.date) : null,
-    position: personalPosition.value || record.position || '',
+    role_id: matchedRole?.value || record.role_id || '',
+    roles:
+      record.roles ||
+      (matchedRole
+        ? {
+            roles_description: matchedRole.description || '',
+            roles_name: matchedRole.label,
+          }
+        : null),
+    position: matchedRole?.value || '',
   }
 }
 
@@ -183,12 +239,25 @@ function buildContractPayload(
 ) {
   const payload = { ...values }
   delete payload[FILE_FIELD]
+  const selectedRole =
+    getRoleByValueOrLabel(values.position) ||
+    getRoleByValueOrLabel(currentRecord?.role_id) ||
+    getRoleByValueOrLabel(currentRecord?.roles?.roles_name) ||
+    getRoleByValueOrLabel(currentRecord?.position)
+
   return {
     ...currentRecord,
     ...payload,
     id: currentRecord?.id || values.id || generateUUID(),
     person_id: personId || currentRecord?.person_id || values.person_id || '',
-    position: personalPosition.value || values.position || currentRecord?.position || '',
+    position: selectedRole?.label || currentRecord?.position || '',
+    role_id: selectedRole?.value || currentRecord?.role_id || '',
+    roles: selectedRole
+      ? {
+          roles_description: selectedRole.description || '',
+          roles_name: selectedRole.label,
+        }
+      : currentRecord?.roles || null,
     date: values.date ? formatDateInput(values.date) : null,
     created_at: currentRecord?.created_at || new Date().toISOString(),
     updated_at: currentRecord?.id ? new Date().toISOString() : null,
@@ -261,7 +330,7 @@ async function getContractFiles(record: ContractRow, documentLinks: DocumentLink
 async function getContractPositionData() {
   loading.value = true
   try {
-    const [contractResponse, personalResponse] = await Promise.all([
+    const [contractResponse, personalResponse, dropdownRoles] = await Promise.all([
       getDatasetRows<ContractRow>(
         DATASET_GET.DATASET_ID,
         DATASET_GET.DATASET_VERSION_CONTRACT_POSITION,
@@ -272,9 +341,22 @@ async function getContractPositionData() {
         page: 1,
         per_page: 50,
       }),
+      getDatasetRows(
+        MANAGE_DROPDOWN_DATASETS.DATASET_ID,
+        MANAGE_DROPDOWN_DATASETS.DATASET_VERSION_ROLES,
+        {
+          view: 'roles',
+          page: 1,
+          per_page: 50,
+        },
+      ),
     ])
+    roles.value = (dropdownRoles.data || []).map((item: any) => ({
+      label: item.name,
+      value: item.id,
+      description: item.description,
+    }))
     personalPosition.value = personalResponse.data?.[0]?.roles?.roles_name || ''
-    console.log('Contract Position API Response:', contractResponse)
     const { records, allDocumentLinks } = extractContractResponse(contractResponse.data)
     documentLinksByContract.value = Object.fromEntries(
       records
@@ -481,9 +563,12 @@ async function persistContract(index: number, values: ContractFormValue) {
 
 function handleSave(index: number, values: Record<string, any>) {
   if (busyEntries.value[index]) return
+  const selectedRoleName =
+    getRoleByValueOrLabel(values.position)?.label ||
+    String(values.roles?.roles_name || values.position || '')
   pendingAction.value = { type: 'save', index, values: values as ContractFormValue }
   action.value = contractPositionData.value[index]?.id ? 'update' : 'add'
-  modalValue.value = `สัญญาจ้าง ${values.contract_number || ''}`
+  modalValue.value = `สัญญาจ้าง ${selectedRoleName || ''}`
   confirmModal.value = true
 }
 
@@ -564,7 +649,7 @@ onMounted(() => {
       :busyEntries="busyEntries"
       :values="contractPositionData"
       :canDelete="true"
-      :fields="contractFields"
+      :fields="resolvedContractFields"
       :deferCommitOnSave="true"
       :deferDeleteOnConfirm="true"
       @save="handleSave"
