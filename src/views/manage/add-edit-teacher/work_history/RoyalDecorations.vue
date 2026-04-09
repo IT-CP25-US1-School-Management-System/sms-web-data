@@ -1,16 +1,10 @@
 <script setup lang="ts">
 import ConfirmModal from '@/components/ConfirmModal.vue'
+import SkeletonCard from '@/components/SkeletonCard.vue'
 import CreateForm from '@/components/form/CreateForm.vue'
-import {
-  DATASET_DELETE,
-  DATASET_EDIT,
-  DATASET_GET,
-  DOCUMENT_DELETE,
-  DOCUMENT_EDIT,
-} from '@/lib/constants'
+import { MANAGE_DATASETS } from '@/lib/constants'
 import { formatDateInput, generateUUID } from '@/lib/helpers'
 import { useAuthStore } from '@/stores/auth'
-import { useTeacherStore } from '@/stores/teachers'
 import { createFileDocument, deleteFileDocument, getFileDocumentRows } from '@/stores/document'
 import {
   createDatasetRow,
@@ -20,8 +14,8 @@ import {
 } from '@/stores/dataset'
 import type { CreateFileDocumentParams, FileDocument } from '@/types/document'
 import type { DocumentLink } from '@/types/document_request'
+import { useTeacherStore } from '@/stores/teachers'
 import { onMounted, ref } from 'vue'
-import { useRoute } from 'vue-router'
 import { toast } from 'vue-sonner'
 
 type DocumentLinkRow = DocumentLink & { id?: string }
@@ -55,33 +49,23 @@ type CreateFormField = {
 }
 type CreateFormSection = { topic?: string; content: CreateFormField[] }
 
-const GET_VIEW = 'decorations_get'
-const EDIT_VIEW = 'decorations_update'
+const VIEW_NAME = 'decorations'
 const ENTITY_TABLE = 'decorations'
 const FILE_FIELD = 'announcement-file'
 
 const DATASET_CONFIG = {
-  DATASET_ID: DATASET_EDIT.DATASET_ID,
-  DATASET_VERSION: DATASET_EDIT.DATASET_VERSION_LICENSE,
-  VIEW_NAME: EDIT_VIEW,
+  DATASET_ID: MANAGE_DATASETS.DATASET_ID,
+  DATASET_VERSION: MANAGE_DATASETS.DATASET_VERSION_ROYAL_DECORATIONS,
+  VIEW_NAME,
 } as const
-const DELETE_CONFIG = {
-  DATASET_ID: DATASET_DELETE.DATASET_ID,
-  DATASET_VERSION: DATASET_DELETE.DATASET_VERSION_LICENSE,
-} as const
-const DOCUMENT_CREATE_CONFIG = {
-  DATASET_ID: DOCUMENT_EDIT.DATASET_ID,
-  DATASET_VERSION: DOCUMENT_EDIT.DATASET_VERSION_DOCUMENT_LINK,
+const DOCUMENT_LINK_DATASET_CONFIG = {
+  DATASET_ID: MANAGE_DATASETS.DATASET_ID,
+  DATASET_VERSION: MANAGE_DATASETS.DATASET_VERSION_DOCUMENT_LINK,
   VIEW_NAME: 'file_view',
 } as const
-const DOCUMENT_DELETE_CONFIG = {
-  DATASET_ID: DOCUMENT_DELETE.DATASET_ID,
-  DATASET_VERSION: DOCUMENT_DELETE.DATASET_VERSION,
-} as const
 
-const route = useRoute()
-const teacherStore = useTeacherStore()
 const authStore = useAuthStore()
+const teacherStore = useTeacherStore()
 
 const loading = ref(false)
 const busyEntries = ref<Record<number, 'save' | 'delete'>>({})
@@ -99,23 +83,12 @@ const pendingAction = ref<
   | null
 >(null)
 
-function getPersonId() {
-  const idFromUrl = route.query.id as string | undefined
-  const personId = idFromUrl || teacherStore.personId
-
-  if (idFromUrl && teacherStore.personId !== idFromUrl) {
-    teacherStore.setPersonId(idFromUrl)
-  }
-
-  return personId
-}
-
 const royalDecorationFields: CreateFormSection[][] = [
   [
     {
       content: [
         {
-          name: 'gazette_publish_date',
+          name: 'announce_date',
           label: 'วันที่ประกาศในราชกิจจา',
           type: 'date',
           required: true,
@@ -125,7 +98,7 @@ const royalDecorationFields: CreateFormSection[][] = [
         {
           name: 'year',
           label: 'ประจำปี',
-          type: 'text',
+          type: 'number',
           required: true,
           isShow: true,
           placeholder: '',
@@ -140,7 +113,7 @@ const royalDecorationFields: CreateFormSection[][] = [
         },
         { name: 'gazette_section', label: 'ตอนที่', type: 'text', placeholder: '' },
         {
-          name: 'announce_date',
+          name: 'gazette_publish_date',
           label: 'ลงวันที่',
           type: 'date',
           required: true,
@@ -197,7 +170,7 @@ function buildRoyalPurpose(values: Partial<RoyalDecorationRow>, fileField?: stri
 function formatRoyalRecord(record: RoyalDecorationRow) {
   return {
     ...record,
-    year: record.year != null ? String(record.year) : '',
+    year: record.year != null ? record.year : 0,
     gazette_publish_date: record.gazette_publish_date
       ? formatDateInput(record.gazette_publish_date)
       : null,
@@ -216,8 +189,8 @@ function buildRoyalPayload(
     ...currentRecord,
     ...payload,
     id: currentRecord?.id || values.id || generateUUID(),
-    person_id: personId || currentRecord?.person_id || values.person_id || '',
-    year: values.year || '',
+    person_id: teacherStore.personId || personId || '',
+    year: values.year || 0,
     gazette_publish_date: values.gazette_publish_date
       ? formatDateInput(values.gazette_publish_date)
       : null,
@@ -231,13 +204,7 @@ function resolveRoyalPersonId(
   values: RoyalDecorationFormValue,
   currentRecord?: RoyalDecorationRow,
 ) {
-  return (
-    getPersonId() ||
-    currentRecord?.person_id ||
-    values.person_id ||
-    royalDecorationData.value.find((record) => record.person_id)?.person_id ||
-    ''
-  )
+  return teacherStore.personId || currentRecord?.person_id || values.person_id || ''
 }
 
 function extractRoyalResponse(data: unknown) {
@@ -290,33 +257,10 @@ async function getRoyalFiles(record: RoyalDecorationRow, documentLinks: Document
 async function getRoyalDecorationData() {
   loading.value = true
   try {
-    const personId = getPersonId()
-    if (!personId) {
-      royalDecorationData.value = []
-      documentLinksByDecoration.value = {}
-      formRenderKey.value += 1
-      toast.error('ไม่พบข้อมูลครู กรุณาบันทึกข้อมูลส่วนบุคคลก่อน', { position: 'bottom-right' })
-      return
-    }
-
     const response = await getDatasetRows<RoyalDecorationRow>(
-      DATASET_GET.DATASET_ID,
-      DATASET_GET.DATASET_VERSION,
-      {
-        view: GET_VIEW,
-        page: 1,
-        per_page: 50,
-        where: [
-          [
-            {
-              table_name: 'decorations',
-              field: 'person_id',
-              operator: '=',
-              value: personId,
-            },
-          ],
-        ],
-      },
+      DATASET_CONFIG.DATASET_ID,
+      DATASET_CONFIG.DATASET_VERSION,
+      { view: DATASET_CONFIG.VIEW_NAME, page: 1, per_page: 50 },
     )
     const { records, allDocumentLinks } = extractRoyalResponse(response.data)
     documentLinksByDecoration.value = Object.fromEntries(
@@ -330,7 +274,6 @@ async function getRoyalDecorationData() {
     royalDecorationData.value = await Promise.all(
       records.map(async (record) => ({
         ...record,
-        person_id: record.person_id || personId,
         'announcement-file': await getRoyalFiles(
           record,
           documentLinksByDecoration.value[record.id || ''] || [],
@@ -400,24 +343,24 @@ async function updateRoyalDecorationData(recordId: string, payload: Record<strin
 }
 
 async function deleteRoyalDecorationData(recordId: string) {
-  return deleteDatasetRow(DELETE_CONFIG.DATASET_ID, DELETE_CONFIG.DATASET_VERSION, recordId)
+  return deleteDatasetRow(DATASET_CONFIG.DATASET_ID, DATASET_CONFIG.DATASET_VERSION, recordId)
 }
 
 async function storeRoyalFiles(documentIds: string[], record: RoyalDecorationRow) {
   const createdLinks: DocumentLinkRow[] = []
   for (const documentId of documentIds) {
     const response = await createDatasetRow<DocumentLinkRow>(
-      DOCUMENT_CREATE_CONFIG.DATASET_ID,
-      DOCUMENT_CREATE_CONFIG.DATASET_VERSION,
+      DOCUMENT_LINK_DATASET_CONFIG.DATASET_ID,
+      DOCUMENT_LINK_DATASET_CONFIG.DATASET_VERSION,
       {
         document_key: documentId,
         entity_table: ENTITY_TABLE,
         entity_id: record.id || '',
         purpose: buildRoyalPurpose(record, FILE_FIELD),
-        person_id: record.person_id || '',
+        person_id: teacherStore.personId || record.person_id || '',
         created_at: new Date().toISOString(),
       },
-      DOCUMENT_CREATE_CONFIG.VIEW_NAME,
+      DOCUMENT_LINK_DATASET_CONFIG.VIEW_NAME,
     )
     createdLinks.push(response.data)
   }
@@ -429,8 +372,8 @@ async function deleteRoyalDocumentLinks(documentLinks: DocumentLinkRow[]) {
     const documentLinkKey = link.id || link.document_key
     if (!documentLinkKey) continue
     await deleteDatasetRow(
-      DOCUMENT_DELETE_CONFIG.DATASET_ID,
-      DOCUMENT_DELETE_CONFIG.DATASET_VERSION,
+      DOCUMENT_LINK_DATASET_CONFIG.DATASET_ID,
+      DOCUMENT_LINK_DATASET_CONFIG.DATASET_VERSION,
       documentLinkKey,
     )
   }
@@ -438,11 +381,7 @@ async function deleteRoyalDocumentLinks(documentLinks: DocumentLinkRow[]) {
 
 async function persistRoyalDecoration(index: number, values: RoyalDecorationFormValue) {
   const currentRecord = royalDecorationData.value[index]
-  const personId = getPersonId() || resolveRoyalPersonId(values, currentRecord)
-  if (!personId) {
-    toast.error('ไม่พบข้อมูลครู กรุณาบันทึกข้อมูลส่วนบุคคลก่อน', { position: 'bottom-right' })
-    return
-  }
+  const personId = resolveRoyalPersonId(values, currentRecord)
   const payload = buildRoyalPayload(values, currentRecord, personId)
   const currentFiles = normalizeRoyalFiles(values[FILE_FIELD])
   const existingFiles = currentFiles.filter(isExistingRoyalFile)
@@ -602,17 +541,16 @@ function handleDelete(index: number, recordId?: string) {
 }
 
 onMounted(() => {
-  const idFromUrl = route.query.id as string | undefined
-  if (idFromUrl && !teacherStore.personId) {
-    teacherStore.setPersonId(idFromUrl)
-  }
-
   getRoyalDecorationData()
 })
 </script>
 
 <template>
-  <div class="mx-6 flex flex-col gap-4 pb-6">
+  <div v-if="loading" class="flex-1 space-y-4 overflow-y-auto px-4 sm:px-6">
+    <SkeletonCard />
+  </div>
+
+  <div v-else class="mx-6 flex flex-col gap-4 pb-6">
     <CreateForm
       :key="formRenderKey"
       :busyEntries="busyEntries"

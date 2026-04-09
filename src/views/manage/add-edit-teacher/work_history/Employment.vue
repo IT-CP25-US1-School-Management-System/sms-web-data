@@ -1,26 +1,174 @@
 <script setup lang="ts">
+import { Button } from '@/components/ui/button'
 import DropDownForm from '@/components/form/DropDownForm.vue'
-import { DATASET_GET } from '@/lib/constants'
+import SkeletonCard from '@/components/SkeletonCard.vue'
+import { MANAGE_DATASETS, MANAGE_DROPDOWN_DATASETS } from '@/lib/constants'
+import { formatDateInput, generateUUID } from '@/lib/helpers'
+import { createDatasetRow, getDatasetRows, updateDatasetRow } from '@/stores/dataset'
 import { useTeacherStore } from '@/stores/teachers'
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { toast } from 'vue-sonner'
-import { getDatasetRows } from '@/stores/dataset'
+
+type RoleRow = {
+  id?: number | string
+  role_id?: number | string
+  roles_id?: number | string
+  role_name_th?: string
+  roles_name_th?: string
+  name_th?: string
+  name?: string
+}
 
 const route = useRoute()
 const teacherStore = useTeacherStore()
+
+const EMPLOYMENT_DATASET_CONFIG = {
+  DATASET_ID: MANAGE_DATASETS.DATASET_ID,
+  DATASET_VERSION: MANAGE_DATASETS.DATASET_VERSION_EMPLOYMENT,
+  VIEW_NAME: MANAGE_DATASETS.VIEW_EMPLOYMENT,
+} as const
+
 const loading = ref(false)
 const employmentData = ref<Record<string, any>[]>([])
+const initialEmploymentData = ref<Record<string, any>[]>([])
+const formRenderKey = ref(0)
+const workFormRefs = ref<Array<InstanceType<typeof DropDownForm> | null>>([])
+const compensationFormRefs = ref<Array<InstanceType<typeof DropDownForm> | null>>([])
+const contractFormRefs = ref<Array<InstanceType<typeof DropDownForm> | null>>([])
+const durationFormRefs = ref<Array<InstanceType<typeof DropDownForm> | null>>([])
+const budgetFormRefs = ref<Array<InstanceType<typeof DropDownForm> | null>>([])
+const roleLabelById = new Map<string, string>()
 
 function getPersonId() {
-  const idFromUrl = route.query.id as string | undefined
-  const personId = idFromUrl || teacherStore.personId
+  const routeId = route.query.id
+  if (typeof routeId === 'string' && routeId.trim()) return routeId
+  if (teacherStore.personId) return teacherStore.personId
+  return undefined
+}
 
-  if (idFromUrl && teacherStore.personId !== idFromUrl) {
-    teacherStore.setPersonId(idFromUrl)
+const displayEmploymentData = computed(() =>
+  employmentData.value.length
+    ? employmentData.value
+    : [
+        {
+          id: 'empty-employment',
+        },
+      ],
+)
+
+const hasChanges = computed(
+  () => JSON.stringify(employmentData.value) !== JSON.stringify(initialEmploymentData.value),
+)
+
+function cloneData<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value))
+}
+
+function mapRoleOptions(rows: RoleRow[]) {
+  return rows
+    .map((row) => {
+      const roleId = [row.id, row.role_id, row.roles_id].find((candidate) => candidate !== undefined)
+      const label = [row.role_name_th, row.roles_name_th, row.name_th, row.name].find((candidate) =>
+        Boolean(candidate),
+      )
+
+      if (roleId === undefined || !label) return null
+
+      return {
+        id: String(roleId),
+        label: String(label),
+      }
+    })
+    .filter((item): item is { id: string; label: string } => Boolean(item))
+}
+
+function normalizeDateForPayload(value?: string | Date | null) {
+  return formatDateInput(value) || null
+}
+
+function hasEmploymentContent(values: Record<string, any>) {
+  return Object.entries(values).some(([key, value]) => {
+    if (['id', 'person_id', 'created_at', 'updated_at'].includes(key)) return false
+    if (value === undefined || value === null) return false
+    return String(value).trim() !== ''
+  })
+}
+
+function buildEmploymentPayload(values: Record<string, any>, personId: string) {
+  return {
+    ...values,
+    id:
+      values.id && values.id !== 'empty-employment'
+        ? values.id
+        : generateUUID(),
+    person_id: values.person_id || personId,
+    social_security:
+      values.social_security !== undefined &&
+      values.social_security !== null &&
+      String(values.social_security).trim() !== ''
+        ? String(values.social_security).trim()
+        : undefined,
+    first_contract_start: normalizeDateForPayload(values.first_contract_start),
+    period_start: normalizeDateForPayload(values.period_start),
+    period_end: normalizeDateForPayload(values.period_end),
+    created_at: values.created_at || new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   }
+}
 
-  return personId
+function handleSectionChange(index: number, payload: { values: Record<string, any>; isDirty: boolean }) {
+  const current = employmentData.value[index] || {}
+  employmentData.value[index] = {
+    ...current,
+    ...payload.values,
+  }
+}
+
+function formatEmploymentRecord(record: Record<string, any>) {
+  const personData =
+    record.person_data && typeof record.person_data === "object" ? record.person_data : undefined
+  const resolvedPosition =
+    personData?.roles?.roles_name ||
+    personData?.roles?.roles_name_th ||
+    (personData?.role_id ? roleLabelById.get(String(personData.role_id)) : '') ||
+    record.position ||
+    ''
+
+  return {
+    ...record,
+    position: resolvedPosition,
+    first_contract_start: formatDateInput(record.first_contract_start),
+    period_start: formatDateInput(record.period_start),
+    period_end: formatDateInput(record.period_end),
+  }
+}
+
+async function fetchRoleLabels() {
+  try {
+    for (const viewName of ['roles', 'role']) {
+      const response = await getDatasetRows<RoleRow>(
+        MANAGE_DROPDOWN_DATASETS.DATASET_ID,
+        MANAGE_DROPDOWN_DATASETS.DATASET_VERSION_ROLES,
+        {
+          view: viewName,
+          page: 1,
+          per_page: 100,
+        },
+      )
+
+      const mappedRoles = mapRoleOptions(response.data || [])
+      if (mappedRoles.length > 0) {
+        roleLabelById.clear()
+        mappedRoles.forEach((role) => {
+          roleLabelById.set(role.id, role.label)
+        })
+        return
+      }
+    }
+  } catch (error) {
+    console.error('Failed to load employment role labels:', error)
+  }
 }
 
 async function getEmploymentData() {
@@ -29,198 +177,332 @@ async function getEmploymentData() {
     const personId = getPersonId()
     if (!personId) {
       employmentData.value = []
-      toast.error('ไม่พบข้อมูลครู กรุณาบันทึกข้อมูลส่วนบุคคลก่อน', {
-        position: 'bottom-right',
-      })
+      formRenderKey.value += 1
       return
     }
 
-    const response = await getDatasetRows(DATASET_GET.DATASET_ID, DATASET_GET.DATASET_VERSION, {
-      view: 'employment_get',
-      page: 1,
-      per_page: 50,
-      where: [
-        [
-          {
-            table_name: 'employment_contracts',
-            field: 'person_id',
-            operator: '=',
-            value: personId,
-          },
+    const response = await getDatasetRows<Record<string, any>>(
+      EMPLOYMENT_DATASET_CONFIG.DATASET_ID,
+      EMPLOYMENT_DATASET_CONFIG.DATASET_VERSION,
+      {
+        view: EMPLOYMENT_DATASET_CONFIG.VIEW_NAME,
+        page: 1,
+        per_page: 50,
+        where: [
+          [
+            {
+              table_name: 'employment_contracts',
+              field: 'person_id',
+              operator: '=',
+              value: personId,
+            },
+          ],
         ],
-      ],
-    })
-    employmentData.value = response.data[0]?.employment_contracts || []
-    toast.success(`โหลดข้อมูลที่อยู่สำเร็จ (${response.total_rows} รายการ)`, {
-      position: 'bottom-right',
-    })
+      },
+    )
+
+    employmentData.value = (response.data || []).map((record) => formatEmploymentRecord(record))
+    initialEmploymentData.value = cloneData(employmentData.value)
+    workFormRefs.value = employmentData.value.map(() => null)
+    compensationFormRefs.value = employmentData.value.map(() => null)
+    contractFormRefs.value = employmentData.value.map(() => null)
+    durationFormRefs.value = employmentData.value.map(() => null)
+    budgetFormRefs.value = employmentData.value.map(() => null)
+    formRenderKey.value += 1
   } catch (error: any) {
     console.error('Employment API Error:', error)
-    toast.error(`โหลดข้อมูลครอบครัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
+    console.error('Error Response:', error?.response?.data)
+    toast.error(
+      `โหลดข้อมูลการจ้างงานไม่สำเร็จ: ${error?.response?.data?.message || error.message}`,
+      {
+        position: 'bottom-right',
+      },
+    )
+  } finally {
+    loading.value = false
+  }
+}
+
+async function persistEmploymentData() {
+  const personId = getPersonId()
+  if (!personId) {
+    toast.error('ไม่พบ ID ของบุคลากร', {
       position: 'bottom-right',
     })
+    return
   }
-  loading.value = false
+
+  const recordsToPersist = displayEmploymentData.value.filter(
+    (record) => hasEmploymentContent(record) || (record.id && record.id !== 'empty-employment'),
+  )
+
+  for (const record of recordsToPersist) {
+    const payload = buildEmploymentPayload(record, personId)
+
+    if (record.id && record.id !== 'empty-employment') {
+      await updateDatasetRow(
+        EMPLOYMENT_DATASET_CONFIG.DATASET_ID,
+        EMPLOYMENT_DATASET_CONFIG.DATASET_VERSION,
+        String(record.id),
+        payload,
+        EMPLOYMENT_DATASET_CONFIG.VIEW_NAME,
+      )
+      continue
+    }
+
+    await createDatasetRow(
+      EMPLOYMENT_DATASET_CONFIG.DATASET_ID,
+      EMPLOYMENT_DATASET_CONFIG.DATASET_VERSION,
+      payload,
+      EMPLOYMENT_DATASET_CONFIG.VIEW_NAME,
+    )
+  }
+}
+
+async function onSaveAll() {
+  const validations = await Promise.all([
+    ...workFormRefs.value.map((form) => form?.validateForm?.() ?? true),
+    ...compensationFormRefs.value.map((form) => form?.validateForm?.() ?? true),
+    ...contractFormRefs.value.map((form) => form?.validateForm?.() ?? true),
+    ...durationFormRefs.value.map((form) => form?.validateForm?.() ?? true),
+    ...budgetFormRefs.value.map((form) => form?.validateForm?.() ?? true),
+  ])
+
+  if (validations.some((result) => result === false)) return
+
+  loading.value = true
+  try {
+    await persistEmploymentData()
+    toast.success('บันทึกข้อมูลการจ้างงานสำเร็จ', {
+      position: 'bottom-right',
+    })
+    await getEmploymentData()
+  } catch (error: any) {
+    console.error('Employment Save Error:', error)
+    toast.error(
+      `บันทึกข้อมูลการจ้างงานไม่สำเร็จ: ${error?.response?.data?.message || error.message}`,
+      {
+        position: 'bottom-right',
+      },
+    )
+  } finally {
+    loading.value = false
+  }
 }
 
 onMounted(() => {
-  const idFromUrl = route.query.id as string | undefined
-  if (idFromUrl && !teacherStore.personId) {
-    teacherStore.setPersonId(idFromUrl)
-  }
-
+  void fetchRoleLabels()
   getEmploymentData()
 })
 </script>
 
 <template>
-  <div class="mx-6 flex flex-col gap-4" v-for="item in employmentData" :key="item.id">
-    <!-- ข้อมูลการทำงาน -->
-    แก้ไขไม่ได้
+  <div v-if="loading" class="flex-1 space-y-4 overflow-y-auto px-4 sm:px-6">
+    <SkeletonCard />
+  </div>
+
+  <div
+    v-else
+    v-for="(item, index) in displayEmploymentData"
+    :key="`${formRenderKey}-${item.id}`"
+    class="mx-6 flex flex-col gap-4"
+  >
     <DropDownForm
+      :ref="(instance) => (workFormRefs[index] = instance as InstanceType<typeof DropDownForm> | null)"
       topic="ข้อมูลการทำงาน"
       :values="item"
+      @change="(payload) => handleSectionChange(index, payload)"
       :fields="[
         {
           name: 'position',
           label: 'ตำแหน่ง',
           type: 'text',
           required: true,
+          placeholder: 'ระบบกำหนดจากข้อมูลบุคลากร',
           disabled: true,
-          placeholder: '-',
         },
         {
           name: 'work_status',
           label: 'สถานะการทำงาน',
           type: 'text',
           required: true,
-          placeholder: '-',
-          disabled: true,
+          placeholder: 'เช่น ปฏิบัติงานอยู่',
+          
         },
         {
           name: 'hiring_nature',
           label: 'ลักษณะการจ้าง',
           type: 'text',
           required: true,
-          placeholder: '-',
-          disabled: true,
+          placeholder: 'เช่น จ้างชั่วคราว',
+          
         },
         {
-          name: 'latest-transfer-type',
+          name: 'contract_action',
           label: 'ประเภทการเคลื่อนไหวล่าสุด',
-          type: 'text',
-          placeholder: '-',
-          disabled: true,
+          type: 'select',
+          placeholder: 'เลือกประเภทการเคลื่อนไหว',
+          
+          options: [
+            { label: 'การต่อสัญญา', value: 'การต่อสัญญา' },
+            { label: 'ทำสัญญาครั้งแรก', value: 'ทำสัญญาครั้งแรก' },
+          ],
         },
       ]"
     />
 
-    <!-- ข้อมูลค่าตอบแทนและสิทธิประโยชน์ -->
     <DropDownForm
+      :ref="(instance) => (compensationFormRefs[index] = instance as InstanceType<typeof DropDownForm> | null)"
       topic="ข้อมูลค่าตอบแทนและสิทธิประโยชน์"
+      :values="item"
+      @change="(payload) => handleSectionChange(index, payload)"
       :fields="[
         {
           name: 'salary',
           label: 'เงินค่าจ้าง',
           type: 'number',
           required: true,
-          placeholder: '-',
-          disabled: true,
+          placeholder: 'เช่น 15000',
+          
         },
         {
-          name: 'social-security-contribution',
+          name: 'social_security',
           label: 'เงินสมทบกองทุนประกันสังคม',
-          type: 'number',
+          type: 'select',
           required: true,
-          placeholder: '-',
-          disabled: true,
+          placeholder: 'เลือกมาตราประกันสังคม',
+          options: [
+            { label: 'มาตรา 33', value: 'มาตรา 33' },
+            { label: 'มาตรา 39', value: 'มาตรา 39' },
+            { label: 'มาตรา 40', value: 'มาตรา 40' },
+            { label: 'อื่นๆ', value: 'อื่นๆ' },
+          ],
         },
       ]"
     />
 
-    <!-- ข้อมูลสัญญาจ้างและเอกสารจ้างจิง -->
     <DropDownForm
-      topic="ข้อมูลสัญญาจ้างและเอกสารจ้างจิง"
+      :ref="(instance) => (contractFormRefs[index] = instance as InstanceType<typeof DropDownForm> | null)"
+      topic="ข้อมูลสัญญาจ้างและเอกสารจ้างจริง"
+      :values="item"
+      @change="(payload) => handleSectionChange(index, payload)"
       :fields="[
         {
-          name: 'contract-order-no',
+          name: 'order_no',
           label: 'เลขที่คำสั่ง / สัญญาจ้าง',
           type: 'text',
           required: true,
-          placeholder: '-',
-          disabled: true,
+          placeholder: 'กรุณาระบุเลขที่คำสั่งหรือสัญญาจ้าง',
+          
         },
         {
           name: 'contract-count',
           label: 'จำนวนครั้งที่ทำสัญญา',
           type: 'text',
           required: true,
-          placeholder: '-',
-          disabled: true,
+          placeholder: 'เช่น 1',
+          
         },
       ]"
     />
 
-    <!-- ข้อมูลระยะเวลาในการจ้างงาน -->
     <DropDownForm
+      :ref="(instance) => (durationFormRefs[index] = instance as InstanceType<typeof DropDownForm> | null)"
       topic="ข้อมูลระยะเวลาในการจ้างงาน"
+      :values="item"
+      @change="(payload) => handleSectionChange(index, payload)"
       :fields="[
         {
-          name: 'first-contract-date',
+          name: 'first_contract_start',
           label: 'ว/ด/ป เริ่มสัญญาครั้งแรก',
-          type: 'text',
+          type: 'date',
           required: true,
-          placeholder: '-',
-          disabled: true,
+          placeholder: 'วว / ดด / ปปปป',
+          
         },
         {
           name: 'total-work-years',
           label: 'จ้างมาแล้วกี่ปี (อายุงานรวม)',
           type: 'text',
           required: true,
-          placeholder: '-',
-          disabled: true,
+          placeholder: 'เช่น 3 ปี',
+          
         },
         {
-          name: 'current-contract-start',
+          name: 'period_start',
           label: 'วันเดือนปีที่เริ่มสัญญาจ้าง (สัญญาปัจจุบัน)',
-          type: 'text',
+          type: 'date',
           required: true,
-          placeholder: '-',
-          disabled: true,
+          placeholder: 'วว / ดด / ปปปป',
+          
         },
         {
-          name: 'contract-end-date',
+          name: 'period_end',
           label: 'วันเดือนปีสิ้นสุดสัญญาจ้าง',
-          type: 'text',
+          type: 'date',
           required: true,
-          placeholder: '-',
-          disabled: true,
+          placeholder: 'วว / ดด / ปปปป',
+          
         },
       ]"
     />
 
-    <!-- ข้อมูลแหล่งงบประมาณที่ใช้จ้าง -->
     <DropDownForm
+      :ref="(instance) => (budgetFormRefs[index] = instance as InstanceType<typeof DropDownForm> | null)"
       topic="ข้อมูลแหล่งงบประมาณที่ใช้จ้าง"
+      :values="item"
+      @change="(payload) => handleSectionChange(index, payload)"
       :fields="[
         {
-          name: 'budget-type',
+          name: 'budget_type',
           label: 'ประเภทเงินงบประมาณ',
-          type: 'text',
+          type: 'select',
           required: true,
-          placeholder: '-',
-          disabled: true,
+          placeholder: 'เลือกประเภทเงินงบประมาณ',
+          
+          options: [
+            { label: 'เงินงบประมาณ', value: 'เงินงบประมาณ' },
+            { label: 'เงินนอกงบประมาณ', value: 'เงินนอกงบประมาณ' },
+            { label: 'เงินรายได้สถานศึกษา', value: 'เงินรายได้สถานศึกษา' },
+            { label: 'เงินอุดหนุนค่าใช้จ่ายรายหัว', value: 'เงินอุดหนุนค่าใช้จ่ายรายหัว' },
+          ],
         },
         {
-          name: 'school-income-type',
+          name: 'school_revenue_type',
           label: 'ประเภทเงินรายได้สถานศึกษา',
-          type: 'text',
+          type: 'select',
           required: true,
-          placeholder: '-',
-          disabled: true,
+          placeholder: 'เลือกประเภทเงินรายได้สถานศึกษา',
+          
+          options: [
+            {
+              label: 'ลูกจ้างชั่วคราว (มีประกันสังคม)',
+              value: 'ลูกจ้างชั่วคราว (มีประกันสังคม)',
+            },
+            {
+              label: 'เหมาบริการ (ไม่มีประกันสังคม)',
+              value: 'เหมาบริการ(ไม่มีประกันสังคม)',
+            },
+            {
+              label: 'เหมาบริการ (ประกันตนเอง)',
+              value: 'เหมาบริการ (ประกันตนเอง)',
+            },
+          ],
         },
       ]"
     />
+  </div>
+
+  <div
+    v-if="!loading"
+    class="sticky right-0 bottom-0 z-40 flex w-full justify-end border-t border-gray-200 bg-white p-3"
+  >
+    <Button
+      :disabled="!hasChanges"
+      @click="onSaveAll"
+      class="rounded-lg bg-[#16A34A] px-8 py-2 font-semibold text-white shadow-sm hover:bg-[#15803D]"
+    >
+      บันทึก
+    </Button>
   </div>
 </template>
