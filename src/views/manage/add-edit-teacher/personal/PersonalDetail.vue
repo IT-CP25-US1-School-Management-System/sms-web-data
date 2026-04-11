@@ -243,7 +243,7 @@ watch(
         last_name_en: teacher.last_name_en,
         'id-card': teacher.national_id,
         'blood-type': teacher.blood_type,
-        birth_date: teacher.birth_date,
+        birth_date: teacher.birth_date ? formatDateInput(teacher.birth_date) : '',
         gender:
           teacher.gender === 'ชาย'
             ? 'male'
