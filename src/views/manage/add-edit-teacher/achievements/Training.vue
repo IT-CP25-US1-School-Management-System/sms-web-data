@@ -2,13 +2,7 @@
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import SkeletonCard from '@/components/SkeletonCard.vue'
 import CreateForm from '@/components/form/CreateForm.vue'
-import {
-  DATASET_DELETE,
-  DATASET_EDIT,
-  DATASET_GET,
-  DOCUMENT_DELETE,
-  DOCUMENT_EDIT,
-} from '@/lib/constants'
+import { MANAGE_DATASETS } from '@/lib/constants'
 import { formatDateInput, generateUUID } from '@/lib/helpers'
 import { useAuthStore } from '@/stores/auth'
 import { createFileDocument, deleteFileDocument, getFileDocumentRows } from '@/stores/document'
@@ -67,32 +61,32 @@ type CreateFormSection = {
   content: CreateFormField[]
 }
 
-const TRAINING_GET_VIEW = 'training_get'
-const TRAINING_EDIT_VIEW = 'training_update'
+const TRAINING_GET_VIEW = MANAGE_DATASETS.VIEW_TRAINING
+const TRAINING_EDIT_VIEW = MANAGE_DATASETS.VIEW_TRAINING
 const TRAINING_ENTITY_TABLE = 'trainings'
 const TRAINING_FILE_FIELDS = ['photo-file', 'certificate-file'] as const
 const teacherStore = useTeacherStore()
 
 const TRAINING_DATASET = {
-  DATASET_ID: DATASET_EDIT.DATASET_ID,
-  DATASET_VERSION: DATASET_EDIT.DATASET_VERSION_TRAINING,
+  DATASET_ID: MANAGE_DATASETS.DATASET_ID,
+  DATASET_VERSION: MANAGE_DATASETS.DATASET_VERSION_TRAINING,
   VIEW_NAME: TRAINING_EDIT_VIEW,
 } as const
 
 const TRAINING_DATASET_DELETE = {
-  DATASET_ID: DATASET_DELETE.DATASET_ID,
-  DATASET_VERSION: DATASET_DELETE.DATASET_VERSION_TRAINING,
+  DATASET_ID: MANAGE_DATASETS.DATASET_ID,
+  DATASET_VERSION: MANAGE_DATASETS.DATASET_VERSION_TRAINING,
 } as const
 
 const DOCUMENT_LINK_CREATE_DATASET = {
-  DATASET_ID: DOCUMENT_EDIT.DATASET_ID,
-  DATASET_VERSION: DOCUMENT_EDIT.DATASET_VERSION_DOCUMENT_LINK,
+  DATASET_ID: MANAGE_DATASETS.DATASET_ID,
+  DATASET_VERSION: MANAGE_DATASETS.DATASET_VERSION_DOCUMENT_LINK,
   VIEW_NAME: 'file_view',
 } as const
 
 const DOCUMENT_LINK_DELETE_DATASET = {
-  DATASET_ID: DOCUMENT_DELETE.DATASET_ID,
-  DATASET_VERSION: DOCUMENT_DELETE.DATASET_VERSION,
+  DATASET_ID: MANAGE_DATASETS.DATASET_ID,
+  DATASET_VERSION: MANAGE_DATASETS.DATASET_VERSION_DOCUMENT_LINK,
 } as const
 
 const authStore = useAuthStore()
@@ -180,7 +174,7 @@ const trainingFields: CreateFormSection[][] = [
           name: 'outcomes',
           label: 'สิ่งที่ได้รับจากการอบรม',
           type: 'textarea',
-          required: true,
+          required: false,
           placeholder: 'Value',
         },
         {
@@ -189,7 +183,7 @@ const trainingFields: CreateFormSection[][] = [
           type: 'file',
           accept: '.jpg,.jpeg,.png',
           multiple: true,
-          required: true,
+          required: false,
         },
         {
           name: 'certificate-file',
@@ -197,7 +191,7 @@ const trainingFields: CreateFormSection[][] = [
           type: 'file',
           accept: '.pdf,.jpg,.png',
           multiple: true,
-          required: true,
+          required: false,
         },
       ],
     },
@@ -358,12 +352,24 @@ async function getTrainingData() {
   loading.value = true
   try {
     const response = await getDatasetRows<TrainingRow>(
-      DATASET_GET.DATASET_ID,
-      DATASET_GET.DATASET_VERSION_TRAINING,
+      TRAINING_DATASET.DATASET_ID,
+      TRAINING_DATASET.DATASET_VERSION,
       {
         view: TRAINING_GET_VIEW,
         page: 1,
         per_page: 50,
+        where: teacherStore.personId
+          ? [
+              [
+                {
+                  table_name: TRAINING_ENTITY_TABLE,
+                  field: 'person_id',
+                  operator: '=',
+                  value: teacherStore.personId,
+                },
+              ],
+            ]
+          : undefined,
       },
     )
 
