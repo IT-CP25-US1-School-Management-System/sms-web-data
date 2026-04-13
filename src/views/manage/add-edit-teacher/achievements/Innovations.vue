@@ -457,6 +457,7 @@ function buildInnovationPayload(
     ''
   const innovationId = currentRecord?.id || values.id || generateUUID()
   const createdAt = currentRecord?.created_at || values.created_at || new Date().toISOString()
+  const isExistingRecord = Boolean(currentRecord?.id || values.id)
 
   return {
     academic_year: values.academic_year || currentRecord?.academic_year || '',
@@ -472,7 +473,7 @@ function buildInnovationPayload(
     start_date: values.start_date ? formatDateInput(values.start_date) : null,
     subject_group: values.subject_group || currentRecord?.subject_group || '',
     supervisor: values.supervisor || currentRecord?.supervisor || null,
-    updated_at: currentRecord?.id ? new Date().toISOString() : null,
+    updated_at: isExistingRecord ? new Date().toISOString() : null,
   }
 }
 
@@ -797,10 +798,12 @@ async function persistInnovationStudents(
 
 async function persistInnovation(index: number, values: InnovationFormValue) {
   const currentRecord = innovationData.value[index]
+  const existingRecordId = currentRecord?.id || values.id
+  const persistedRecord = currentRecord || (existingRecordId ? values : undefined)
   const personId = resolveInnovationPersonId(values, currentRecord)
-  const payload = buildInnovationPayload(values, currentRecord, personId)
-  const currentLinks = currentRecord?.id
-    ? documentLinksByInnovation.value[currentRecord.id] || []
+  const payload = buildInnovationPayload(values, persistedRecord, personId)
+  const currentLinks = existingRecordId
+    ? documentLinksByInnovation.value[existingRecordId] || []
     : []
 
   const removedLinks = INNOVATION_FILE_FIELDS.flatMap((fileField) => {
@@ -830,7 +833,7 @@ async function persistInnovation(index: number, values: InnovationFormValue) {
   let createdDocumentLinks: DocumentLinkRow[] = []
 
   try {
-    if (!currentRecord?.id) {
+    if (!existingRecordId) {
       const createdRecord = await createInnovationData(payload)
       createdRecordId = createdRecord.data?.id || ''
       await persistInnovationStudents(values, createdRecordId || payload.id, personId)
@@ -860,8 +863,8 @@ async function persistInnovation(index: number, values: InnovationFormValue) {
     }
 
     if (!hasFileChanges) {
-      await updateInnovationData(currentRecord.id, payload)
-      await persistInnovationStudents(values, currentRecord.id, personId, currentRecord)
+      await updateInnovationData(existingRecordId, payload)
+      await persistInnovationStudents(values, existingRecordId, personId, persistedRecord)
       toast.success('บันทึกข้อมูลผลงานและนวัตกรรมสำเร็จ', { position: 'bottom-right' })
       await getInnovationData()
       return
@@ -876,9 +879,9 @@ async function persistInnovation(index: number, values: InnovationFormValue) {
             uploadedKeys,
             {
               ...payload,
-              ...currentRecord,
-              id: currentRecord.id,
-              person_id: currentRecord.person_id || payload.person_id,
+              ...persistedRecord,
+              id: existingRecordId,
+              person_id: persistedRecord?.person_id || payload.person_id,
             },
             fileField,
           )),
@@ -886,8 +889,8 @@ async function persistInnovation(index: number, values: InnovationFormValue) {
       }
     }
 
-    await updateInnovationData(currentRecord.id, payload)
-    await persistInnovationStudents(values, currentRecord.id, personId, currentRecord)
+    await updateInnovationData(existingRecordId, payload)
+    await persistInnovationStudents(values, existingRecordId, personId, persistedRecord)
 
     if (removedLinks.length) {
       await deleteInnovationDocumentLinks(removedLinks)

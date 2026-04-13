@@ -140,6 +140,20 @@ const isPersonIdAvailable = () => {
   const idFromUrl = route.query.id as string
   return !!(idFromUrl || teacherStore.personId)
 }
+
+const isGovernmentTeacher = () => {
+  const governmentStatus = teacherStore.currentTeacher?.is_government
+  return isPersonIdAvailable() && (governmentStatus === true || governmentStatus === 'true')
+}
+
+const isNonGovernmentTeacher = () => {
+  return (
+    isPersonIdAvailable() &&
+    teacherStore.currentTeacher?.is_government !== undefined &&
+    !isGovernmentTeacher()
+  )
+}
+
 // Add edit teacher sidebar menu config (shown when on add-edit-teacher routes)
 const addTeacherMenu: MenuItem[] = [
   {
@@ -195,35 +209,35 @@ const addTeacherMenu: MenuItem[] = [
         label: 'ข้อมูลการดำรงตำแหน่ง',
         icon: null,
         routeName: ROUTE_NAMES.ADD_TEACHER_POSITION_HISTORY,
-        showCondition: isPersonIdAvailable,
+        showCondition: isGovernmentTeacher,
       },
       {
         id: 'add-royal-decorations',
         label: 'เครื่องราชอิสริยาภรณ์',
         icon: null,
         routeName: ROUTE_NAMES.ADD_TEACHER_ROYAL_DECORATIONS,
-        showCondition: isPersonIdAvailable,
+        showCondition: isGovernmentTeacher,
       },
       {
         id: 'add-academic-rank',
         label: 'ประวัติวิทยฐานะ',
         icon: null,
         routeName: ROUTE_NAMES.ADD_TEACHER_ACADEMIC_RANK,
-        showCondition: isPersonIdAvailable,
+        showCondition: isGovernmentTeacher,
       },
       {
         id: 'add-employment',
         label: 'ข้อมูลการจ้างงาน',
         icon: null,
         routeName: ROUTE_NAMES.ADD_TEACHER_EMPLOYMENT,
-        showCondition: isPersonIdAvailable,
+        showCondition: isNonGovernmentTeacher,
       },
       {
         id: 'add-contract-position',
         label: 'ประวัติการดำรงตำแหน่ง',
         icon: null,
         routeName: ROUTE_NAMES.ADD_TEACHER_CONTRACT_POSITION,
-        showCondition: isPersonIdAvailable,
+        showCondition: isNonGovernmentTeacher,
       },
     ],
   },
@@ -464,37 +478,29 @@ onMounted(async () => {
 
               <template v-if="collapsibleStates[menuItem.id]">
                 <SidebarMenuSub>
-                  <SidebarMenuSubItem
-                    v-for="child in menuItem.children"
-                    :key="child.id"
-                    :class="{
-                      'cursor-not-allowed opacity-50':
-                        child.showCondition && !child.showCondition(),
-                    }"
-                  >
-                    <SidebarMenuSubButton
-                      v-if="child.routeName"
-                      :is-active="isActiveRoute(child.routeName)"
-                      as-child
-                      :disabled="child.showCondition && !child.showCondition()"
-                    >
-                      <RouterLink
-                        v-if="!child.showCondition || child.showCondition()"
-                        :to="{
-                          name: child.routeName,
-                          query: getTeacherIdForNavigation()
-                            ? { id: getTeacherIdForNavigation() }
-                            : {},
-                        }"
+                  <template v-for="child in menuItem.children" :key="child.id">
+                    <SidebarMenuSubItem v-if="!child.showCondition || child.showCondition()">
+                      <SidebarMenuSubButton
+                        v-if="child.routeName"
+                        :is-active="isActiveRoute(child.routeName)"
+                        as-child
                       >
+                        <RouterLink
+                          :to="{
+                            name: child.routeName,
+                            query: getTeacherIdForNavigation()
+                              ? { id: getTeacherIdForNavigation() }
+                              : {},
+                          }"
+                        >
+                          <span>{{ child.label }}</span>
+                        </RouterLink>
+                      </SidebarMenuSubButton>
+                      <SidebarMenuSubButton v-else class="cursor-default opacity-50">
                         <span>{{ child.label }}</span>
-                      </RouterLink>
-                      <span v-else class="cursor-not-allowed">{{ child.label }}</span>
-                    </SidebarMenuSubButton>
-                    <SidebarMenuSubButton v-else class="cursor-default opacity-50">
-                      <span>{{ child.label }}</span>
-                    </SidebarMenuSubButton>
-                  </SidebarMenuSubItem>
+                      </SidebarMenuSubButton>
+                    </SidebarMenuSubItem>
+                  </template>
                 </SidebarMenuSub>
               </template>
             </template>

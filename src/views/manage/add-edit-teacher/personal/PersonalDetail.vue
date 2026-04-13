@@ -392,6 +392,7 @@ const handleSave = async () => {
       last_name_th: lastName,
       prefix_id: prefixId,
       role_id: roleId,
+      is_government: currentValues.is_government ?? true,
     })
 
     await router.push({ name: ROUTE_NAMES.ADD_TEACHER_ADDRESS, query: { id: personId! } })
@@ -505,6 +506,7 @@ const handleSave = async () => {
           label: 'ประเภทบุคลากร',
           type: 'checkbox',
           placeholder: 'เป็นข้าราชการ',
+          disabled: isEditing,
         },
       ]"
     />
