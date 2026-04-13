@@ -10,7 +10,7 @@ import { ArrowUpFromLine } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { toast } from 'vue-sonner'
-import { useTeacherStore } from '@/stores/teachers'
+import { updateTeacher, useTeacherStore } from '@/stores/teachers'
 import { createDatasetRow, getDatasetRows, updateDatasetRow } from '@/stores/dataset'
 import { exportData, getUrlFile } from '@/stores/reporting'
 import type { ExportJobRequest, GetExportJobResponse } from '@/types/reporting'
@@ -426,6 +426,19 @@ function normalizeSelectValue(value: unknown) {
   return /^\d+$/.test(normalized) ? Number(normalized) : normalized
 }
 
+function normalizeTeacherRoleId(value: unknown): string | undefined {
+  if (value === undefined || value === null || String(value).trim() === '') return undefined
+  return String(value).trim()
+}
+
+function normalizeTeacherDepartmentId(value: unknown): number | undefined {
+  if (value === undefined || value === null || String(value).trim() === '') return undefined
+  if (typeof value === 'number') return value
+
+  const normalized = String(value).trim()
+  return /^\d+$/.test(normalized) ? Number(normalized) : undefined
+}
+
 function createPositionFormState(source?: PositionRow, index = 0): PositionFormState {
   const initialValues = cloneFormValues(source || {})
   const generatedId =
@@ -575,6 +588,26 @@ function buildPositionPayload(
   }
 }
 
+function buildPersonDataPayload(source: PositionRow | undefined, payload: Record<string, any>) {
+  const personData =
+    source?.person_data && typeof source.person_data === 'object' ? source.person_data : {}
+  const resolvedPersonId =
+    personData.id ?? source?.person_id ?? payload.person_id ?? getPersonId() ?? undefined
+  const resolvedCreatedAt =
+    personData.created_at ?? payload.created_at ?? source?.created_at ?? new Date().toISOString()
+
+  return {
+    ...personData,
+    id: resolvedPersonId,
+    created_at: resolvedCreatedAt,
+    updated_at: new Date().toISOString(),
+    role_id: normalizeTeacherRoleId(payload.role_id ?? source?.role_id ?? personData.role_id),
+    department_id: normalizeTeacherDepartmentId(
+      payload.department_id ?? source?.department_id ?? personData.department_id,
+    ),
+  }
+}
+
 function handleFormSave(formId: string, values: Record<string, any>) {
   const target = positionForms.value.find((form) => form.id === formId)
   if (!target) return
@@ -628,13 +661,16 @@ async function persistPositionData() {
       if (!payload) continue
 
       const normalizedPayload = buildPositionPayload(form.source, payload, personId, form.id)
+      const personPayload = buildPersonDataPayload(form.source, payload)
 
       if (form.source?.id) {
         await updatePositionData(String(form.source.id), normalizedPayload)
+        await updateTeacher(personId, personPayload)
         continue
       }
 
       await createPositionData(normalizedPayload)
+      await updateTeacher(personId, personPayload)
     }
 
     toast.success('บันทึกข้อมูลตำแหน่งสำเร็จ', { position: 'bottom-right' })

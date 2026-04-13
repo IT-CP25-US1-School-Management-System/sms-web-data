@@ -56,6 +56,7 @@ type FieldSection = {
   topic?: string
   content: FieldItem[]
   subFields?: FieldItem[] // nested dynamic form within section
+  subEntryFieldName?: string
 }
 
 type ExistingFileItem = {
@@ -267,6 +268,7 @@ const fileInputRefs = ref<Array<Record<string, HTMLInputElement | null>>>([])
 const fileSizeErrors = ref<Array<Record<string, string | undefined>>>([])
 const fileTypeErrors = ref<Array<Record<string, string | undefined>>>([])
 const MAX_FILE_SIZE = 15 * 1024 * 1024 // 15 MB
+const subEntries = ref<Record<string, Record<string, string>[]>>({})
 
 function createDefaultEntryValues(entry: FieldSection[] = []) {
   const defaultValues: Record<string, any> = {}
@@ -342,6 +344,17 @@ function syncFileMapFromValues() {
   })
 }
 
+function getSubEntryFieldName(entryIdx: number, sectionIdx: number) {
+  return localEntries.value[entryIdx]?.[sectionIdx]?.subEntryFieldName
+}
+
+function syncSubEntryValues(entryIdx: number, sectionIdx: number) {
+  const fieldName = getSubEntryFieldName(entryIdx, sectionIdx)
+  if (!fieldName) return
+  const key = `${entryIdx}-${sectionIdx}`
+  updateEntryValue(entryIdx, fieldName, [...(subEntries.value[key] || [])])
+}
+
 // Sync localEntries & localValues with props.fields/values
 // ซิงก์ค่า `props.fields` และ `props.values` เข้ากับ state ภายใน (localEntries/localValues)
 // เป้าหมาย:
@@ -408,6 +421,18 @@ watch(
     while (fileTypeErrors.value.length < entriesCount) fileTypeErrors.value.push({})
     while (fileTypeErrors.value.length > entriesCount) fileTypeErrors.value.pop()
     syncFileMapFromValues()
+
+    const nextSubEntries: Record<string, Record<string, string>[]> = {}
+    localEntries.value.forEach((entry, entryIndex) => {
+      entry.forEach((section, sectionIndex) => {
+        if (!section.subFields?.length || !section.subEntryFieldName) return
+        const sourceValue = localValues.value[entryIndex]?.[section.subEntryFieldName]
+        nextSubEntries[`${entryIndex}-${sectionIndex}`] = Array.isArray(sourceValue)
+          ? sourceValue.map((item) => ({ ...(item || {}) }))
+          : []
+      })
+    })
+    subEntries.value = nextSubEntries
 
     // 4) สร้าง/อัปเดต Zod schema สำหรับแต่ละ entry
     buildSchemas()
@@ -818,9 +843,6 @@ async function downloadFile(file: UploadedFileItem) {
   window.URL.revokeObjectURL(blobUrl)
 }
 
-// Sub-form state: key = `${entryIndex}-${sectionIndex}`, value = array of sub-entries
-const subEntries = ref<Record<string, Record<string, string>[]>>({})
-
 function getSubEntries(entryIdx: number, sectionIdx: number): Record<string, string>[] {
   const key = `${entryIdx}-${sectionIdx}`
   if (!subEntries.value[key]) {
@@ -835,11 +857,31 @@ function addSubEntry(entryIdx: number, sectionIdx: number) {
     subEntries.value[key] = []
   }
   subEntries.value[key].push({})
+  syncSubEntryValues(entryIdx, sectionIdx)
 }
 
 function deleteSubEntry(entryIdx: number, sectionIdx: number, subIdx: number) {
   const key = `${entryIdx}-${sectionIdx}`
   subEntries.value[key]?.splice(subIdx, 1)
+  syncSubEntryValues(entryIdx, sectionIdx)
+}
+
+function updateSubEntryValue(
+  entryIdx: number,
+  sectionIdx: number,
+  subIdx: number,
+  fieldName: string,
+  value: any,
+) {
+  const key = `${entryIdx}-${sectionIdx}`
+  if (!subEntries.value[key]) {
+    subEntries.value[key] = []
+  }
+  subEntries.value[key][subIdx] = {
+    ...(subEntries.value[key][subIdx] || {}),
+    [fieldName]: value,
+  }
+  syncSubEntryValues(entryIdx, sectionIdx)
 }
 
 // Date picker helpers
@@ -1469,7 +1511,13 @@ function formatDisplayDateRange(str: string | undefined): string {
                                 class="disabled:opacity-50"
                                 @input="
                                   (e: Event) =>
-                                    (subEntry[subField.name] = (e.target as HTMLInputElement).value)
+                                    updateSubEntryValue(
+                                      entryIndex,
+                                      sectionIndex,
+                                      subIdx,
+                                      subField.name,
+                                      (e.target as HTMLInputElement).value,
+                                    )
                                 "
                               />
                               <Popover
@@ -1505,7 +1553,13 @@ function formatDisplayDateRange(str: string | undefined): string {
                                     @update:model-value="
                                       (val: DateValue | undefined) => {
                                         if (val) {
-                                          subEntry[subField.name] = dateValueToString(val)
+                                          updateSubEntryValue(
+                                            entryIndex,
+                                            sectionIndex,
+                                            subIdx,
+                                            subField.name,
+                                            dateValueToString(val),
+                                          )
                                           datePopoverOpen[
                                             `sub-${entryIndex}-${sectionIndex}-${subIdx}-${subField.name}`
                                           ] = false
@@ -1548,7 +1602,13 @@ function formatDisplayDateRange(str: string | undefined): string {
                                     @update:model-value="
                                       (val: DateRange) => {
                                         if (val.start) {
-                                          subEntry[subField.name] = dateRangeToString(val)
+                                          updateSubEntryValue(
+                                            entryIndex,
+                                            sectionIndex,
+                                            subIdx,
+                                            subField.name,
+                                            dateRangeToString(val),
+                                          )
                                           if (val.end) {
                                             datePopoverOpen[
                                               `sub-range-${entryIndex}-${sectionIndex}-${subIdx}-${subField.name}`
@@ -1566,7 +1626,13 @@ function formatDisplayDateRange(str: string | undefined): string {
                                 :disabled="subField.disabled"
                                 @update:model-value="
                                   (val: any) => {
-                                    subEntry[subField.name] = val as string
+                                    updateSubEntryValue(
+                                      entryIndex,
+                                      sectionIndex,
+                                      subIdx,
+                                      subField.name,
+                                      val as string,
+                                    )
                                   }
                                 "
                               >

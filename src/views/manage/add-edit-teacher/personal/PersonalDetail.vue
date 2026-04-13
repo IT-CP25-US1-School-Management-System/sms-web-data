@@ -5,6 +5,7 @@ import DropDownForm from '@/components/form/DropDownForm.vue'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/composables/useToast'
 import { MANAGE_DROPDOWN_DATASETS, ROUTE_NAMES } from '@/lib/constants'
+import { formatDateInput } from '@/lib/helpers'
 import { createUser } from '@/stores/api'
 import { getDatasetRows } from '@/stores/dataset'
 import { createTeacher, getTeacherById, updateTeacher, useTeacherStore } from '@/stores/teachers'
@@ -55,16 +56,37 @@ const formValuesUpdate = ref<Record<string, any>>({
   line_id: '',
 })
 
+const PREFIX_EN_BY_ID: Record<string, string> = {
+  '250ae8ee-9f0a-4b94-a2c4-a475752dc3e6': 'Mr.',
+  '6ec2c1dd-ab31-47d3-8870-680baac1b8da': 'Mrs.',
+  '9b91d6d5-c414-4a92-b44a-2ad07250271c': 'Miss',
+}
+
+function getPrefixEn(prefixId?: string | number | null) {
+  if (!prefixId) return ''
+  return PREFIX_EN_BY_ID[String(prefixId)] || ''
+}
+
 const generalForm = ref<any>(null)
 const sensitiveForm = ref<any>(null)
 const contactForm = ref<any>(null)
 
 const handleFormSave = (values: Record<string, any>) => {
-  formValuesUpdate.value = { ...formValuesUpdate.value, ...values }
+  const nextValues = { ...formValuesUpdate.value, ...values }
+  if ('prefix_id' in values) {
+    nextValues.prefix_en = getPrefixEn(nextValues.prefix_id)
+  }
+  formValues.value = { ...formValues.value, ...nextValues }
+  formValuesUpdate.value = nextValues
 }
 
 const handleFormChange = (payload: { values: Record<string, any>; isDirty: boolean }) => {
-  formValuesUpdate.value = { ...formValuesUpdate.value, ...payload.values }
+  const nextValues = { ...formValuesUpdate.value, ...payload.values }
+  if ('prefix_id' in payload.values) {
+    nextValues.prefix_en = getPrefixEn(nextValues.prefix_id)
+  }
+  formValues.value = { ...formValues.value, ...nextValues }
+  formValuesUpdate.value = nextValues
 }
 
 const requiredFields = [
@@ -97,8 +119,8 @@ const hasAnyChanges = computed(() =>
 const canSave = computed(() => hasAnyChanges.value && hasRequiredFieldsCompleted.value)
 
 const genderMap: Record<string, string> = {
-  male: 'ชาย',
-  female: 'หญิง',
+  male: 'male',
+  female: 'female',
 }
 
 const maritalStatusMap: Record<string, string> = {
@@ -209,6 +231,9 @@ watch(
       formValues.value = {
         is_government: normalizeBoolean(teacher.is_government),
         prefix_id: teacher.prefix_id ? String(teacher.prefix_id) : '',
+        prefix_en:
+          teacher.prefixes?.prefixes_name_en ||
+          getPrefixEn(teacher.prefix_id ? String(teacher.prefix_id) : ''),
         role_id: teacher.role_id ? String(teacher.role_id) : '',
         first_name_th: teacher.first_name_th,
         middle_name_th: teacher.middle_name_th,
@@ -218,8 +243,13 @@ watch(
         last_name_en: teacher.last_name_en,
         'id-card': teacher.national_id,
         'blood-type': teacher.blood_type,
-        birth_date: teacher.birth_date,
-        gender: teacher.gender === 'ชาย' ? 'male' : teacher.gender === 'หญิง' ? 'female' : '',
+        birth_date: teacher.birth_date ? formatDateInput(teacher.birth_date) : '',
+        gender:
+          teacher.gender === 'ชาย'
+            ? 'male'
+            : teacher.gender === 'หญิง'
+              ? 'female'
+              : teacher.gender || '',
         religion: teacher.religion,
         nationality: teacher.nationality,
         ethnicity: teacher.ethnicity,
@@ -330,7 +360,7 @@ const handleSave = async () => {
       first_name_en: currentValues.first_name_en || undefined,
       middle_name_en: currentValues.middle_name_en || undefined,
       last_name_en: currentValues.last_name_en || undefined,
-      birth_date: currentValues.birth_date || undefined,
+      birth_date: formatDateInput(currentValues.birth_date) || undefined,
       national_id: currentValues['id-card'] || undefined,
       gender: (genderMap[currentValues.gender] as any) || undefined,
       religion: currentValues.religion || undefined,
@@ -362,6 +392,7 @@ const handleSave = async () => {
       last_name_th: lastName,
       prefix_id: prefixId,
       role_id: roleId,
+      is_government: currentValues.is_government ?? true,
     })
 
     await router.push({ name: ROUTE_NAMES.ADD_TEACHER_ADDRESS, query: { id: personId! } })
@@ -417,13 +448,9 @@ const handleSave = async () => {
         {
           name: 'prefix_en',
           label: 'Prefix',
-          type: 'select',
-          placeholder: 'Select prefix',
-          options: [
-            { label: 'Mr.', value: 'Mr.' },
-            { label: 'Mrs.', value: 'Mrs.' },
-            { label: 'Miss', value: 'Miss' },
-          ],
+          type: 'text',
+          placeholder: 'ระบบกำหนดให้อัตโนมัติ',
+          disabled: true,
         },
 
         { name: 'first_name_en', label: 'Name', type: 'text', placeholder: 'Enter name' },
@@ -479,6 +506,7 @@ const handleSave = async () => {
           label: 'ประเภทบุคลากร',
           type: 'checkbox',
           placeholder: 'เป็นข้าราชการ',
+          disabled: isEditing,
         },
       ]"
     />

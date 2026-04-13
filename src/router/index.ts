@@ -196,9 +196,10 @@ const router = createRouter({
       component: () => import('@/views/manage/ManageTeacherView.vue'),
       meta: { requiresAuth: true, adminOnly: true },
     },
+    
     {
       path: '/manage/teachers/add',
-      component: () => import('@/views/manage/add-edit-teacher/AddTeacherView.vue'),
+      component: () => import('@/views/manage/add-edit-teacher/personal/PersonalView.vue'),
       meta: { requiresAuth: true, adminOnly: true },
       redirect: { name: ROUTE_NAMES.ADD_TEACHER_PERSONAL },
       beforeEnter: validateTeacherIdGuard,
@@ -234,6 +235,15 @@ const router = createRouter({
             import('@/views/manage/add-edit-teacher/personal/ProfessionalLicense.vue'),
           meta: { requiresAuth: true, adminOnly: true, label: 'ใบประกอบวิชาชีพ' },
         },
+      ],
+    },
+    {
+      path: '/manage/teachers/add/work-history',
+      component: () => import('@/views/manage/add-edit-teacher/work_history/WorkHistoryView.vue'),
+      meta: { requiresAuth: true, adminOnly: true },
+      redirect: { name: ROUTE_NAMES.ADD_TEACHER_POSITION_HISTORY },
+      beforeEnter: validateTeacherIdGuard,
+      children: [
         {
           path: 'position-history',
           name: ROUTE_NAMES.ADD_TEACHER_POSITION_HISTORY,
@@ -268,6 +278,15 @@ const router = createRouter({
             import('@/views/manage/add-edit-teacher/work_history/ContractPosition.vue'),
           meta: { requiresAuth: true, adminOnly: true, label: 'ประวัติการดำรงตำแหน่ง' },
         },
+      ],
+    },
+    {
+      path: '/manage/teachers/add/achievements',
+      component: () => import('@/views/manage/add-edit-teacher/achievements/AchievementsView.vue'),
+      meta: { requiresAuth: true, adminOnly: true },
+      redirect: { name: ROUTE_NAMES.ADD_TEACHER_TRAINING },
+      beforeEnter: validateTeacherIdGuard,
+      children: [
         {
           path: 'training',
           name: ROUTE_NAMES.ADD_TEACHER_TRAINING,
@@ -278,7 +297,7 @@ const router = createRouter({
           path: 'innovations',
           name: ROUTE_NAMES.ADD_TEACHER_INNOVATIONS,
           component: () => import('@/views/manage/add-edit-teacher/achievements/Innovations.vue'),
-          meta: { requiresAuth: true, adminOnly: true, label: 'ข้อมูลผลงานและนวัตกรรม' },
+          meta: { requiresAuth: true, adminOnly: true, label: 'ข้อมูลผลงาน/นวัตกรรม' },
         },
       ],
     },
@@ -358,3 +377,4 @@ router.beforeEach(async (to, _from, next) => {
 })
 
 export default router
+

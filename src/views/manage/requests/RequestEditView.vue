@@ -24,7 +24,7 @@ import {
   createApprovalLog,
 } from '@/stores/document_request'
 import { getFileDocumentRows } from '@/stores/document'
-import { toDateInputFormat, getPrefixName } from '@/lib/helpers'
+import { formatDateInput, toDateInputFormat, getPrefixName } from '@/lib/helpers'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
@@ -278,8 +278,8 @@ const handleSave = async () => {
       person_id: request.value.person_id,
       document_type: formData.value.document_type,
       description: formData.value.description,
-      start_date: formData.value.start_date || undefined,
-      end_date: formData.value.end_date || undefined,
+      start_date: formatDateInput(formData.value.start_date) || undefined,
+      end_date: formatDateInput(formData.value.end_date) || undefined,
       quantity: parseFloat(formData.value.quantity) || 0,
       status: (formData.value.status as 'กำลังดำเนินการ' | 'อนุมัติ' | 'ไม่อนุมัติ') || undefined,
       created_at: request.value.created_at,

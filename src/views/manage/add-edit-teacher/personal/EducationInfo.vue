@@ -4,6 +4,7 @@ import NormalForm, {
   type NormalFormChangePayload,
 } from '@/components/form/NormalForm.vue'
 import { Button } from '@/components/ui/button'
+import { formatDateInput } from '@/lib/helpers'
 import {
   createEducationRecord,
   getEducationById,
@@ -262,8 +263,8 @@ function buildEducationRequestPayload(
     major_group: normalizeText(values.major_group),
     minor_group: normalizeText(values.minor_group),
     institution: String(values.institution || '').trim(),
-    start_date: normalizeText(values.start_date),
-    graduation_date: normalizeText(values.graduation_date),
+    start_date: formatDateInput(values.start_date) || undefined,
+    graduation_date: formatDateInput(values.graduation_date) || undefined,
     country: String(values.country || '').trim(),
     honor_type: normalizeText(values.honor_type),
     is_used_for_first_appointment: qualificationUsage.is_used_for_first_appointment,

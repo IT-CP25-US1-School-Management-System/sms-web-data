@@ -4,7 +4,7 @@ import ConfirmModal from '@/components/ConfirmModal.vue'
 import provincesJson from '@/assets/thai-province-data/provinces.json'
 import districtsJson from '@/assets/thai-province-data/districts.json'
 import subDistrictsJson from '@/assets/thai-province-data/sub_districts.json'
-import { PREFIX_NAME_BY_ID } from '@/lib/helpers'
+import { formatDateInput, PREFIX_NAME_BY_ID } from '@/lib/helpers'
 import {
   createFamilyMember,
   deleteFamilyMember,
@@ -504,7 +504,7 @@ function buildFamilyPayload(
     national_id: normalizeText(normalizedValues.national_id),
     gender: normalizeGender(normalizedValues.gender),
     is_alive: normalizeAliveStatus(normalizedValues.is_alive),
-    birth_date: normalizeText(normalizedValues.birth_date),
+    birth_date: formatDateInput(normalizedValues.birth_date) || undefined,
     phone: normalizeText(normalizedValues.phone),
     email: normalizeText(normalizedValues.email),
     marital_status: normalizeText(normalizedValues.marital_status),
