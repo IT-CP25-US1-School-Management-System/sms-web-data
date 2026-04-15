@@ -5,7 +5,7 @@ import NormalForm, {
 } from '@/components/form/NormalForm.vue'
 import { Button } from '@/components/ui/button'
 import { MANAGE_DATASETS, MANAGE_DROPDOWN_DATASETS } from '@/lib/constants'
-import { formatDateInput } from '@/lib/helpers'
+import { calAge, formatDateInput, sortDropdownOptionsByThaiLabel } from '@/lib/helpers'
 import { ArrowUpFromLine } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
@@ -98,7 +98,7 @@ function mapDropdownOptions<T extends Record<string, any>>(
   valueKeys: string[],
   labelKeys: string[],
 ) {
-  return rows
+  const options = rows
     .map((item) => {
       const value = valueKeys.map((key) => item[key]).find((candidate) => candidate !== undefined)
       const label = labelKeys.map((key) => item[key]).find((candidate) => Boolean(candidate))
@@ -111,6 +111,8 @@ function mapDropdownOptions<T extends Record<string, any>>(
       }
     })
     .filter((item): item is { label: string; value: string } => Boolean(item))
+
+  return sortDropdownOptionsByThaiLabel(options)
 }
 
 async function fetchRoleOptions() {
@@ -319,14 +321,14 @@ const positionFields: NormalFormField[] = [
     name: 'work_age_from_appointment',
     label: 'อายุงาน(นับจากวันบรรจุ)',
     type: 'text',
-    disabled: false,
+    disabled: true,
     placeholder: '',
   },
   {
     name: 'work_age_at_school',
     label: 'อายุงาน ณ โรงเรียนคณะราษฎร์ฯ',
     type: 'text',
-    disabled: false,
+    disabled: true,
     placeholder: '',
   },
 ]
@@ -357,6 +359,20 @@ function cloneFormValues(values: Record<string, any> = {}) {
   return JSON.parse(JSON.stringify(values))
 }
 
+function calculateYearsFromDate(value?: string | Date | null) {
+  const date = formatDateInput(value)
+  return date ? String(calAge(date)) : ''
+}
+
+function withCalculatedWorkAges(values: Record<string, any>) {
+  const nextValues = { ...values }
+  nextValues.work_age_from_appointment = calculateYearsFromDate(
+    nextValues.appointment_date ?? nextValues.government_entry_date,
+  )
+  nextValues.work_age_at_school = calculateYearsFromDate(nextValues.school_entry_date)
+  return nextValues
+}
+
 function extractPositionRecords(data: unknown): PositionRow[] {
   if (!Array.isArray(data) || !data.length) return []
 
@@ -384,7 +400,7 @@ function formatPositionRecord(record: PositionRow): PositionRow {
   const personData =
     record.person_data && typeof record.person_data === 'object' ? record.person_data : undefined
 
-  return {
+  return withCalculatedWorkAges({
     ...record,
     person_id: record.person_id || personData?.id || '',
     department_id:
@@ -410,7 +426,7 @@ function formatPositionRecord(record: PositionRow): PositionRow {
     retirement_date: formatDateInput(record.retirement_date),
     position_held_date: formatDateInput(record.position_held_date ?? record.position_date),
     school_entry_date: formatDateInput(record.school_entry_date),
-  }
+  })
 }
 
 function normalizeDateForPayload(date?: string | Date | null) {
@@ -523,7 +539,17 @@ function handleFormChange(formId: string, payload: NormalFormChangePayload) {
   const target = positionForms.value.find((form) => form.id === formId)
   if (!target) return
 
-  target.currentValues = cloneFormValues(payload.values)
+  const nextValues = withCalculatedWorkAges(payload.values)
+  target.currentValues = cloneFormValues(nextValues)
+  if (nextValues.work_age_from_appointment !== payload.values.work_age_from_appointment) {
+    target.formRef?.setFieldValue?.(
+      'work_age_from_appointment',
+      nextValues.work_age_from_appointment,
+    )
+  }
+  if (nextValues.work_age_at_school !== payload.values.work_age_at_school) {
+    target.formRef?.setFieldValue?.('work_age_at_school', nextValues.work_age_at_school)
+  }
   target.hasChanges = JSON.stringify(target.currentValues) !== JSON.stringify(target.initialValues)
 }
 
@@ -554,6 +580,8 @@ function buildPositionPayload(
   delete restPayload.position_held_date
   delete restPayload.school_entry_date
   delete restPayload.service_start_date
+  delete restPayload.work_age_from_appointment
+  delete restPayload.work_age_at_school
 
   const restSource = { ...(source || {}) }
   delete restSource.person_data
@@ -566,6 +594,8 @@ function buildPositionPayload(
   delete restSource.position_held_date
   delete restSource.school_entry_date
   delete restSource.service_start_date
+  delete restSource.work_age_from_appointment
+  delete restSource.work_age_at_school
 
   const resolvedId = source?.id || payload.id || fallbackId || ''
   const resolvedCreatedAt = source?.created_at || payload.created_at || new Date().toISOString()
@@ -612,7 +642,10 @@ function handleFormSave(formId: string, values: Record<string, any>) {
   const target = positionForms.value.find((form) => form.id === formId)
   if (!target) return
 
-  pendingPayloads.set(formId, buildPositionPayload(target.source, values, getPersonId(), formId))
+  pendingPayloads.set(
+    formId,
+    buildPositionPayload(target.source, withCalculatedWorkAges(values), getPersonId(), formId),
+  )
 }
 
 const hasAnyChanges = computed(() => positionForms.value.some((form) => form.hasChanges))

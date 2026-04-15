@@ -4,7 +4,7 @@
 
 import type { DocumentLink } from '@/types/document_request'
 
-export type Gender = 'ชาย' | 'หญิง' | 'อื่นๆ'
+export type Gender = 'male' | 'female' | 'other'
 export type BloodType = 'A' | 'B' | 'AB' | 'O'
 
 export interface Role {
