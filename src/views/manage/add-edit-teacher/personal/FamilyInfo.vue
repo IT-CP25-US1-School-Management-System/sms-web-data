@@ -143,9 +143,13 @@ function normalizeAliveStatus(value: unknown) {
 }
 
 function normalizeGender(value: unknown): FamilyMember['gender'] | undefined {
-  if (value === 'ชาย' || value === 'หญิง' || value === 'อื่นๆ') {
+  if (value === 'male' || value === 'female' || value === 'other') {
     return value
   }
+
+  if (value === 'ชาย') return 'male'
+  if (value === 'หญิง') return 'female'
+  if (value === 'อื่นๆ') return 'other'
 
   return undefined
 }
@@ -254,8 +258,13 @@ function createFamilyFields(values: Record<string, any>): CreateFormSection[] {
         {
           name: 'gender',
           label: 'เพศ',
-          type: 'text',
-          placeholder: 'เช่น ชาย / หญิง',
+          type: 'select',
+          placeholder: 'เลือกเพศ',
+          options: [
+            { label: 'ชาย', value: 'male' },
+            { label: 'หญิง', value: 'female' },
+            { label: 'อื่นๆ', value: 'other' },
+          ],
         },
         {
           name: 'is_alive',

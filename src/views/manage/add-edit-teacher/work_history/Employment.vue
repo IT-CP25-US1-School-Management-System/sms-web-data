@@ -3,7 +3,12 @@ import { Button } from '@/components/ui/button'
 import DropDownForm from '@/components/form/DropDownForm.vue'
 import SkeletonCard from '@/components/SkeletonCard.vue'
 import { MANAGE_DATASETS, MANAGE_DROPDOWN_DATASETS } from '@/lib/constants'
-import { formatDateInput, generateUUID } from '@/lib/helpers'
+import {
+  calAge,
+  formatDateInput,
+  generateUUID,
+  sortDropdownOptionsByThaiLabel,
+} from '@/lib/helpers'
 import { createDatasetRow, getDatasetRows, updateDatasetRow } from '@/stores/dataset'
 import { useTeacherStore } from '@/stores/teachers'
 import { computed, onMounted, ref } from 'vue'
@@ -66,9 +71,11 @@ function cloneData<T>(value: T): T {
 }
 
 function mapRoleOptions(rows: RoleRow[]) {
-  return rows
+  const options = rows
     .map((row) => {
-      const roleId = [row.id, row.role_id, row.roles_id].find((candidate) => candidate !== undefined)
+      const roleId = [row.id, row.role_id, row.roles_id].find(
+        (candidate) => candidate !== undefined,
+      )
       const label = [row.role_name_th, row.roles_name_th, row.name_th, row.name].find((candidate) =>
         Boolean(candidate),
       )
@@ -81,27 +88,43 @@ function mapRoleOptions(rows: RoleRow[]) {
       }
     })
     .filter((item): item is { id: string; label: string } => Boolean(item))
+
+  return sortDropdownOptionsByThaiLabel(options)
 }
 
 function normalizeDateForPayload(value?: string | Date | null) {
   return formatDateInput(value) || null
 }
 
+function calculateYearsFromDate(value?: string | Date | null) {
+  const date = formatDateInput(value)
+  return date ? String(calAge(date)) : ''
+}
+
+function withCalculatedEmploymentAges(values: Record<string, any>) {
+  return {
+    ...values,
+    'total-work-years': calculateYearsFromDate(values.first_contract_start),
+  }
+}
+
 function hasEmploymentContent(values: Record<string, any>) {
   return Object.entries(values).some(([key, value]) => {
-    if (['id', 'person_id', 'created_at', 'updated_at'].includes(key)) return false
+    if (['id', 'person_id', 'created_at', 'updated_at', 'total-work-years'].includes(key)) {
+      return false
+    }
     if (value === undefined || value === null) return false
     return String(value).trim() !== ''
   })
 }
 
 function buildEmploymentPayload(values: Record<string, any>, personId: string) {
+  const payloadValues = { ...values }
+  delete payloadValues['total-work-years']
+
   return {
-    ...values,
-    id:
-      values.id && values.id !== 'empty-employment'
-        ? values.id
-        : generateUUID(),
+    ...payloadValues,
+    id: values.id && values.id !== 'empty-employment' ? values.id : generateUUID(),
     person_id: values.person_id || personId,
     social_security:
       values.social_security !== undefined &&
@@ -117,17 +140,32 @@ function buildEmploymentPayload(values: Record<string, any>, personId: string) {
   }
 }
 
-function handleSectionChange(index: number, payload: { values: Record<string, any>; isDirty: boolean }) {
+function handleSectionChange(
+  index: number,
+  payload: { values: Record<string, any>; isDirty: boolean },
+) {
   const current = employmentData.value[index] || {}
-  employmentData.value[index] = {
+  const nextValues = withCalculatedEmploymentAges({
     ...current,
     ...payload.values,
+  })
+
+  if (
+    'first_contract_start' in payload.values &&
+    current['total-work-years'] !== nextValues['total-work-years']
+  ) {
+    durationFormRefs.value[index]?.setFieldValue?.(
+      'total-work-years',
+      nextValues['total-work-years'],
+    )
   }
+
+  employmentData.value[index] = nextValues
 }
 
 function formatEmploymentRecord(record: Record<string, any>) {
   const personData =
-    record.person_data && typeof record.person_data === "object" ? record.person_data : undefined
+    record.person_data && typeof record.person_data === 'object' ? record.person_data : undefined
   const resolvedPosition =
     personData?.roles?.roles_name ||
     personData?.roles?.roles_name_th ||
@@ -135,13 +173,13 @@ function formatEmploymentRecord(record: Record<string, any>) {
     record.position ||
     ''
 
-  return {
+  return withCalculatedEmploymentAges({
     ...record,
     position: resolvedPosition,
     first_contract_start: formatDateInput(record.first_contract_start),
     period_start: formatDateInput(record.period_start),
     period_end: formatDateInput(record.period_end),
-  }
+  })
 }
 
 async function fetchRoleLabels() {
@@ -308,7 +346,9 @@ onMounted(() => {
     class="mx-6 flex flex-col gap-4"
   >
     <DropDownForm
-      :ref="(instance) => (workFormRefs[index] = instance as InstanceType<typeof DropDownForm> | null)"
+      :ref="
+        (instance) => (workFormRefs[index] = instance as InstanceType<typeof DropDownForm> | null)
+      "
       topic="ข้อมูลการทำงาน"
       :values="item"
       @change="(payload) => handleSectionChange(index, payload)"
@@ -327,7 +367,6 @@ onMounted(() => {
           type: 'text',
           required: true,
           placeholder: 'เช่น ปฏิบัติงานอยู่',
-          
         },
         {
           name: 'hiring_nature',
@@ -335,14 +374,13 @@ onMounted(() => {
           type: 'text',
           required: true,
           placeholder: 'เช่น จ้างชั่วคราว',
-          
         },
         {
           name: 'contract_action',
           label: 'ประเภทการเคลื่อนไหวล่าสุด',
           type: 'select',
           placeholder: 'เลือกประเภทการเคลื่อนไหว',
-          
+
           options: [
             { label: 'การต่อสัญญา', value: 'การต่อสัญญา' },
             { label: 'ทำสัญญาครั้งแรก', value: 'ทำสัญญาครั้งแรก' },
@@ -352,7 +390,10 @@ onMounted(() => {
     />
 
     <DropDownForm
-      :ref="(instance) => (compensationFormRefs[index] = instance as InstanceType<typeof DropDownForm> | null)"
+      :ref="
+        (instance) =>
+          (compensationFormRefs[index] = instance as InstanceType<typeof DropDownForm> | null)
+      "
       topic="ข้อมูลค่าตอบแทนและสิทธิประโยชน์"
       :values="item"
       @change="(payload) => handleSectionChange(index, payload)"
@@ -363,7 +404,6 @@ onMounted(() => {
           type: 'number',
           required: true,
           placeholder: 'เช่น 15000',
-          
         },
         {
           name: 'social_security',
@@ -382,7 +422,10 @@ onMounted(() => {
     />
 
     <DropDownForm
-      :ref="(instance) => (contractFormRefs[index] = instance as InstanceType<typeof DropDownForm> | null)"
+      :ref="
+        (instance) =>
+          (contractFormRefs[index] = instance as InstanceType<typeof DropDownForm> | null)
+      "
       topic="ข้อมูลสัญญาจ้างและเอกสารจ้างจริง"
       :values="item"
       @change="(payload) => handleSectionChange(index, payload)"
@@ -393,7 +436,6 @@ onMounted(() => {
           type: 'text',
           required: true,
           placeholder: 'กรุณาระบุเลขที่คำสั่งหรือสัญญาจ้าง',
-          
         },
         {
           name: 'contract-count',
@@ -401,13 +443,15 @@ onMounted(() => {
           type: 'text',
           required: true,
           placeholder: 'เช่น 1',
-          
         },
       ]"
     />
 
     <DropDownForm
-      :ref="(instance) => (durationFormRefs[index] = instance as InstanceType<typeof DropDownForm> | null)"
+      :ref="
+        (instance) =>
+          (durationFormRefs[index] = instance as InstanceType<typeof DropDownForm> | null)
+      "
       topic="ข้อมูลระยะเวลาในการจ้างงาน"
       :values="item"
       @change="(payload) => handleSectionChange(index, payload)"
@@ -418,15 +462,13 @@ onMounted(() => {
           type: 'date',
           required: true,
           placeholder: 'วว / ดด / ปปปป',
-          
         },
         {
           name: 'total-work-years',
           label: 'จ้างมาแล้วกี่ปี (อายุงานรวม)',
           type: 'text',
-          required: true,
+          disabled: true,
           placeholder: 'เช่น 3 ปี',
-          
         },
         {
           name: 'period_start',
@@ -434,7 +476,6 @@ onMounted(() => {
           type: 'date',
           required: true,
           placeholder: 'วว / ดด / ปปปป',
-          
         },
         {
           name: 'period_end',
@@ -442,13 +483,14 @@ onMounted(() => {
           type: 'date',
           required: true,
           placeholder: 'วว / ดด / ปปปป',
-          
         },
       ]"
     />
 
     <DropDownForm
-      :ref="(instance) => (budgetFormRefs[index] = instance as InstanceType<typeof DropDownForm> | null)"
+      :ref="
+        (instance) => (budgetFormRefs[index] = instance as InstanceType<typeof DropDownForm> | null)
+      "
       topic="ข้อมูลแหล่งงบประมาณที่ใช้จ้าง"
       :values="item"
       @change="(payload) => handleSectionChange(index, payload)"
@@ -459,7 +501,7 @@ onMounted(() => {
           type: 'select',
           required: true,
           placeholder: 'เลือกประเภทเงินงบประมาณ',
-          
+
           options: [
             { label: 'เงินงบประมาณ', value: 'เงินงบประมาณ' },
             { label: 'เงินนอกงบประมาณ', value: 'เงินนอกงบประมาณ' },
@@ -473,7 +515,7 @@ onMounted(() => {
           type: 'select',
           required: true,
           placeholder: 'เลือกประเภทเงินรายได้สถานศึกษา',
-          
+
           options: [
             {
               label: 'ลูกจ้างชั่วคราว (มีประกันสังคม)',

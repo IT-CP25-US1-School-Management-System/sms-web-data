@@ -2,7 +2,7 @@
 import ConfirmModal from '@/components/ConfirmModal.vue'
 import CreateForm from '@/components/form/CreateForm.vue'
 import { MANAGE_DATASETS, MANAGE_DROPDOWN_DATASETS } from '@/lib/constants'
-import { formatDateInput, generateUUID } from '@/lib/helpers'
+import { formatDateInput, generateUUID, sortDropdownOptionsByThaiLabel } from '@/lib/helpers'
 import { useAuthStore } from '@/stores/auth'
 import { useTeacherStore } from '@/stores/teachers'
 import { createFileDocument, deleteFileDocument, getFileDocumentRows } from '@/stores/document'
@@ -163,7 +163,7 @@ function getCurrentUserName() {
 }
 
 function mapDropdownOptions<T extends Record<string, any>>(rows: T[], labelKeys: string[]) {
-  return Array.from(
+  const options = Array.from(
     new Map(
       rows
         .map((item) => {
@@ -180,6 +180,8 @@ function mapDropdownOptions<T extends Record<string, any>>(rows: T[], labelKeys:
         .map((item) => [item.value, item]),
     ).values(),
   )
+
+  return sortDropdownOptionsByThaiLabel(options)
 }
 
 function resolveRoleIdFromRow(row: RoleRow) {

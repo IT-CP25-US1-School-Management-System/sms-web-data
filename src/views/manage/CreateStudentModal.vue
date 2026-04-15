@@ -5,7 +5,7 @@ import DropDownForm from '@/components/form/DropDownForm.vue'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { useToast } from '@/composables/useToast'
-import { formatDateInput, generateUUID, PREFIX_NAME_BY_ID } from '@/lib/helpers'
+import { calAge, formatDateInput, generateUUID, PREFIX_NAME_BY_ID } from '@/lib/helpers'
 import {
   createStudent,
   createStudentAddress,
@@ -112,6 +112,11 @@ function getPrefixEn(prefixId?: string | null, fallback?: string | null) {
   return PREFIX_EN_BY_ID[String(prefixId)] || ''
 }
 
+function calculateAgeFromDate(value?: string | Date | null) {
+  const date = formatDateInput(value)
+  return date ? calAge(date) : ''
+}
+
 const studentFields: FormFieldItem[] = [
   {
     name: 'student_id',
@@ -156,7 +161,7 @@ const studentFields: FormFieldItem[] = [
   { name: 'first_name_en', label: 'ชื่อ (อังกฤษ)', type: 'text', placeholder: 'Enter first name' },
   { name: 'last_name_en', label: 'นามสกุล (อังกฤษ)', type: 'text', placeholder: 'Enter last name' },
   { name: 'date_of_birth', label: 'วัน / เดือน / ปี เกิด', type: 'date' },
-  { name: 'age_years', label: 'อายุ (ปี)', type: 'number', required: true },
+  { name: 'age_years', label: 'อายุ (ปี)', type: 'number', disabled: true },
   { name: 'birth_province', label: 'จังหวัดที่เกิด', type: 'text' },
   { name: 'weight_kg', label: 'น้ำหนัก', type: 'number' },
   { name: 'height_cm', label: 'ส่วนสูง', type: 'number' },
@@ -327,7 +332,10 @@ function normalizeStudentParents(source?: any[] | any | null): Parent[] {
   }))
 }
 
-function mergeDefined<T extends Record<string, any>>(base: T, override?: Record<string, any> | null): T {
+function mergeDefined<T extends Record<string, any>>(
+  base: T,
+  override?: Record<string, any> | null,
+): T {
   if (!override) return base
 
   const merged: Record<string, any> = { ...base }
@@ -352,7 +360,9 @@ function buildStudentInitialValues(student: Student) {
     first_name_en: student.first_name_en || '',
     last_name_en: student.last_name_en || '',
     date_of_birth: formatDateInput(student.date_of_birth),
-    age_years: student.age_years ?? '',
+    age_years: student.date_of_birth
+      ? calculateAgeFromDate(student.date_of_birth)
+      : (student.age_years ?? ''),
     birth_province: student.birth_province || '',
     weight_kg: student.weight_kg ?? '',
     height_cm: student.height_cm ?? '',
@@ -474,6 +484,10 @@ async function loadStudentForEdit() {
 const handleStudentValuesUpdate = (payload: { values: Record<string, any>; isDirty: boolean }) => {
   const nextValues = { ...studentFormValues.value, ...payload.values }
   nextValues.prefixEn = getPrefixEn(nextValues.prefixe_id, nextValues.prefixEn)
+  if ('date_of_birth' in payload.values) {
+    nextValues.age_years = calculateAgeFromDate(nextValues.date_of_birth)
+    studentFormRef.value?.setFieldValue?.('age_years', nextValues.age_years)
+  }
   studentFormValues.value = nextValues
 }
 
@@ -492,6 +506,7 @@ function buildStudentPayload(now: string): StudentCreateDTO | StudentUpdateDTO {
   const firstName = studentFormValues.value.first_name_th?.trim()
   const lastName = studentFormValues.value.last_name_th?.trim()
   const originalStudent = originalStudentValue.value || {}
+  const calculatedAge = calculateAgeFromDate(studentFormValues.value.date_of_birth)
 
   return {
     id: studentRowId.value,
@@ -503,7 +518,7 @@ function buildStudentPayload(now: string): StudentCreateDTO | StudentUpdateDTO {
     last_name_th: lastName,
     first_name_en: studentFormValues.value.first_name_en || undefined,
     last_name_en: studentFormValues.value.last_name_en || undefined,
-    age_years: studentFormValues.value.age_years || 0,
+    age_years: calculatedAge === '' ? 0 : calculatedAge,
     address_id: addressRowId.value,
     academic_track: originalStudent.academic_track || undefined,
     student_type: originalStudent.student_type || undefined,
@@ -529,7 +544,8 @@ function buildAddressPayload(now: string): AddressCreateDTO {
   return {
     id: addressRowId.value,
     student_id: studentRowId.value,
-    house_registry_no: addressFormValues.value.house_registry_no || originalAddress.house_registry_no || undefined,
+    house_registry_no:
+      addressFormValues.value.house_registry_no || originalAddress.house_registry_no || undefined,
     house_no: addressFormValues.value.house_no || undefined,
     moo: addressFormValues.value.moo || undefined,
     building: addressFormValues.value.building || originalAddress.building || undefined,
@@ -645,12 +661,9 @@ async function handleNextStep() {
     emit('success')
     emit('close')
   } catch (error: any) {
-    showError(
-      isEditMode.value ? 'ไม่สามารถแก้ไขข้อมูลนักเรียน' : 'ไม่สามารถบันทึกข้อมูลนักเรียน',
-      {
-        description: error?.response?.data?.message || error?.message,
-      },
-    )
+    showError(isEditMode.value ? 'ไม่สามารถแก้ไขข้อมูลนักเรียน' : 'ไม่สามารถบันทึกข้อมูลนักเรียน', {
+      description: error?.response?.data?.message || error?.message,
+    })
   } finally {
     isSubmitting.value = false
   }
@@ -723,7 +736,7 @@ onMounted(() => {
         </DialogDescription>
       </div>
 
-      <div v-if="isLoading" class="p-6 text-center text-sm text-muted-foreground">
+      <div v-if="isLoading" class="text-muted-foreground p-6 text-center text-sm">
         กำลังโหลดข้อมูลนักเรียน...
       </div>
 
@@ -816,9 +829,7 @@ onMounted(() => {
           </Button>
         </div>
 
-        <div
-          class="flex justify-between border-t border-[#e5e5e5] bg-[#fdfdfd] px-6 py-4"
-        >
+        <div class="flex justify-between border-t border-[#e5e5e5] bg-[#fdfdfd] px-6 py-4">
           <Button
             v-if="currentStep > 0"
             variant="outline"
@@ -849,11 +860,7 @@ onMounted(() => {
               }"
             >
               {{
-                currentStep === STEPS.PARENT
-                  ? isEditMode
-                    ? 'บันทึกการแก้ไข'
-                    : 'บันทึก'
-                  : 'ถัดไป'
+                currentStep === STEPS.PARENT ? (isEditMode ? 'บันทึกการแก้ไข' : 'บันทึก') : 'ถัดไป'
               }}
               <ChevronRight v-if="currentStep < STEPS.PARENT" class="h-4 w-4" />
             </Button>
