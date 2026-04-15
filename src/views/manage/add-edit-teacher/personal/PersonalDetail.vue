@@ -5,7 +5,7 @@ import DropDownForm from '@/components/form/DropDownForm.vue'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/composables/useToast'
 import { MANAGE_DROPDOWN_DATASETS, ROUTE_NAMES } from '@/lib/constants'
-import { formatDateInput } from '@/lib/helpers'
+import { calAge, formatDateInput, sortDropdownOptionsByThaiLabel } from '@/lib/helpers'
 import { createUser } from '@/stores/api'
 import { getDatasetRows } from '@/stores/dataset'
 import { createTeacher, getTeacherById, updateTeacher, useTeacherStore } from '@/stores/teachers'
@@ -67,6 +67,11 @@ function getPrefixEn(prefixId?: string | number | null) {
   return PREFIX_EN_BY_ID[String(prefixId)] || ''
 }
 
+function calculateAgeFromDate(value?: string | Date | null) {
+  const date = formatDateInput(value)
+  return date ? calAge(date) : ''
+}
+
 const generalForm = ref<any>(null)
 const sensitiveForm = ref<any>(null)
 const contactForm = ref<any>(null)
@@ -76,6 +81,9 @@ const handleFormSave = (values: Record<string, any>) => {
   if ('prefix_id' in values) {
     nextValues.prefix_en = getPrefixEn(nextValues.prefix_id)
   }
+  if ('birth_date' in values) {
+    nextValues.age = calculateAgeFromDate(nextValues.birth_date)
+  }
   formValues.value = { ...formValues.value, ...nextValues }
   formValuesUpdate.value = nextValues
 }
@@ -84,6 +92,10 @@ const handleFormChange = (payload: { values: Record<string, any>; isDirty: boole
   const nextValues = { ...formValuesUpdate.value, ...payload.values }
   if ('prefix_id' in payload.values) {
     nextValues.prefix_en = getPrefixEn(nextValues.prefix_id)
+  }
+  if ('birth_date' in payload.values) {
+    nextValues.age = calculateAgeFromDate(nextValues.birth_date)
+    generalForm.value?.setFieldValue?.('age', nextValues.age)
   }
   formValues.value = { ...formValues.value, ...nextValues }
   formValuesUpdate.value = nextValues
@@ -121,6 +133,15 @@ const canSave = computed(() => hasAnyChanges.value && hasRequiredFieldsCompleted
 const genderMap: Record<string, string> = {
   male: 'male',
   female: 'female',
+  other: 'other',
+}
+
+function normalizeGender(value: unknown) {
+  if (value === 'male' || value === 'female' || value === 'other') return value
+  if (value === 'ชาย') return 'male'
+  if (value === 'หญิง') return 'female'
+  if (value === 'อื่นๆ') return 'other'
+  return ''
 }
 
 const maritalStatusMap: Record<string, string> = {
@@ -134,12 +155,43 @@ function normalizeBoolean(value: unknown) {
   return value === true || value === 'true'
 }
 
+function normalizeExistingTeacherPayload(teacher?: Record<string, any> | null) {
+  if (!teacher) return {}
+
+  const {
+    prefixes,
+    roles,
+    governments,
+    employment_contract,
+    family_members,
+    education_records,
+    professional_licenses,
+    ...payload
+  } = teacher
+
+  return {
+    ...payload,
+    id: payload.id,
+    prefix_id: payload.prefix_id,
+    role_id: payload.role_id,
+    is_government: normalizeBoolean(payload.is_government),
+    birth_date: formatDateInput(payload.birth_date) || undefined,
+    created_at: payload.created_at,
+    updated_at: payload.updated_at,
+  }
+}
+
+function resolvePayloadValue(value: unknown, fallback: unknown) {
+  if (value === undefined || value === null || value === '') return fallback ?? undefined
+  return value
+}
+
 function mapDropdownOptions<T extends Record<string, any>>(
   rows: T[],
   valueKeys: string[],
   labelKeys: string[],
 ) {
-  return rows
+  const options = rows
     .map((item) => {
       const value = valueKeys.map((key) => item[key]).find((candidate) => candidate !== undefined)
       const label = labelKeys.map((key) => item[key]).find((candidate) => Boolean(candidate))
@@ -152,6 +204,8 @@ function mapDropdownOptions<T extends Record<string, any>>(
       }
     })
     .filter((item): item is { label: string; value: string } => Boolean(item))
+
+  return sortDropdownOptionsByThaiLabel(options)
 }
 
 async function fetchPrefixOptions() {
@@ -244,12 +298,8 @@ watch(
         'id-card': teacher.national_id,
         'blood-type': teacher.blood_type,
         birth_date: teacher.birth_date ? formatDateInput(teacher.birth_date) : '',
-        gender:
-          teacher.gender === 'ชาย'
-            ? 'male'
-            : teacher.gender === 'หญิง'
-              ? 'female'
-              : teacher.gender || '',
+        age: calculateAgeFromDate(teacher.birth_date),
+        gender: normalizeGender(teacher.gender),
         religion: teacher.religion,
         nationality: teacher.nationality,
         ethnicity: teacher.ethnicity,
@@ -349,30 +399,53 @@ const handleSave = async () => {
       personId = userResponse.data.keycloak_id
     }
 
-    const payload: TeacherCreateDTO = {
+    const existingPayload = isEditing.value
+      ? normalizeExistingTeacherPayload(teacherStore.currentTeacher as Record<string, any>)
+      : {}
+
+    const payload: TeacherCreateDTO & Record<string, any> = {
+      ...existingPayload,
       id: personId,
       prefix_id: prefixId,
       role_id: roleId,
-      is_government: currentValues.is_government ?? true,
+      is_government: currentValues.is_government ?? existingPayload.is_government ?? true,
       first_name_th: firstName,
-      middle_name_th: currentValues.middle_name_th || undefined,
+      middle_name_th: resolvePayloadValue(
+        currentValues.middle_name_th,
+        existingPayload.middle_name_th,
+      ),
       last_name_th: lastName,
-      first_name_en: currentValues.first_name_en || undefined,
-      middle_name_en: currentValues.middle_name_en || undefined,
-      last_name_en: currentValues.last_name_en || undefined,
-      birth_date: formatDateInput(currentValues.birth_date) || undefined,
-      national_id: currentValues['id-card'] || undefined,
-      gender: (genderMap[currentValues.gender] as any) || undefined,
-      religion: currentValues.religion || undefined,
-      nationality: currentValues.nationality || undefined,
-      ethnicity: currentValues.ethnicity || undefined,
-      blood_type: currentValues['blood-type'] || undefined,
-      physical_status: currentValues['physical-status'] || undefined,
-      phone: currentValues.phone || undefined,
-      personal_email: currentValues.personal_email || undefined,
-      line_id: currentValues.line_id || undefined,
-      marital_status: maritalStatusMap[currentValues['marital-status']] || undefined,
-      spouse_name: currentValues['spouse-name'] || undefined,
+      first_name_en: resolvePayloadValue(currentValues.first_name_en, existingPayload.first_name_en),
+      middle_name_en: resolvePayloadValue(
+        currentValues.middle_name_en,
+        existingPayload.middle_name_en,
+      ),
+      last_name_en: resolvePayloadValue(currentValues.last_name_en, existingPayload.last_name_en),
+      birth_date: resolvePayloadValue(
+        formatDateInput(currentValues.birth_date),
+        existingPayload.birth_date,
+      ) as string | undefined,
+      national_id: resolvePayloadValue(currentValues['id-card'], existingPayload.national_id),
+      gender: resolvePayloadValue(genderMap[currentValues.gender], existingPayload.gender) as any,
+      religion: resolvePayloadValue(currentValues.religion, existingPayload.religion),
+      nationality: resolvePayloadValue(currentValues.nationality, existingPayload.nationality),
+      ethnicity: resolvePayloadValue(currentValues.ethnicity, existingPayload.ethnicity),
+      blood_type: resolvePayloadValue(currentValues['blood-type'], existingPayload.blood_type) as any,
+      physical_status: resolvePayloadValue(
+        currentValues['physical-status'],
+        existingPayload.physical_status,
+      ),
+      phone: resolvePayloadValue(currentValues.phone, existingPayload.phone),
+      personal_email: resolvePayloadValue(
+        currentValues.personal_email,
+        existingPayload.personal_email,
+      ),
+      line_id: resolvePayloadValue(currentValues.line_id, existingPayload.line_id),
+      marital_status: resolvePayloadValue(
+        maritalStatusMap[currentValues['marital-status']],
+        existingPayload.marital_status,
+      ),
+      spouse_name: resolvePayloadValue(currentValues['spouse-name'], existingPayload.spouse_name),
       created_at: isEditing.value ? teacherStore.currentTeacher?.created_at || now : now,
       updated_at: now,
     }
@@ -467,7 +540,7 @@ const handleSave = async () => {
           type: 'date',
           placeholder: 'วว / ดด / ปปปป',
         },
-        { name: 'age', label: 'อายุ (ปี)', type: 'number', placeholder: 'อายุ' },
+        { name: 'age', label: 'อายุ (ปี)', type: 'number', placeholder: 'อายุ', disabled: true },
         {
           name: 'marital-status',
           label: 'สถานภาพการแต่งงาน',
@@ -506,7 +579,7 @@ const handleSave = async () => {
           label: 'ประเภทบุคลากร',
           type: 'checkbox',
           placeholder: 'เป็นข้าราชการ',
-          disabled: isEditing,
+          disabled: false,
         },
       ]"
     />
@@ -526,6 +599,7 @@ const handleSave = async () => {
           options: [
             { label: 'ชาย', value: 'male' },
             { label: 'หญิง', value: 'female' },
+            { label: 'อื่นๆ', value: 'other' },
           ],
         },
         {

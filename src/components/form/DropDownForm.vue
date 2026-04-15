@@ -244,7 +244,16 @@ async function validateForm() {
   return result.valid && filesValid
 }
 
-defineExpose({ submitForm, validateForm, isDirty })
+function setFieldValue(path: string, value: unknown) {
+  if (localValues.value[path] === value) return
+  localValues.value = {
+    ...localValues.value,
+    [path]: value,
+  }
+  formRef.value?.setFieldValue?.(path as any, value, false)
+}
+
+defineExpose({ submitForm, validateForm, isDirty, setFieldValue })
 
 const isOpen = ref(true)
 

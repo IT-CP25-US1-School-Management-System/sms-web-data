@@ -3,7 +3,7 @@ import ConfirmModal from '@/components/ConfirmModal.vue'
 import SkeletonCard from '@/components/SkeletonCard.vue'
 import CreateForm from '@/components/form/CreateForm.vue'
 import { MANAGE_DATASETS, MANAGE_DROPDOWN_DATASETS } from '@/lib/constants'
-import { formatDateInput, generateUUID } from '@/lib/helpers'
+import { formatDateInput, generateUUID, sortDropdownOptionsByThaiLabel } from '@/lib/helpers'
 import { useAuthStore } from '@/stores/auth'
 import { useTeacherStore } from '@/stores/teachers'
 import { createFileDocument, deleteFileDocument, getFileDocumentRows } from '@/stores/document'
@@ -336,7 +336,7 @@ function mapDropdownOptions<T extends Record<string, any>>(
   valueKeys: string[],
   labelKeys: string[],
 ) {
-  return rows
+  const options = rows
     .map((row) => {
       const value = valueKeys.map((key) => row[key]).find((candidate) => candidate != null)
       const label = labelKeys.map((key) => row[key]).find((candidate) => candidate != null)
@@ -344,6 +344,8 @@ function mapDropdownOptions<T extends Record<string, any>>(
       return { label: String(label), value: String(value) }
     })
     .filter((option): option is { label: string; value: string } => Boolean(option))
+
+  return sortDropdownOptionsByThaiLabel(options)
 }
 
 async function fetchDepartmentOptions() {

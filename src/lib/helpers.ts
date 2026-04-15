@@ -74,6 +74,15 @@ export const generateUUID = (): string => {
   })
 }
 
+export function sortDropdownOptionsByThaiLabel<T extends { label: string }>(options: T[]): T[] {
+  return [...options].sort((left, right) =>
+    left.label.localeCompare(right.label, 'th-TH', {
+      numeric: true,
+      sensitivity: 'base',
+    }),
+  )
+}
+
 export const toDateInputFormat = (date: string | Date | undefined | null): string => {
   if (!date) return ''
   const d = new Date(date)
