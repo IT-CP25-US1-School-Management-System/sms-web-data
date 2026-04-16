@@ -61,7 +61,7 @@ const DATASET_CONFIG = {
 const DOCUMENT_LINK_DATASET_CONFIG = {
   DATASET_ID: MANAGE_DATASETS.DATASET_ID,
   DATASET_VERSION: MANAGE_DATASETS.DATASET_VERSION_DOCUMENT_LINK,
-  VIEW_NAME: 'file_view',
+  VIEW_NAME: 'document_links',
 } as const
 
 const authStore = useAuthStore()
@@ -146,6 +146,10 @@ const royalDecorationFields: CreateFormSection[][] = [
   ],
 ]
 
+function getPersonId() {
+  return teacherStore.personId || ''
+}
+
 function getCurrentUserName() {
   return (
     authStore.user?.name || authStore.user?.given_name || authStore.user?.email || 'current-user'
@@ -163,7 +167,7 @@ function isExistingRoyalFile(file: RoyalFileItem): file is ExistingRoyalFile {
 }
 
 function buildRoyalPurpose(values: Partial<RoyalDecorationRow>, fileField?: string) {
-  const basePurpose = `${values.license_type || 'license'}_${values.license_no || 'unknown'}`
+  const basePurpose = `Decoration_${values.class || values.gazette_order_no || values.year || 'unknown'}`
   return fileField ? `${basePurpose}_${fileField}` : basePurpose
 }
 
@@ -198,6 +202,22 @@ function buildRoyalPayload(
     created_at: currentRecord?.created_at || new Date().toISOString(),
     updated_at: currentRecord?.id ? new Date().toISOString() : null,
   }
+}
+
+function hasRoyalDecorationContent(values: RoyalDecorationFormValue) {
+  const files = normalizeRoyalFiles(values[FILE_FIELD])
+  return Boolean(
+    values.id ||
+      values.announce_date ||
+      values.year ||
+      values.class ||
+      values.gazette_book_no ||
+      values.gazette_section ||
+      values.gazette_publish_date ||
+      values.gazette_page ||
+      values.gazette_order_no ||
+      files.length,
+  )
 }
 
 function resolveRoyalPersonId(
@@ -257,10 +277,32 @@ async function getRoyalFiles(record: RoyalDecorationRow, documentLinks: Document
 async function getRoyalDecorationData() {
   loading.value = true
   try {
+    const personId = getPersonId()
+    if (!personId) {
+      royalDecorationData.value = []
+      documentLinksByDecoration.value = {}
+      formRenderKey.value += 1
+      return
+    }
+
     const response = await getDatasetRows<RoyalDecorationRow>(
       DATASET_CONFIG.DATASET_ID,
       DATASET_CONFIG.DATASET_VERSION,
-      { view: DATASET_CONFIG.VIEW_NAME, page: 1, per_page: 50 },
+      {
+        view: DATASET_CONFIG.VIEW_NAME,
+        page: 1,
+        per_page: 50,
+        where: [
+          [
+            {
+              table_name: DATASET_CONFIG.VIEW_NAME,
+              field: 'person_id',
+              operator: '=',
+              value: personId,
+            },
+          ],
+        ],
+      },
     )
     const { records, allDocumentLinks } = extractRoyalResponse(response.data)
     documentLinksByDecoration.value = Object.fromEntries(
@@ -381,6 +423,11 @@ async function deleteRoyalDocumentLinks(documentLinks: DocumentLinkRow[]) {
 
 async function persistRoyalDecoration(index: number, values: RoyalDecorationFormValue) {
   const currentRecord = royalDecorationData.value[index]
+  if (!currentRecord?.id && !hasRoyalDecorationContent(values)) {
+    toast.info('ยังไม่มีข้อมูลเครื่องราชอิสริยาภรณ์ให้บันทึก', { position: 'bottom-right' })
+    return
+  }
+
   const personId = resolveRoyalPersonId(values, currentRecord)
   const payload = buildRoyalPayload(values, currentRecord, personId)
   const currentFiles = normalizeRoyalFiles(values[FILE_FIELD])

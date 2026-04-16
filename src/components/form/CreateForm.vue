@@ -29,6 +29,8 @@ import { computed, ref, watch } from 'vue'
 
 // (removed example global form - using per-entry VeeForm instead)
 
+const DEFAULT_DATE_MAX_YEAR_OFFSET = 80
+
 type FieldItem = {
   name: string
   label?: string
@@ -50,6 +52,7 @@ type FieldItem = {
   options?: { label: string; value: any }[]
   accept?: string // e.g. '.pdf,.jpg,.png' or 'image/*'
   multiple?: boolean
+  maxYearOffset?: number
 }
 
 type FieldSection = {
@@ -901,6 +904,14 @@ function dateValueToString(dv: DateValue): string {
   return `${y}-${m}-${d}`
 }
 
+function getMaxDateValue(field: FieldItem) {
+  return new CalendarDate(
+    new Date().getFullYear() + (field.maxYearOffset ?? DEFAULT_DATE_MAX_YEAR_OFFSET),
+    12,
+    31,
+  )
+}
+
 function formatDisplayDate(str: string | undefined): string {
   if (!str) return ''
   const [y, m, d] = str.split('-')
@@ -1147,6 +1158,7 @@ function formatDisplayDateRange(str: string | undefined): string {
                                 <Calendar
                                   :model-value="stringToDateValue(veeField.value as string)"
                                   layout="month-and-year"
+                                  :max-value="getMaxDateValue(fieldItem)"
                                   @update:model-value="
                                     (val: DateValue | undefined) => {
                                       if (val) {
@@ -1550,6 +1562,7 @@ function formatDisplayDateRange(str: string | undefined): string {
                                   <Calendar
                                     :model-value="stringToDateValue(subEntry[subField.name])"
                                     layout="month-and-year"
+                                    :max-value="getMaxDateValue(subField)"
                                     @update:model-value="
                                       (val: DateValue | undefined) => {
                                         if (val) {

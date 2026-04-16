@@ -269,8 +269,12 @@ function createFamilyFields(values: Record<string, any>): CreateFormSection[] {
         {
           name: 'is_alive',
           label: 'การมีชีวิต',
-          type: 'text',
-          placeholder: 'เช่น มีชีวิต / ไม่มีชีวิต',
+          type: 'select',
+          placeholder: 'เลือกสถานะการมีชีวิต',
+          options: [
+            { label: 'มีชีวิต', value: 'มีชีวิต' },
+            { label: 'ไม่มีชีวิต', value: 'ไม่มีชีวิต' },
+          ],
         },
         {
           name: 'birth_date',
@@ -295,8 +299,16 @@ function createFamilyFields(values: Record<string, any>): CreateFormSection[] {
         {
           name: 'marital_status',
           label: 'สถานภาพ',
-          type: 'text',
-          placeholder: 'เช่น โสด / สมรส',
+          type: 'select',
+          placeholder: 'เลือกสถานภาพ',
+          options: [
+            { label: 'โสด', value: 'โสด' },
+            { label: 'สมรส', value: 'สมรส' },
+            { label: 'หม้าย', value: 'หม้าย' },
+            { label: 'หย่าร้าง', value: 'หย่าร้าง' },
+            { label: 'แยกกันอยู่', value: 'แยกกันอยู่' },
+            { label: 'เสียชีวิต', value: 'เสียชีวิต' },
+          ],
         },
       ],
     },

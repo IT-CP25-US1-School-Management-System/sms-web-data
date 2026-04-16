@@ -364,9 +364,17 @@ onMounted(() => {
         {
           name: 'work_status',
           label: 'สถานะการทำงาน',
-          type: 'text',
+          type: 'select',
           required: true,
-          placeholder: 'เช่น ปฏิบัติงานอยู่',
+          placeholder: 'เลือกสถานะการทำงาน',
+          options: [
+            { label: 'ทำงาน', value: 'ทำงาน' },
+            { label: 'ย้าย', value: 'ย้าย' },
+            { label: 'เกษียณอายุราชการ', value: 'เกษียณอายุราชการ' },
+            { label: 'ช่วยราชการ', value: 'ช่วยราชการ' },
+            { label: 'ลาออก', value: 'ลาออก' },
+            { label: 'เสียชีวิต', value: 'เสียชีวิต' },
+          ],
         },
         {
           name: 'hiring_nature',
