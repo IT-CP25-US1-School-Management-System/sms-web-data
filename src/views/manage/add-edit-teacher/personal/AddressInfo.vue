@@ -1,491 +1,481 @@
-﻿<script setup lang="ts">
-import NormalForm, {
-  type NormalFormField,
-  type NormalFormChangePayload,
-  type NormalFormOption,
-} from '@/components/form/NormalForm.vue'
-import { Button } from '@/components/ui/button'
+<script setup lang="ts">
+import CreateForm from '@/components/form/CreateForm.vue'
+import SkeletonCard from '@/components/SkeletonCard.vue'
+import provincesJson from '@/assets/thai-province-data/provinces.json'
+import districtsJson from '@/assets/thai-province-data/districts.json'
+import subDistrictsJson from '@/assets/thai-province-data/sub_districts.json'
+import { generateUUID } from '@/lib/helpers'
 import {
   createPersonAddress,
   getAddressById,
   updatePersonAddress,
   useTeacherStore,
 } from '@/stores/teachers'
-import type { PersonAddress, Province, District, SubDistrict } from '@/types/address'
-import type { PersonAddressCreateDTO } from '@/types/teacher'
-import provincesJson from '@/assets/thai-province-data/provinces.json'
-import districtsJson from '@/assets/thai-province-data/districts.json'
-import subDistrictsJson from '@/assets/thai-province-data/sub_districts.json'
-import { onMounted, reactive, ref, computed } from 'vue'
+import type { PersonAddress, PersonAddressCreateDTO } from '@/types/teacher'
+import type { District, Province, SubDistrict } from '@/types/address'
+import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { toast } from 'vue-sonner'
 
-type NormalFormInstance = InstanceType<typeof NormalForm>
-
-type AddressFormState = {
-  id: string
-  recordId: string | null
-  createdAt?: string
-  updatedAt?: string
-  fields: NormalFormField[]
-  initialValues: Record<string, any>
-  currentValues: Record<string, any>
-  formRef: NormalFormInstance | null
-  hasChanges: boolean
-  lastProvince?: string
-  lastDistrict?: string
+type CreateFormField = {
+  name: string
+  label?: string
+  type:
+    | 'text'
+    | 'date'
+    | 'date-range'
+    | 'select'
+    | 'combobox'
+    | 'number'
+    | 'email'
+    | 'textarea'
+    | 'file'
+    | 'checkbox'
+    | 'checkbox-group'
+  placeholder?: string
+  required?: boolean
+  disabled?: boolean
+  isShow?: boolean
+  options?: { label: string; value: any }[]
+  accept?: string
+  multiple?: boolean
 }
+
+type CreateFormSection = {
+  topic?: string
+  content: CreateFormField[]
+}
+
 const route = useRoute()
 const teacherStore = useTeacherStore()
-const isSubmitting = ref(false)
 
-onMounted(() => {
-  const idFromUrl = route.query.id as string
-  if (idFromUrl && !teacherStore.personId) {
-    teacherStore.setPersonId(idFromUrl)
-  }
-  getAddressData()
-})
 const loading = ref(false)
-const addressForms = ref<AddressFormState[]>([])
+const busyEntries = ref<Record<number, 'save' | 'delete'>>({})
+const addressData = ref<Record<string, any>[]>([])
+const addressFields = ref<CreateFormSection[][]>([])
 
 const provinceData = provincesJson as Province[]
 const districtData = districtsJson as District[]
 const subDistrictData = subDistrictsJson as SubDistrict[]
 
-const provinceOptions: NormalFormOption[] = provinceData.map((province) => ({
+const provinceOptions = provinceData.map((province) => ({
   label: province.name_th,
   value: String(province.id),
 }))
 
-const provinceNameMap = new Map(provinceOptions.map((opt) => [opt.value, opt.label]))
-
-const districtOptionsByProvince = new Map<string, NormalFormOption[]>()
+const provinceNameMap = new Map(
+  provinceOptions.map((option) => [String(option.value), option.label]),
+)
+const districtOptionsByProvince = new Map<string, { label: string; value: string }[]>()
 const districtNameMap = new Map<string, string>()
+const subDistrictOptionsByDistrict = new Map<string, { label: string; value: string }[]>()
+const subDistrictNameMap = new Map<string, string>()
+const postalCodeBySubDistrict = new Map<string, string>()
+
 districtData.forEach((district) => {
-  const option: NormalFormOption = { label: district.name_th, value: String(district.id) }
   const provinceId = String(district.province_id)
+  const option = {
+    label: district.name_th,
+    value: String(district.id),
+  }
+
   if (!districtOptionsByProvince.has(provinceId)) {
     districtOptionsByProvince.set(provinceId, [])
   }
+
   districtOptionsByProvince.get(provinceId)!.push(option)
   districtNameMap.set(option.value, option.label)
 })
 
-const subDistrictOptionsByDistrict = new Map<string, NormalFormOption[]>()
-const subDistrictNameMap = new Map<string, string>()
-const postalCodeBySubDistrict = new Map<string, string>()
-
 subDistrictData.forEach((subDistrict) => {
-  const option: NormalFormOption = { label: subDistrict.name_th, value: String(subDistrict.id) }
   const districtId = String(subDistrict.district_id)
+  const option = {
+    label: subDistrict.name_th,
+    value: String(subDistrict.id),
+  }
+
   if (!subDistrictOptionsByDistrict.has(districtId)) {
     subDistrictOptionsByDistrict.set(districtId, [])
   }
+
   subDistrictOptionsByDistrict.get(districtId)!.push(option)
   subDistrictNameMap.set(option.value, option.label)
+
   if (subDistrict.zip_code) {
     postalCodeBySubDistrict.set(option.value, String(subDistrict.zip_code))
   }
 })
 
-const addressTypeOptions: NormalFormOption[] = [
+const addressTypeOptions = [
   { label: 'ที่อยู่ตามทะเบียนบ้าน', value: 'is_house_registered' },
   { label: 'ที่อยู่ปัจจุบัน', value: 'is_current' },
   { label: 'ที่อยู่หลังเกษียณอายุราชการ', value: 'is_retired_residence' },
 ]
 
-const pendingPayloads = new Map<string, Record<string, any>>()
+function getPersonId() {
+  const idFromUrl = route.query.id as string | undefined
+  const personId = idFromUrl || teacherStore.personId
 
-function cloneFormValues(values: Record<string, any>) {
-  return JSON.parse(JSON.stringify(values))
-}
-
-function buildAddressValues(source?: PersonAddress) {
-  return {
-    address_types: [
-      ...(source?.is_house_registered ? ['is_house_registered'] : []),
-      ...(source?.is_current ? ['is_current'] : []),
-      ...(source?.is_retired_residence ? ['is_retired_residence'] : []),
-    ],
-    province_code: source?.province_code || '',
-    district_code: source?.district_code || '',
-    subdistrict_code: source?.subdistrict_code || '',
-    postal_code: source?.postal_code || '',
-    house_no: source?.house_no || '',
-    house_registry_no: source?.house_registry_no || '',
-    moo: source?.moo || '',
-    soi: source?.soi || '',
-    road: source?.road || '',
-    building: source?.building || '',
+  if (idFromUrl && teacherStore.personId !== idFromUrl) {
+    teacherStore.setPersonId(idFromUrl)
   }
+
+  return personId
 }
 
-function cloneOptions(options?: NormalFormOption[]) {
-  return (options || []).map((opt) => ({ ...opt }))
+function cloneOptions(options?: { label: string; value: string }[]) {
+  return (options || []).map((option) => ({ ...option }))
 }
 
 function getDistrictOptions(provinceCode?: string) {
-  return cloneOptions(districtOptionsByProvince.get(String(provinceCode)) || [])
+  return cloneOptions(districtOptionsByProvince.get(String(provinceCode || '')) || [])
 }
 
 function getSubDistrictOptions(districtCode?: string) {
-  return cloneOptions(subDistrictOptionsByDistrict.get(String(districtCode)) || [])
+  return cloneOptions(subDistrictOptionsByDistrict.get(String(districtCode || '')) || [])
 }
 
-function createAddressFields(values: Record<string, any>) {
-  return reactive<NormalFormField[]>([
-    {
-      name: 'address_types',
-      label: 'ประเภทที่อยู่',
-      type: 'checkbox-group',
-      required: true,
-      options: cloneOptions(addressTypeOptions),
-    },
-    {
-      name: 'province_code',
-      label: 'จังหวัด',
-      type: 'combobox',
-      required: true,
-      options: cloneOptions(provinceOptions),
-      placeholder: 'ค้นหาจังหวัด',
-    },
-    {
-      name: 'district_code',
-      label: 'อำเภอ/เขต',
-      type: 'combobox',
-      required: true,
-      options: getDistrictOptions(values.province_code),
-      placeholder: 'ค้นหาอำเภอ/เขต',
-      disabled: !values.province_code,
-    },
-    {
-      name: 'subdistrict_code',
-      label: 'ตำบล/แขวง',
-      type: 'combobox',
-      required: true,
-      options: getSubDistrictOptions(values.district_code),
-      placeholder: 'ค้นหาตำบล/แขวง',
-      disabled: !values.district_code,
-    },
-    {
-      name: 'postal_code',
-      label: 'รหัสไปรษณีย์',
-      type: 'text',
-      required: true,
-      placeholder: 'กรุณาระบุรหัสไปรษณีย์',
-    },
-    {
-      name: 'house_no',
-      label: 'บ้านเลขที่',
-      type: 'text',
-      required: true,
-      placeholder: 'กรุณาระบุบ้านเลขที่',
-    },
-    {
-      name: 'house_registry_no',
-      label: 'รหัสทะเบียนบ้าน',
-      type: 'text',
-      placeholder: 'กรุณาระบุรหัสทะเบียนบ้าน',
-    },
-    {
-      name: 'moo',
-      label: 'หมู่ที่',
-      type: 'text',
-      placeholder: 'กรุณาระบุหมู่ที่',
-    },
-    {
-      name: 'road',
-      label: 'ถนน',
-      type: 'text',
-      placeholder: 'กรุณาระบุถนน',
-    },
-    {
-      name: 'soi',
-      label: 'ตรอก/ซอย',
-      type: 'text',
-      placeholder: 'กรุณาระบุตรอก/ซอย',
-    },
-    {
-      name: 'building',
-      label: 'หมู่บ้าน/อาคาร',
-      type: 'text',
-      placeholder: 'กรุณาระบุหมู่บ้าน/อาคาร',
-    },
-  ])
+function normalizeText(value: unknown) {
+  const text = String(value ?? '').trim()
+  return text || undefined
 }
 
-function createAddressFormState(source?: PersonAddress, index = 0) {
-  const initialValues = buildAddressValues(source)
-  const generatedId =
-    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-      ? crypto.randomUUID()
-      : `address-${Date.now()}-${index}`
-  const state = reactive<AddressFormState>({
-    id: source?.id || generatedId,
-    recordId: source?.id || null,
-    createdAt: source?.created_at || undefined,
-    updatedAt: source?.updated_at || undefined,
-    fields: createAddressFields(initialValues),
-    initialValues: cloneFormValues(initialValues),
-    currentValues: cloneFormValues(initialValues),
-    formRef: null,
-    hasChanges: false,
-    lastProvince: initialValues.province_code,
-    lastDistrict: initialValues.district_code,
-  })
-  syncCascade(state, initialValues, true)
-  return state
-}
-
-function syncCascade(form: AddressFormState, values: Record<string, any>, isInitial = false) {
-  const districtField = form.fields.find((field) => field.name === 'district_code')
-  if (districtField) {
-    districtField.options = getDistrictOptions(values.province_code)
-    districtField.disabled = !values.province_code
-  }
-
-  const subDistrictField = form.fields.find((field) => field.name === 'subdistrict_code')
-  if (subDistrictField) {
-    subDistrictField.options = getSubDistrictOptions(values.district_code)
-    subDistrictField.disabled = !values.district_code
-  }
-
-  if (!isInitial && form.formRef) {
-    if (form.lastProvince !== values.province_code) {
-      form.lastProvince = values.province_code
-      form.formRef.setFieldValue?.('district_code', '')
-      form.formRef.setFieldValue?.('subdistrict_code', '')
-    }
-    if (form.lastDistrict !== values.district_code) {
-      form.lastDistrict = values.district_code
-      form.formRef.setFieldValue?.('subdistrict_code', '')
-    }
-  } else {
-    form.lastProvince = values.province_code
-    form.lastDistrict = values.district_code
-  }
-
-  const subdistrictCode = values.subdistrict_code
-  const autoPostal = subdistrictCode
-    ? postalCodeBySubDistrict.get(String(subdistrictCode))
-    : undefined
-
-  if (autoPostal) {
-    if (isInitial) {
-      form.initialValues.postal_code = autoPostal
-    } else {
-      form.formRef?.setFieldValue?.('postal_code', autoPostal)
-    }
+function mapAddressForForm(address: Partial<PersonAddress>) {
+  return {
+    ...address,
+    address_types: [
+      ...(address.is_house_registered ? ['is_house_registered'] : []),
+      ...(address.is_current ? ['is_current'] : []),
+      ...(address.is_retired_residence ? ['is_retired_residence'] : []),
+    ],
+    province_code: address.province_code ? String(address.province_code) : '',
+    district_code: address.district_code ? String(address.district_code) : '',
+    subdistrict_code: address.subdistrict_code ? String(address.subdistrict_code) : '',
+    postal_code: address.postal_code || '',
+    house_no: address.house_no || '',
+    house_registry_no: address.house_registry_no || '',
+    moo: address.moo || '',
+    soi: address.soi || '',
+    road: address.road || '',
+    building: address.building || '',
   }
 }
 
-async function getAddressData() {
-  loading.value = true
-  const idFromUrl = route.query.id as string
-  const personId = idFromUrl || teacherStore.personId
+function createAddressFields(values: Record<string, any>): CreateFormSection[] {
+  return [
+    {
+      topic: 'ประเภทที่อยู่',
+      content: [
+        {
+          name: 'address_types',
+          label: 'ประเภทที่อยู่',
+          type: 'checkbox-group',
+          required: true,
+          options: cloneOptions(addressTypeOptions),
+        },
+      ],
+    },
+    {
+      topic: 'ข้อมูลที่อยู่',
+      content: [
+        {
+          name: 'province_code',
+          label: 'จังหวัด',
+          type: 'combobox',
+          required: true,
+          options: cloneOptions(provinceOptions),
+          placeholder: 'ค้นหาจังหวัด',
+        },
+        {
+          name: 'district_code',
+          label: 'อำเภอ/เขต',
+          type: 'combobox',
+          required: true,
+          options: getDistrictOptions(values.province_code),
+          placeholder: 'ค้นหาอำเภอ/เขต',
+          disabled: !values.province_code,
+        },
+        {
+          name: 'subdistrict_code',
+          label: 'ตำบล/แขวง',
+          type: 'combobox',
+          required: true,
+          options: getSubDistrictOptions(values.district_code),
+          placeholder: 'ค้นหาตำบล/แขวง',
+          disabled: !values.district_code,
+        },
+        {
+          name: 'postal_code',
+          label: 'รหัสไปรษณีย์',
+          type: 'text',
+          required: true,
+          placeholder: 'กรุณาระบุรหัสไปรษณีย์',
+        },
+        {
+          name: 'house_no',
+          label: 'บ้านเลขที่',
+          type: 'text',
+          required: true,
+          placeholder: 'กรุณาระบุบ้านเลขที่',
+        },
+        {
+          name: 'house_registry_no',
+          label: 'รหัสทะเบียนบ้าน',
+          type: 'text',
+          placeholder: 'กรุณาระบุรหัสทะเบียนบ้าน',
+        },
+        {
+          name: 'moo',
+          label: 'หมู่ที่',
+          type: 'text',
+          placeholder: 'กรุณาระบุหมู่ที่',
+        },
+        {
+          name: 'road',
+          label: 'ถนน',
+          type: 'text',
+          placeholder: 'กรุณาระบุถนน',
+        },
+        {
+          name: 'soi',
+          label: 'ตรอก/ซอย',
+          type: 'text',
+          placeholder: 'กรุณาระบุตรอก/ซอย',
+        },
+        {
+          name: 'building',
+          label: 'หมู่บ้าน/อาคาร',
+          type: 'text',
+          placeholder: 'กรุณาระบุหมู่บ้าน/อาคาร',
+        },
+      ],
+    },
+  ]
+}
 
-  if (!personId) {
-    addressForms.value = [createAddressFormState(undefined, 0)]
-    loading.value = false
+function setAddressFieldsAt(index: number, values: Record<string, any>) {
+  const nextFields = [...addressFields.value]
+  nextFields[index] = createAddressFields(values)
+  addressFields.value = nextFields
+}
+
+function handleAddressChange(index: number, values: Record<string, any>) {
+  const previous = addressData.value[index] || {}
+  const nextValues = {
+    ...previous,
+    ...values,
+  }
+
+  const provinceChanged =
+    String(nextValues.province_code || '') !== String(previous.province_code || '')
+  const districtChanged =
+    String(nextValues.district_code || '') !== String(previous.district_code || '')
+  const subDistrictChanged =
+    String(nextValues.subdistrict_code || '') !== String(previous.subdistrict_code || '')
+
+  if (!provinceChanged && !districtChanged && !subDistrictChanged && addressFields.value[index]) {
     return
   }
 
-  try {
-    const response = await getAddressById(personId)
-    const records = response.data?.person_addresses || []
-    addressForms.value = (records.length ? records : [undefined]).map((address, index) =>
-      createAddressFormState(address, index),
-    )
-  } catch (error: any) {
-    console.error('Address API Error:', error)
-    toast.error(`โหลดข้อมูลที่อยู่ไม่สำเร็จ: ${error?.response?.data?.message || error.message}`)
-    addressForms.value = [createAddressFormState(undefined, 0)]
-  } finally {
-    loading.value = false
+  if (provinceChanged) {
+    nextValues.district_code = ''
+    nextValues.subdistrict_code = ''
+    nextValues.postal_code = ''
+  } else if (districtChanged) {
+    nextValues.subdistrict_code = ''
+    nextValues.postal_code = ''
+  }
+
+  const subDistrictCode = String(nextValues.subdistrict_code || '')
+  if (subDistrictCode) {
+    nextValues.postal_code =
+      postalCodeBySubDistrict.get(subDistrictCode) || nextValues.postal_code || ''
+  }
+
+  const nextAddressData = [...addressData.value]
+  nextAddressData[index] = nextValues
+  addressData.value = nextAddressData
+
+  if (provinceChanged || districtChanged || !addressFields.value[index]) {
+    setAddressFieldsAt(index, nextValues)
   }
 }
 
-function setFormRef(formId: string, instance: NormalFormInstance | null) {
-  const target = addressForms.value.find((entry) => entry.id === formId)
-  if (target) {
-    target.formRef = instance
-  }
-}
-
-function handleFormChange(formId: string, payload: NormalFormChangePayload) {
-  const target = addressForms.value.find((entry) => entry.id === formId)
-  if (!target) return
-  target.currentValues = cloneFormValues(payload.values)
-  target.hasChanges = JSON.stringify(target.currentValues) !== JSON.stringify(target.initialValues)
-  syncCascade(target, payload.values)
-}
-
-function normalizeAddressPayload(values: Record<string, any>) {
-  const selectedTypes = new Set<string>(values.address_types || [])
-  const provinceName = provinceNameMap.get(String(values.province_code)) || ''
-  const districtName = districtNameMap.get(String(values.district_code)) || ''
-  const subDistrictName = subDistrictNameMap.get(String(values.subdistrict_code)) || ''
-  const postal =
-    values.postal_code || postalCodeBySubDistrict.get(String(values.subdistrict_code)) || ''
-  return {
+function normalizeAddressPayload(
+  currentAddress: Record<string, any>,
+  values?: Record<string, any>,
+) {
+  const mergedValues = {
+    ...currentAddress,
     ...values,
-    province: provinceName,
-    district: districtName,
-    subdistrict: subDistrictName,
-    postal_code: postal,
+  }
+
+  const provinceCode = String(mergedValues.province_code || '')
+  const districtCode = String(mergedValues.district_code || '')
+  const subDistrictCode = String(mergedValues.subdistrict_code || '')
+  const selectedTypes = new Set<string>(
+    Array.isArray(mergedValues.address_types) ? mergedValues.address_types : [],
+  )
+
+  return {
+    ...mergedValues,
+    province_code: provinceCode || undefined,
+    district_code: districtCode || undefined,
+    subdistrict_code: subDistrictCode || undefined,
+    province: provinceNameMap.get(provinceCode) || mergedValues.province || undefined,
+    district: districtNameMap.get(districtCode) || mergedValues.district || undefined,
+    subdistrict: subDistrictNameMap.get(subDistrictCode) || mergedValues.subdistrict || undefined,
+    postal_code:
+      mergedValues.postal_code || postalCodeBySubDistrict.get(subDistrictCode) || undefined,
     is_house_registered: selectedTypes.has('is_house_registered'),
     is_current: selectedTypes.has('is_current'),
     is_retired_residence: selectedTypes.has('is_retired_residence'),
   }
 }
 
-function handleFormSave(formId: string, values: Record<string, any>) {
-  const payload = normalizeAddressPayload(values)
-  pendingPayloads.set(formId, payload)
-}
-
-function buildAddressRequestPayload(
-  normalizedValues: Record<string, any>,
-  metadata: {
-    addressId: string
-    personId: string
-    createdAt: string
-    updatedAt: string
-  },
+function buildAddressPayload(
+  source: Record<string, any>,
+  values?: Record<string, any>,
+  mode: 'create' | 'update' = 'update',
 ): PersonAddressCreateDTO {
-  const normalizeString = (value: unknown) => {
-    const text = String(value ?? '').trim()
-    return text || undefined
-  }
+  const normalizedValues = normalizeAddressPayload(source, values)
+  const now = new Date().toISOString()
+  const id = String(normalizedValues.id || source.id || generateUUID())
 
   return {
-    id: metadata.addressId,
-    person_id: metadata.personId,
-    house_registry_no: normalizeString(normalizedValues.house_registry_no),
-    house_no: normalizeString(normalizedValues.house_no),
-    moo: normalizeString(normalizedValues.moo),
-    building: normalizeString(normalizedValues.building),
-    soi: normalizeString(normalizedValues.soi),
-    road: normalizeString(normalizedValues.road),
-    subdistrict_code: normalizeString(normalizedValues.subdistrict_code),
-    subdistrict: normalizeString(normalizedValues.subdistrict),
-    district_code: normalizeString(normalizedValues.district_code),
-    district: normalizeString(normalizedValues.district),
-    province_code: normalizeString(normalizedValues.province_code),
-    province: normalizeString(normalizedValues.province),
-    postal_code: normalizeString(normalizedValues.postal_code),
+    ...source,
+    ...values,
+    id,
+    person_id: String(normalizedValues.person_id || ''),
+    house_registry_no: normalizeText(normalizedValues.house_registry_no),
+    house_no: normalizeText(normalizedValues.house_no),
+    moo: normalizeText(normalizedValues.moo),
+    building: normalizeText(normalizedValues.building),
+    soi: normalizeText(normalizedValues.soi),
+    road: normalizeText(normalizedValues.road),
+    subdistrict_code: normalizeText(normalizedValues.subdistrict_code),
+    subdistrict: normalizeText(normalizedValues.subdistrict),
+    district_code: normalizeText(normalizedValues.district_code),
+    district: normalizeText(normalizedValues.district),
+    province_code: normalizeText(normalizedValues.province_code),
+    province: normalizeText(normalizedValues.province),
+    postal_code: normalizeText(normalizedValues.postal_code),
     is_house_registered: Boolean(normalizedValues.is_house_registered),
     is_current: Boolean(normalizedValues.is_current),
     is_retired_residence: Boolean(normalizedValues.is_retired_residence),
-    created_at: metadata.createdAt,
-    updated_at: metadata.updatedAt,
+    created_at:
+      mode === 'create'
+        ? now
+        : normalizeText(normalizedValues.created_at) || normalizeText(source.created_at) || now,
+    updated_at: now,
   }
 }
 
-const hasAnyChanges = computed(() =>
-  addressForms.value.some(
-    (entry) => JSON.stringify(entry.currentValues) !== JSON.stringify(entry.initialValues),
-  ),
-)
-const hasAnyInvalidRequired = computed(() =>
-  addressForms.value.some((entry) => Boolean(entry.formRef?.hasMissingRequiredFields)),
-)
-const isSaveDisabled = computed(
-  () => loading.value || isSubmitting.value || !hasAnyChanges.value || hasAnyInvalidRequired.value,
-)
+async function getAddressData() {
+  loading.value = true
+  try {
+    const personId = getPersonId()
 
-async function onSaveAll() {
-  if (isSubmitting.value) return
+    if (!personId) {
+      addressData.value = []
+      addressFields.value = [createAddressFields({})]
+      toast.error('ไม่พบข้อมูลครู กรุณาบันทึกข้อมูลส่วนบุคคลก่อน', {
+        position: 'bottom-right',
+      })
+      return
+    }
 
-  const idFromUrl = route.query.id as string
-  const personId = idFromUrl || teacherStore.personId
+    const response = await getAddressById(personId)
+    addressData.value = (response.data?.person_addresses || []).map((address: PersonAddress) =>
+      mapAddressForForm(address),
+    )
+    addressFields.value = addressData.value.length
+      ? addressData.value.map((address) => createAddressFields(address))
+      : [createAddressFields({})]
+  } catch (error: any) {
+    console.error('Address API Error:', error)
+    toast.error(`โหลดข้อมูลที่อยู่ไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
+      position: 'bottom-right',
+    })
+    addressData.value = []
+    addressFields.value = [createAddressFields({})]
+  } finally {
+    loading.value = false
+  }
+}
+
+async function updateAddressData(index: number, values?: Record<string, any>) {
+  const currentAddress = addressData.value[index] || {}
+  const personId = getPersonId()
+
   if (!personId) {
-    toast.error('ไม่พบข้อมูลครู กรุณาบันทึกข้อมูลส่วนบุคคลก่อน')
+    toast.error('ไม่พบข้อมูลครู กรุณาบันทึกข้อมูลส่วนบุคคลก่อน', {
+      position: 'bottom-right',
+    })
     return
   }
 
-  pendingPayloads.clear()
-  for (const form of addressForms.value) {
-    if (form.formRef?.submitForm) {
-      const valid = await form.formRef.submitForm()
-      if (!valid) {
-        toast.error('กรุณากรอกข้อมูลให้ครบถ้วนก่อนบันทึก')
-        return
-      }
-    }
+  const source = {
+    ...currentAddress,
+    person_id: currentAddress.person_id || personId,
+  }
+  const mode = currentAddress.id ? 'update' : 'create'
+  const payload = buildAddressPayload(source, values, mode)
+
+  if (currentAddress.id) {
+    await updatePersonAddress(currentAddress.id, payload)
+  } else {
+    await createPersonAddress(payload)
   }
 
-  const changedForms = addressForms.value.filter((form) => form.hasChanges)
-  if (!changedForms.length) return
+  await getAddressData()
+  toast.success('บันทึกข้อมูลที่อยู่เรียบร้อย', {
+    position: 'bottom-right',
+  })
+}
+
+async function handleSave(index: number, values: Record<string, any>) {
+  if (busyEntries.value[index]) return
+
+  busyEntries.value = {
+    ...busyEntries.value,
+    [index]: 'save',
+  }
 
   try {
-    isSubmitting.value = true
-
-    for (const form of changedForms) {
-      const normalizedPayload = pendingPayloads.get(form.id)
-      if (!normalizedPayload) continue
-
-      const now = new Date().toISOString()
-      const requestPayload = buildAddressRequestPayload(normalizedPayload, {
-        addressId: form.recordId || form.id,
-        personId,
-        createdAt: form.createdAt || now,
-        updatedAt: now,
-      })
-
-      if (form.recordId) {
-        await updatePersonAddress(form.recordId, requestPayload)
-        form.createdAt = requestPayload.created_at
-        form.updatedAt = requestPayload.updated_at
-      } else {
-        const response = await createPersonAddress(requestPayload)
-        const createdRecordId =
-          typeof (response.data as { id?: unknown } | undefined)?.id === 'string'
-            ? ((response.data as { id?: string }).id ?? null)
-            : (requestPayload.id ?? null)
-        if (createdRecordId) {
-          form.recordId = createdRecordId
-        }
-        form.createdAt = requestPayload.created_at
-        form.updatedAt = requestPayload.updated_at
-      }
-    }
-
-    await getAddressData()
-    toast.success('บันทึกข้อมูลที่อยู่เรียบร้อย')
+    await updateAddressData(index, values)
   } catch (error: any) {
     console.error('Address save error:', error)
-    toast.error(`บันทึกข้อมูลที่อยู่ไม่สำเร็จ: ${error?.response?.data?.message || error.message}`)
+    toast.error(
+      `บันทึกข้อมูลที่อยู่ไม่สำเร็จ: ${error?.response?.data?.message || error.message}`,
+      {
+        position: 'bottom-right',
+      },
+    )
   } finally {
-    isSubmitting.value = false
+    const { [index]: _busyEntry, ...restBusyEntries } = busyEntries.value
+    busyEntries.value = restBusyEntries
   }
 }
+
+onMounted(() => {
+  getAddressData()
+})
 </script>
 
 <template>
-  <div class="flex flex-col gap-4">
-    <div v-for="form in addressForms" :key="form.id" class="px-4 sm:px-6">
-      <NormalForm
-        :topic="`ข้อมูลที่อยู่`"
-        :fields="form.fields"
-        :values="form.initialValues"
-        :ref="(instance) => setFormRef(form.id, instance as NormalFormInstance | null)"
-        @change="(payload) => handleFormChange(form.id, payload)"
-        @save="(values) => handleFormSave(form.id, values)"
-      />
-    </div>
+  <div v-if="loading" class="flex-1 space-y-4 overflow-y-auto px-4 sm:px-6">
+    <SkeletonCard />
+  </div>
 
-    <div
-      class="sticky right-0 bottom-0 z-40 flex w-full justify-end border-t border-gray-200 bg-white p-3 dark:border-neutral-700 dark:bg-black"
-    >
-      <Button
-        class="rounded-lg bg-[#16A34A] px-8 py-2 font-semibold text-white shadow-sm hover:bg-[#15803D]"
-        :disabled="isSaveDisabled"
-        @click="onSaveAll"
-      >
-        {{ isSubmitting ? 'กำลังบันทึก...' : 'บันทึก' }}
-      </Button>
-    </div>
+  <div v-else class="mx-6 flex flex-col gap-4 pb-6">
+    <CreateForm
+      :busyEntries="busyEntries"
+      :values="addressData"
+      :fields="addressFields"
+      :deferCommitOnSave="true"
+      @change="handleAddressChange"
+      @save="handleSave"
+    />
   </div>
 </template>
