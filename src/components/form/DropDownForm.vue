@@ -34,6 +34,7 @@ type FieldItem = {
   options?: { label: string; value: string }[]
   accept?: string
   multiple?: boolean
+  maxYearOffset?: number
 }
 
 const emit = defineEmits<{
@@ -47,6 +48,8 @@ const props = defineProps<{
   fields?: FieldItem[]
   values?: Record<string, any>
 }>()
+
+const DEFAULT_DATE_MAX_YEAR_OFFSET = 80
 
 function buildNumberValidator(label: string, required?: boolean) {
   const requiredMessage = `${label} จำเป็นต้องกรอก`
@@ -349,6 +352,14 @@ function dateValueToString(dv: DateValue): string {
   return `${y}-${m}-${d}`
 }
 
+function getMaxDateValue(field: FieldItem) {
+  return new CalendarDate(
+    new Date().getFullYear() + (field.maxYearOffset ?? DEFAULT_DATE_MAX_YEAR_OFFSET),
+    12,
+    31,
+  )
+}
+
 function formatDisplayDate(str: string | undefined): string {
   if (!str) return ''
   const [y, m, d] = str.split('-')
@@ -442,6 +453,7 @@ function formatDisplayDate(str: string | undefined): string {
                       <Calendar
                         :model-value="stringToDateValue(field.value as string)"
                         layout="month-and-year"
+                        :max-value="getMaxDateValue(fieldItem)"
                         @update:model-value="
                           (val: DateValue | undefined) => {
                             if (val) {

@@ -22,12 +22,15 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Spinner } from '@/components/ui/spinner'
 import { type DateValue, CalendarDate } from '@internationalized/date'
 import type { DateRange } from 'reka-ui'
 import { computed, ref, watch } from 'vue'
 
 // (removed example global form - using per-entry VeeForm instead)
+
+const DEFAULT_DATE_MAX_YEAR_OFFSET = 80
 
 type FieldItem = {
   name: string
@@ -42,6 +45,8 @@ type FieldItem = {
     | 'email'
     | 'textarea'
     | 'file'
+    | 'checkbox'
+    | 'checkbox-group'
   placeholder?: string
   required?: boolean
   disabled?: boolean
@@ -50,6 +55,7 @@ type FieldItem = {
   options?: { label: string; value: any }[]
   accept?: string // e.g. '.pdf,.jpg,.png' or 'image/*'
   multiple?: boolean
+  maxYearOffset?: number
 }
 
 type FieldSection = {
@@ -134,6 +140,22 @@ function buildSchemas() {
 
         const label = f.label || f.name
         const requiredMsg = `กรุณากรอก ${label}`
+
+        if (f.type === 'checkbox') {
+          shape[f.name] = f.required
+            ? z.boolean().refine((val) => val === true, { message: requiredMsg })
+            : z.boolean().optional()
+          return
+        }
+
+        if (f.type === 'checkbox-group') {
+          const checkboxMessage = f.required ? `${label} กรุณาเลือกอย่างน้อย 1 ตัวเลือก` : undefined
+          const arraySchema = z.array(z.string())
+          shape[f.name] = f.required
+            ? arraySchema.min(1, { message: checkboxMessage })
+            : arraySchema.optional()
+          return
+        }
 
         // Special-case email fields so we provide a specific Thai message
         if (f.type === 'email') {
@@ -277,6 +299,10 @@ function createDefaultEntryValues(entry: FieldSection[] = []) {
     section.content.forEach((field) => {
       if (field.defaultValue !== undefined) {
         defaultValues[field.name] = field.defaultValue
+      } else if (field.type === 'checkbox') {
+        defaultValues[field.name] = false
+      } else if (field.type === 'checkbox-group') {
+        defaultValues[field.name] = []
       }
     })
   })
@@ -714,6 +740,22 @@ function isEmptyRequiredValue(value: any) {
   return value == null || value === ''
 }
 
+function handleCheckboxGroupUpdate(
+  entryIndex: number,
+  fieldName: string,
+  currentValue: unknown,
+  optionValue: string,
+  checked: boolean,
+) {
+  const current = Array.isArray(currentValue) ? currentValue : []
+  const next = checked
+    ? Array.from(new Set([...current, optionValue]))
+    : current.filter((value) => value !== optionValue)
+
+  updateEntryValue(entryIndex, fieldName, next)
+  return next
+}
+
 function hasEntryChanges(entryIndex: number) {
   const current = normalizeComparableValue(localValues.value[entryIndex] || {})
   const initial = normalizeComparableValue(initialEntryValues.value[entryIndex] || {})
@@ -723,6 +765,10 @@ function hasEntryChanges(entryIndex: number) {
 function hasEntryMissingRequired(entryIndex: number) {
   return getAllFields(entryIndex).some((field) => {
     if (!field.required || field.disabled) return false
+
+    if (field.type === 'checkbox') {
+      return localValues.value[entryIndex]?.[field.name] !== true
+    }
 
     if (field.type === 'file') {
       const files = getFiles(entryIndex, field.name)
@@ -899,6 +945,14 @@ function dateValueToString(dv: DateValue): string {
   const m = String(dv.month).padStart(2, '0')
   const d = String(dv.day).padStart(2, '0')
   return `${y}-${m}-${d}`
+}
+
+function getMaxDateValue(field: FieldItem) {
+  return new CalendarDate(
+    new Date().getFullYear() + (field.maxYearOffset ?? DEFAULT_DATE_MAX_YEAR_OFFSET),
+    12,
+    31,
+  )
 }
 
 function formatDisplayDate(str: string | undefined): string {
@@ -1147,6 +1201,7 @@ function formatDisplayDateRange(str: string | undefined): string {
                                 <Calendar
                                   :model-value="stringToDateValue(veeField.value as string)"
                                   layout="month-and-year"
+                                  :max-value="getMaxDateValue(fieldItem)"
                                   @update:model-value="
                                     (val: DateValue | undefined) => {
                                       if (val) {
@@ -1326,6 +1381,70 @@ function formatDisplayDateRange(str: string | undefined): string {
                               class="min-h-20 w-full resize-none disabled:opacity-50"
                               :aria-invalid="!!errors.length"
                             />
+
+                            <!-- checkbox -->
+                            <div
+                              v-else-if="fieldItem.type === 'checkbox'"
+                              class="flex items-center gap-2"
+                            >
+                              <Checkbox
+                                :id="`form-field-${fieldItem.name}`"
+                                :model-value="Boolean(veeField.value)"
+                                :disabled="fieldItem.disabled"
+                                @update:model-value="
+                                  (val: boolean | 'indeterminate') => {
+                                    const nextValue = val === true
+                                    veeField['onUpdate:modelValue']?.(nextValue)
+                                    updateEntryValue(entryIndex, fieldItem.name, nextValue)
+                                  }
+                                "
+                              />
+                              <label
+                                :for="`form-field-${fieldItem.name}`"
+                                class="text-muted-foreground text-sm"
+                              >
+                                {{ fieldItem.placeholder || 'เลือก' }}
+                              </label>
+                            </div>
+
+                            <!-- checkbox group -->
+                            <div
+                              v-else-if="fieldItem.type === 'checkbox-group'"
+                              class="flex flex-col gap-2"
+                            >
+                              <div
+                                v-for="opt in fieldItem.options || []"
+                                :key="opt.value"
+                                class="flex items-center gap-2"
+                              >
+                                <Checkbox
+                                  :id="`${entryIndex}-${fieldItem.name}-${opt.value}`"
+                                  :model-value="
+                                    Array.isArray(veeField.value) &&
+                                    veeField.value.includes(opt.value)
+                                  "
+                                  :disabled="fieldItem.disabled"
+                                  @update:model-value="
+                                    (val: boolean | 'indeterminate') => {
+                                      const nextValue = handleCheckboxGroupUpdate(
+                                        entryIndex,
+                                        fieldItem.name,
+                                        veeField.value,
+                                        String(opt.value),
+                                        val === true,
+                                      )
+                                      veeField['onUpdate:modelValue']?.(nextValue)
+                                    }
+                                  "
+                                />
+                                <label
+                                  :for="`${entryIndex}-${fieldItem.name}-${opt.value}`"
+                                  class="text-sm"
+                                >
+                                  {{ opt.label }}
+                                </label>
+                              </div>
+                            </div>
 
                             <div class="min-h-6">
                               <FieldError v-if="errors.length" :errors="errors" class="mt-1 ml-0" />
@@ -1550,6 +1669,7 @@ function formatDisplayDateRange(str: string | undefined): string {
                                   <Calendar
                                     :model-value="stringToDateValue(subEntry[subField.name])"
                                     layout="month-and-year"
+                                    :max-value="getMaxDateValue(subField)"
                                     @update:model-value="
                                       (val: DateValue | undefined) => {
                                         if (val) {

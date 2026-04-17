@@ -302,6 +302,7 @@ const positionFields: NormalFormField[] = [
     type: 'date',
     disabled: false,
     placeholder: 'วว / ดด / ปปปป',
+    maxYearOffset: 80,
   },
   {
     name: 'position_held_date',

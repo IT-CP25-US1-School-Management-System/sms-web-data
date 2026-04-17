@@ -148,7 +148,9 @@ const maritalStatusMap: Record<string, string> = {
   single: 'โสด',
   married: 'สมรส',
   widowed: 'หม้าย',
-  divorced: 'หย่า',
+  divorced: 'หย่าร้าง',
+  separated: 'แยกกันอยู่',
+  deceased: 'เสียชีวิต',
 }
 
 function normalizeBoolean(value: unknown) {
@@ -314,9 +316,13 @@ watch(
               ? 'married'
               : teacher.marital_status === 'หม้าย'
                 ? 'widowed'
-                : teacher.marital_status === 'หย่า'
+                : teacher.marital_status === 'หย่าร้าง' || teacher.marital_status === 'หย่า'
                   ? 'divorced'
-                  : '',
+                  : teacher.marital_status === 'แยกกันอยู่'
+                    ? 'separated'
+                    : teacher.marital_status === 'เสียชีวิต'
+                      ? 'deceased'
+                      : '',
         'spouse-name': teacher.spouse_name,
       }
       formValuesUpdate.value = { ...formValues.value }
@@ -550,7 +556,9 @@ const handleSave = async () => {
             { label: 'โสด', value: 'single' },
             { label: 'สมรส', value: 'married' },
             { label: 'หม้าย', value: 'widowed' },
-            { label: 'หย่า', value: 'divorced' },
+            { label: 'หย่าร้าง', value: 'divorced' },
+            { label: 'แยกกันอยู่', value: 'separated' },
+            { label: 'เสียชีวิต', value: 'deceased' },
           ],
         },
         {

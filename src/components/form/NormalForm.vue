@@ -52,6 +52,7 @@ export type NormalFormField = {
   accept?: string
   multiple?: boolean
   defaultValue?: unknown
+  maxYearOffset?: number
 }
 
 export type NormalFormChangePayload = {
@@ -69,6 +70,8 @@ const emit = defineEmits<{
   (e: 'save', value: Record<string, any>): void
   (e: 'change', value: NormalFormChangePayload): void
 }>()
+
+const DEFAULT_DATE_MAX_YEAR_OFFSET = 80
 
 function getDefaultValue(field: NormalFormField) {
   if (field.defaultValue !== undefined) return field.defaultValue
@@ -376,6 +379,14 @@ function dateValueToString(dv: DateValue): string {
   return `${y}-${m}-${d}`
 }
 
+function getMaxDateValue(field: NormalFormField) {
+  return new CalendarDate(
+    new Date().getFullYear() + (field.maxYearOffset ?? DEFAULT_DATE_MAX_YEAR_OFFSET),
+    12,
+    31,
+  )
+}
+
 function formatDisplayDate(str: string | undefined): string {
   if (!str) return ''
   const [y, m, d] = str.split('-')
@@ -461,7 +472,7 @@ function handleCheckboxGroupUpdate(
                     autocomplete="off"
                     :aria-invalid="!!errors.length"
                     :disabled="fieldItem.disabled"
-                    class="disabled:opacity-80"
+                    class="disabled:opacity-50"
                   />
 
                   <!-- date (Popover + Calendar) -->
@@ -477,7 +488,7 @@ function handleCheckboxGroupUpdate(
                         :class="[
                           'w-full justify-start text-left font-normal',
                           !field.value && 'text-muted-foreground',
-                          fieldItem.disabled && 'disabled:opacity-80',
+                          fieldItem.disabled && 'disabled:opacity-50',
                         ]"
                       >
                         <CalendarIcon class="mr-2 h-4 w-4" />
@@ -492,6 +503,7 @@ function handleCheckboxGroupUpdate(
                       <Calendar
                         :model-value="stringToDateValue(field.value as string)"
                         layout="month-and-year"
+                        :max-value="getMaxDateValue(fieldItem)"
                         @update:model-value="
                           (val: DateValue | undefined) => {
                             if (val) {
@@ -595,7 +607,7 @@ function handleCheckboxGroupUpdate(
                     @update:model-value="(v) => field['onUpdate:modelValue']?.(v)"
                     :placeholder="fieldItem.placeholder || fieldItem.label || fieldItem.name"
                     :disabled="fieldItem.disabled"
-                    class="min-h-20 resize-none disabled:opacity-80"
+                    class="min-h-20 resize-none disabled:opacity-50"
                     :aria-invalid="!!errors.length"
                   />
 
