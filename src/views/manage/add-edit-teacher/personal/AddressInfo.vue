@@ -11,8 +11,8 @@ import {
   updatePersonAddress,
   useTeacherStore,
 } from '@/stores/teachers'
-import type { PersonAddress, PersonAddressCreateDTO } from '@/types/teacher'
-import type { District, Province, SubDistrict } from '@/types/address'
+import type { PersonAddressCreateDTO } from '@/types/teacher'
+import type { District, PersonAddress, Province, SubDistrict } from '@/types/address'
 import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { toast } from 'vue-sonner'
@@ -304,7 +304,7 @@ function handleAddressChange(index: number, values: Record<string, any>) {
 function normalizeAddressPayload(
   currentAddress: Record<string, any>,
   values?: Record<string, any>,
-) {
+): Record<string, any> {
   const mergedValues = {
     ...currentAddress,
     ...values,

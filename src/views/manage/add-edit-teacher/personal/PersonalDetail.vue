@@ -157,7 +157,7 @@ function normalizeBoolean(value: unknown) {
   return value === true || value === 'true'
 }
 
-function normalizeExistingTeacherPayload(teacher?: Record<string, any> | null) {
+function normalizeExistingTeacherPayload(teacher?: Record<string, any> | null): Record<string, any> {
   if (!teacher) return {}
 
   const {
@@ -183,7 +183,7 @@ function normalizeExistingTeacherPayload(teacher?: Record<string, any> | null) {
   }
 }
 
-function resolvePayloadValue(value: unknown, fallback: unknown) {
+function resolvePayloadValue(value: unknown, fallback: unknown): any {
   if (value === undefined || value === null || value === '') return fallback ?? undefined
   return value
 }
