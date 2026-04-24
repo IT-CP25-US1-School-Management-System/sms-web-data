@@ -54,12 +54,49 @@ const { canPreviousPage, canNextPage, getVisiblePages } = usePagination(paginati
 const fetchRequests = async () => {
   loading.value = true
   try {
-    const response = await getDocumentRequests()
+    const query = searchQuery.value.trim()
+    const response = await getDocumentRequests({
+      page: pagination.value.page,
+      per_page: pagination.value.per_page,
+      sort_by: 'created_at',
+      sort_order: 'desc',
+      where_logical_operator: query ? 'OR' : undefined,
+      where: query
+        ? [
+            [
+              {
+                table_name: 'document_requests',
+                field: 'document_type',
+                operator: 'like',
+                value: `%${query}%`,
+              },
+              {
+                table_name: 'document_requests',
+                field: 'title',
+                operator: 'like',
+                value: `%${query}%`,
+              },
+              {
+                table_name: 'person_data',
+                field: 'first_name_th',
+                operator: 'like',
+                value: `%${query}%`,
+              },
+              {
+                table_name: 'person_data',
+                field: 'last_name_th',
+                operator: 'like',
+                value: `%${query}%`,
+              },
+            ],
+          ]
+        : undefined,
+    })
     requests.value = response.data
-    pagination.value.total_rows = response.total_rows || response.data.length
-    pagination.value.total_pages = Math.ceil(
-      pagination.value.total_rows / pagination.value.per_page,
-    )
+    pagination.value.page = response.page || pagination.value.page
+    pagination.value.per_page = response.per_page || pagination.value.per_page
+    pagination.value.total_rows = response.total_rows || 0
+    pagination.value.total_pages = response.total_pages || 1
   } catch (error: any) {
     console.error('Failed to fetch requests:', error)
     toast.error('เกิดข้อผิดพลาด', {

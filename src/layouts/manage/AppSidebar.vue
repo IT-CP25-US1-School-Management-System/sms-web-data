@@ -111,20 +111,16 @@ const menuConfig: {
   ],
 }
 
-// Check if current route is an add-edit-teacher route
-const isAddTeacherRoute = computed(() => {
+// Check if current route is an add/edit-teacher route
+const isTeacherFormRoute = computed(() => {
   const name = route.name?.toString() || ''
   return name.startsWith('AddTeacher')
 })
 
-// Check if current route is an edit-teacher route
-const isEditTeacherRoute = computed(() => {
-  const name = route.name?.toString() || ''
-  return name.startsWith('EditTeacher')
-})
+const isEditTeacherContext = computed(() => Boolean(route.query.id))
 
 // Show teacher sub-menu on add or edit routes
-const showTeacherSubMenu = computed(() => isAddTeacherRoute.value || isEditTeacherRoute.value)
+const showTeacherSubMenu = computed(() => isTeacherFormRoute.value)
 
 // Dynamic label for the teacher sub-menu group
 const teacherSubMenuLabel = computed(() => {
@@ -306,7 +302,15 @@ const getTeacherIdForNavigation = () => {
 }
 
 const isChildDisabled = (child: MenuChild) => {
-  return Boolean(child.showCondition && !child.showCondition())
+  return !isEditTeacherContext.value && Boolean(child.showCondition && !child.showCondition())
+}
+
+const shouldShowChild = (child: MenuChild) => {
+  if (isEditTeacherContext.value) {
+    return !child.showCondition || child.showCondition()
+  }
+
+  return true
 }
 
 const isActiveMenuItem = (menuItem: MenuItem) => {
@@ -483,7 +487,7 @@ onMounted(async () => {
               <template v-if="collapsibleStates[menuItem.id]">
                 <SidebarMenuSub>
                   <template v-for="child in menuItem.children" :key="child.id">
-                    <SidebarMenuSubItem>
+                    <SidebarMenuSubItem v-if="shouldShowChild(child)">
                       <SidebarMenuSubButton
                         v-if="child.routeName && !isChildDisabled(child)"
                         :is-active="isActiveRoute(child.routeName)"
