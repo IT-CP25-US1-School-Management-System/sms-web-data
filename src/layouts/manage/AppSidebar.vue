@@ -305,6 +305,10 @@ const getTeacherIdForNavigation = () => {
   return idFromUrl || teacherStore.personId || ''
 }
 
+const isChildDisabled = (child: MenuChild) => {
+  return Boolean(child.showCondition && !child.showCondition())
+}
+
 const isActiveMenuItem = (menuItem: MenuItem) => {
   if (menuItem.children && Array.isArray(menuItem.children) && menuItem.children.length > 0) {
     return menuItem.children.some((child: MenuChild) => isActiveRoute(child.routeName))
@@ -479,9 +483,9 @@ onMounted(async () => {
               <template v-if="collapsibleStates[menuItem.id]">
                 <SidebarMenuSub>
                   <template v-for="child in menuItem.children" :key="child.id">
-                    <SidebarMenuSubItem v-if="!child.showCondition || child.showCondition()">
+                    <SidebarMenuSubItem>
                       <SidebarMenuSubButton
-                        v-if="child.routeName"
+                        v-if="child.routeName && !isChildDisabled(child)"
                         :is-active="isActiveRoute(child.routeName)"
                         as-child
                       >
@@ -496,7 +500,11 @@ onMounted(async () => {
                           <span>{{ child.label }}</span>
                         </RouterLink>
                       </SidebarMenuSubButton>
-                      <SidebarMenuSubButton v-else class="cursor-default opacity-50">
+                      <SidebarMenuSubButton
+                        v-else
+                        class="cursor-not-allowed opacity-50"
+                        :disabled="isChildDisabled(child)"
+                      >
                         <span>{{ child.label }}</span>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>
