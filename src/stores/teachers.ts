@@ -316,9 +316,11 @@ export const useTeacherStore = defineStore('teacher', () => {
     personId.value = id
   }
 
-  function setCurrentTeacher(teacher: Partial<PersonData>) {
-    personId.value = teacher.id || null
-    currentTeacher.value = teacher
+  function setCurrentTeacher(teacher: Partial<PersonData> | Record<string, any>) {
+    const normalizedTeacher = { ...teacher } as Partial<PersonData>
+
+    personId.value = normalizedTeacher.id || null
+    currentTeacher.value = normalizedTeacher
   }
 
   function clearPersonId() {
