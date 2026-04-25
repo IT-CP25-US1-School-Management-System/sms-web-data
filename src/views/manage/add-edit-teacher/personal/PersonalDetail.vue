@@ -466,12 +466,9 @@ const handleSave = async () => {
     }
 
     teacherStore.setCurrentTeacher({
+      ...(teacherStore.currentTeacher || {}),
+      ...payload,
       id: personId!,
-      first_name_th: firstName,
-      last_name_th: lastName,
-      prefix_id: prefixId,
-      role_id: roleId,
-      is_government: currentValues.is_government ?? true,
     })
 
     await router.push({ name: ROUTE_NAMES.ADD_TEACHER_ADDRESS, query: { id: personId! } })

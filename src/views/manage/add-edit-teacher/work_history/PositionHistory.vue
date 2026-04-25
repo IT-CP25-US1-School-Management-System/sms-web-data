@@ -620,8 +620,16 @@ function buildPositionPayload(
 }
 
 function buildPersonDataPayload(source: PositionRow | undefined, payload: Record<string, any>) {
-  const personData =
+  const storePersonData =
+    teacherStore.currentTeacher && typeof teacherStore.currentTeacher === 'object'
+      ? teacherStore.currentTeacher
+      : {}
+  const sourcePersonData =
     source?.person_data && typeof source.person_data === 'object' ? source.person_data : {}
+  const personData = {
+    ...storePersonData,
+    ...sourcePersonData,
+  }
   const resolvedPersonId =
     personData.id ?? source?.person_id ?? payload.person_id ?? getPersonId() ?? undefined
   const resolvedCreatedAt =
