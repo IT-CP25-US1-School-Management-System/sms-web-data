@@ -6,6 +6,7 @@ export const ROUTE_NAMES = {
   LOGIN: 'Login',
   HOME: 'Home',
   PROFILE: 'Profile',
+  MANAGE_PROFILE: 'ManageProfile',
   PERSONAL: 'Personal',
   WORK_HISTORY: 'WorkHistory',
   ACHIEVEMENTS: 'Achievements',

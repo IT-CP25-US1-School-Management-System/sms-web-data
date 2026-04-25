@@ -105,7 +105,7 @@ const menuConfig: {
       id: 'profile',
       label: 'โปรไฟล์',
       icon: User,
-      routeName: ROUTE_NAMES.PROFILE,
+      routeName: ROUTE_NAMES.MANAGE_PROFILE,
       children: null,
     },
   ],
@@ -571,7 +571,7 @@ onMounted(async () => {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
-                <DropdownMenuItem @click="router.push({ name: ROUTE_NAMES.PROFILE })">
+                <DropdownMenuItem @click="router.push({ name: ROUTE_NAMES.MANAGE_PROFILE })">
                   <User class="mr-2 h-4 w-4" />
                   โปรไฟล์
                 </DropdownMenuItem>

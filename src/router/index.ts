@@ -58,6 +58,12 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/manage/profile',
+      name: ROUTE_NAMES.MANAGE_PROFILE,
+      component: () => import('@/views/manage/ProfileView.vue'),
+      meta: { requiresAuth: true, adminOnly: true },
+    },
+    {
       path: '/personal',
       component: () => import('@/views/web/personal/PersonalView.vue'),
       meta: { requiresAuth: true, webOnly: true },
