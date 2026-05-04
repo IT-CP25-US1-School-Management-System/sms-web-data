@@ -5,6 +5,7 @@ export const API_BASE_URL = env.API_BASE_URL
 export const ROUTE_NAMES = {
   LOGIN: 'Login',
   HOME: 'Home',
+  NOT_FOUND: 'NotFound',
   PROFILE: 'Profile',
   MANAGE_PROFILE: 'ManageProfile',
   PERSONAL: 'Personal',

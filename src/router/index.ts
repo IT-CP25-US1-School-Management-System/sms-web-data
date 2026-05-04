@@ -331,6 +331,11 @@ const router = createRouter({
       component: () => import('@/views/manage/requests/RequestEditView.vue'),
       meta: { requiresAuth: true, adminOnly: true },
     },
+    {
+      path: '/:pathMatch(.*)*',
+      name: ROUTE_NAMES.NOT_FOUND,
+      component: () => import('@/views/NotFoundView.vue'),
+    },
   ],
 })
 

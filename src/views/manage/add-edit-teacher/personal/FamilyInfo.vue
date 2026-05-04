@@ -293,7 +293,7 @@ function createFamilyFields(values: Record<string, any>): CreateFormSection[] {
           name: 'email',
           label: 'อีเมล',
           type: 'email',
-          required: true,
+          required: false,
           placeholder: 'เช่น name@example.com',
         },
         {

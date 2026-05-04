@@ -114,7 +114,7 @@ function getPersonId() {
 const academicRankFields: CreateFormSection[][] = [
   [
     {
-      topic: 'ประวัติการมีวิทยฐานะ',
+      topic: 'ประวัติการเลื่อนตำแหน่งวิทยฐานะ',
       content: [
         {
           name: 'order-no',
@@ -138,11 +138,13 @@ const academicRankFields: CreateFormSection[][] = [
         },
         {
           name: 'academic-rank',
-          label: 'วิทยฐานะ',
+          label: 'การเลื่อนตำแหน่ง/วิทยฐานะ',
           type: 'select',
           required: true,
           placeholder: 'เลือกวิทยฐานะ',
           options: [
+            { label: 'ครูผู้ช่วย', value: 'ครูผู้ช่วย' },
+            { label: 'ครู(คศ.1)', value: 'ครู(คศ.1)' },
             { label: 'ครูชำนาญการ', value: 'ครูชำนาญการ' },
             { label: 'ครูชำนาญการพิเศษ', value: 'ครูชำนาญการพิเศษ' },
             { label: 'ครูเชี่ยวชาญ', value: 'ครูเชี่ยวชาญ' },
