@@ -1,15 +1,12 @@
 import { dataApiInstance } from '@/stores/api'
-import { DATASET_GET } from '@/lib/constants'
 import type { DatasetListResponse, DatasetRowResponse, DatasetQueryParams } from '@/types/dataset'
 
-export const DATASET_ID = DATASET_GET.DATASET_ID
-export const DATASET_VERSION = DATASET_GET.DATASET_VERSION
 /**
  * Generic function to list rows from a dataset version
  */
 export async function getDatasetRows<T = Record<string, any>>(
-  datasetId: string = DATASET_ID,
-  version: string = DATASET_VERSION,
+  datasetId: string,
+  version: string,
   params?: DatasetQueryParams,
 ): Promise<DatasetListResponse<T>> {
   const queryParams: Record<string, any> = {

@@ -1,13 +1,11 @@
 import {
-  DATASET_ID,
-  DATASET_VERSION,
   getDatasetRows,
   getDatasetRowByKey,
   createDatasetRow,
   updateDatasetRow,
   deleteDatasetRow,
 } from '@/stores/dataset'
-import { MANAGE_ATTENDANCE_DATASET, MANAGE_DATASETS } from '@/lib/constants'
+import { MANAGE_ATTENDANCE_DATASET, MANAGE_DATASETS, DATASET_GET } from '@/lib/constants'
 import { defineStore } from 'pinia'
 import { ref, readonly } from 'vue'
 import type { DatasetListResponse, DatasetRowResponse, DatasetQueryParams } from '@/types/dataset'
@@ -36,6 +34,8 @@ const LICENSE_DATASET_ID = MANAGE_DATASETS.DATASET_ID
 const LICENSE_DATASET_VERSION = MANAGE_DATASETS.DATASET_VERSION_LICENSE
 const ATTENDANCE_DATASET_ID = MANAGE_ATTENDANCE_DATASET.DATASET_ID
 const ATTENDANCE_DATASET_VERSION = MANAGE_ATTENDANCE_DATASET.DATASET_VERSION
+const TEACHER_DATASET_ID = DATASET_GET.DATASET_ID
+const TEACHER_DATASET_VERSION = DATASET_GET.DATASET_VERSION
 
 /**
  * Get list of teachers with pagination and filters
@@ -43,7 +43,7 @@ const ATTENDANCE_DATASET_VERSION = MANAGE_ATTENDANCE_DATASET.DATASET_VERSION
 export async function getTeachers(
   params?: DatasetQueryParams,
 ): Promise<DatasetListResponse<PersonData>> {
-  return getDatasetRows<PersonData>(DATASET_ID, DATASET_VERSION, {
+  return getDatasetRows<PersonData>(TEACHER_DATASET_ID, TEACHER_DATASET_VERSION, {
     ...params,
     view: 'personal_detail',
   })
@@ -79,7 +79,12 @@ export async function createDailyAttendance(
  * Get a single teacher by ID
  */
 export async function getTeacherById(teacherId: string): Promise<DatasetRowResponse<PersonData>> {
-  return getDatasetRowByKey<PersonData>(DATASET_ID, DATASET_VERSION, teacherId, 'personal_detail')
+  return getDatasetRowByKey<PersonData>(
+    TEACHER_DATASET_ID,
+    TEACHER_DATASET_VERSION,
+    teacherId,
+    'personal_detail',
+  )
 }
 
 /**
@@ -89,8 +94,8 @@ export async function getAddressById(
   teacherId: string,
 ): Promise<DatasetRowResponse<{ person_addresses?: PersonAddress[] }>> {
   return getDatasetRowByKey<{ person_addresses?: PersonAddress[] }>(
-    DATASET_ID,
-    DATASET_VERSION,
+    TEACHER_DATASET_ID,
+    TEACHER_DATASET_VERSION,
     teacherId,
     'personal_address',
   )
@@ -103,8 +108,8 @@ export async function getFamilyById(
   teacherId: string,
 ): Promise<DatasetRowResponse<{ family_members?: FamilyMember[] }>> {
   return getDatasetRowByKey<{ family_members?: FamilyMember[] }>(
-    DATASET_ID,
-    DATASET_VERSION,
+    TEACHER_DATASET_ID,
+    TEACHER_DATASET_VERSION,
     teacherId,
     'personal_family',
   )
@@ -117,8 +122,8 @@ export async function getEducationById(
   teacherId: string,
 ): Promise<DatasetRowResponse<{ education_records?: EducationRecord[] }>> {
   return getDatasetRowByKey<{ education_records?: EducationRecord[] }>(
-    DATASET_ID,
-    DATASET_VERSION,
+    TEACHER_DATASET_ID,
+    TEACHER_DATASET_VERSION,
     teacherId,
     'personal_education',
   )
@@ -177,7 +182,7 @@ export async function getProfessionalLicensesByTeacherId(
 export async function createTeacher(
   data: TeacherCreateDTO,
 ): Promise<DatasetRowResponse<PersonData>> {
-  return createDatasetRow<PersonData>(DATASET_ID, DATASET_VERSION, data)
+  return createDatasetRow<PersonData>(TEACHER_DATASET_ID, TEACHER_DATASET_VERSION, data)
 }
 
 /**
@@ -187,14 +192,14 @@ export async function updateTeacher(
   teacherId: string,
   data: TeacherUpdateDTO,
 ): Promise<DatasetRowResponse<PersonData>> {
-  return updateDatasetRow<PersonData>(DATASET_ID, DATASET_VERSION, teacherId, data)
+  return updateDatasetRow<PersonData>(TEACHER_DATASET_ID, TEACHER_DATASET_VERSION, teacherId, data)
 }
 
 /**
  * Delete a teacher by ID (soft delete)
  */
 export async function deleteTeacher(teacherId: string): Promise<void> {
-  return deleteDatasetRow(DATASET_ID, DATASET_VERSION, teacherId)
+  return deleteDatasetRow(TEACHER_DATASET_ID, TEACHER_DATASET_VERSION, teacherId)
 }
 
 /**
