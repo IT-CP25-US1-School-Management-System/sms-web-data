@@ -3,9 +3,8 @@ import { computed, onBeforeUnmount, ref, type Component } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import MainLayout from '@/layouts/manage/MainLayout.vue'
-import { MANAGE_STUDENT_DATASETS } from '@/lib/constants'
+import { DATASET_GET, MANAGE_STUDENT_DATASETS } from '@/lib/constants'
 import { formatDateTime } from '@/lib/helpers'
-import { DATASET_ID, DATASET_VERSION } from '@/stores/dataset'
 import {
   createReportImportJob,
   createReportImportTemplate,
@@ -30,8 +29,8 @@ const defaultImportTarget: ImportTarget = {
   key: 'teacher',
   label: 'คุณครู',
   description: 'นำเข้าข้อมูลบุคลากรและครู',
-  datasetId: DATASET_ID,
-  version: DATASET_VERSION,
+  datasetId: DATASET_GET.DATASET_ID,
+  version: DATASET_GET.DATASET_VERSION,
   icon: Users,
 }
 
