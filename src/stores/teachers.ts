@@ -5,7 +5,7 @@ import {
   updateDatasetRow,
   deleteDatasetRow,
 } from '@/stores/dataset'
-import { MANAGE_ATTENDANCE_DATASET, MANAGE_DATASETS, DATASET_GET } from '@/lib/constants'
+import { MANAGE_ATTENDANCE_DATASET, MANAGE_DATASETS, MANAGE_TEACHER_DATASET } from '@/lib/constants'
 import { defineStore } from 'pinia'
 import { ref, readonly } from 'vue'
 import type { DatasetListResponse, DatasetRowResponse, DatasetQueryParams } from '@/types/dataset'
@@ -34,8 +34,8 @@ const LICENSE_DATASET_ID = MANAGE_DATASETS.DATASET_ID
 const LICENSE_DATASET_VERSION = MANAGE_DATASETS.DATASET_VERSION_LICENSE
 const ATTENDANCE_DATASET_ID = MANAGE_ATTENDANCE_DATASET.DATASET_ID
 const ATTENDANCE_DATASET_VERSION = MANAGE_ATTENDANCE_DATASET.DATASET_VERSION
-const TEACHER_DATASET_ID = DATASET_GET.DATASET_ID
-const TEACHER_DATASET_VERSION = DATASET_GET.DATASET_VERSION
+const TEACHER_DATASET_ID = MANAGE_TEACHER_DATASET.DATASET_ID
+const TEACHER_DATASET_VERSION = MANAGE_TEACHER_DATASET.DATASET_VERSION
 
 /**
  * Get list of teachers with pagination and filters
