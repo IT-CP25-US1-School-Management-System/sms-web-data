@@ -186,8 +186,8 @@ const handleModalClose = () => {
           <h2 class="text-base font-semibold">รายชื่อนักเรียน</h2>
         </div>
 
-        <div class="flex min-h-0 flex-1 flex-col rounded-lg border px-4">
-          <table class="w-full" style="table-layout: fixed">
+        <div class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border">
+          <table class="hidden w-full" style="table-layout: fixed">
             <thead class="bg-muted/50">
               <tr>
                 <th class="py-2 text-left font-medium">ชื่อ</th>
@@ -201,7 +201,17 @@ const handleModalClose = () => {
           </table>
 
           <div class="min-h-0 flex-1 overflow-auto">
-            <table class="w-full" style="table-layout: fixed">
+            <table class="w-full [&_th]:px-4 [&_td]:px-4" style="table-layout: fixed">
+              <thead class="bg-muted/50 sticky top-0 z-10">
+                <tr>
+                  <th class="py-2 text-left font-medium">ชื่อ</th>
+                  <th class="py-2 text-left font-medium">นามสกุล</th>
+                  <th class="py-2 text-center font-medium">เลขประจำตัว</th>
+                  <th class="py-2 text-center font-medium">ชั้น</th>
+                  <th class="py-2 text-center font-medium">ห้อง</th>
+                  <th class="py-2 text-center font-medium">การดำเนินการ</th>
+                </tr>
+              </thead>
               <tbody>
                 <tr v-if="loading">
                   <td colspan="6" class="py-8 text-center">
@@ -260,7 +270,7 @@ const handleModalClose = () => {
 
           <div
             v-if="!loading && students.length > 0"
-            class="flex shrink-0 items-center justify-end gap-2 border-t py-2"
+            class="flex shrink-0 items-center justify-end gap-2 border-t px-4 py-2"
           >
             <span class="text-muted-foreground mr-auto text-sm">
               แสดง {{ students.length }} รายการจาก {{ pagination.total_rows }} รายการทั้งหมด

@@ -44,6 +44,7 @@ const contractFormRefs = ref<Array<InstanceType<typeof DropDownForm> | null>>([]
 const durationFormRefs = ref<Array<InstanceType<typeof DropDownForm> | null>>([])
 const budgetFormRefs = ref<Array<InstanceType<typeof DropDownForm> | null>>([])
 const roleLabelById = new Map<string, string>()
+const positionOptions = ref<{ label: string; value: string }[]>([])
 
 function getPersonId() {
   const routeId = route.query.id
@@ -201,6 +202,11 @@ async function fetchRoleLabels() {
         mappedRoles.forEach((role) => {
           roleLabelById.set(role.id, role.label)
         })
+        positionOptions.value = mappedRoles.map((role) => ({
+          label: role.label,
+          value: role.label,
+        }))
+        formRenderKey.value += 1
         return
       }
     }
@@ -356,10 +362,11 @@ onMounted(() => {
         {
           name: 'position',
           label: 'ตำแหน่ง',
-          type: 'text',
+          type: 'select',
           required: true,
           placeholder: 'ระบบกำหนดจากข้อมูลบุคลากร',
-          disabled: true,
+          disabled: false,
+          options: positionOptions,
         },
         {
           name: 'work_status',
@@ -379,9 +386,13 @@ onMounted(() => {
         {
           name: 'hiring_nature',
           label: 'ลักษณะการจ้าง',
-          type: 'text',
+          type: 'select',
           required: true,
           placeholder: 'เช่น จ้างชั่วคราว',
+          options: [
+            { label: 'จ้างใหม่', value: 'จ้างใหม่' },
+            { label: 'ต่อเนื่อง', value: 'ต่อเนื่อง' },
+          ],
         },
         {
           name: 'contract_action',
@@ -410,7 +421,7 @@ onMounted(() => {
           name: 'salary',
           label: 'เงินค่าจ้าง',
           type: 'number',
-          required: true,
+          required: false,
           placeholder: 'เช่น 15000',
         },
         {

@@ -400,8 +400,12 @@ const getPersonDisplayName = (record: DailyAttendanceRecord) => {
           <h2 class="text-base font-semibold">{{ tableTitle }}</h2>
         </div>
 
-        <div class="flex min-h-0 flex-1 flex-col rounded-lg border px-4">
-          <table v-if="!isLeaveTab" class="w-full" style="table-layout: fixed">
+        <div class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border">
+          <table
+            v-if="!isLeaveTab"
+            class="w-full [&_th]:px-4 [&_td]:px-4"
+            style="table-layout: fixed"
+          >
             <thead class="bg-muted/50">
               <tr>
                 <th class="py-2 text-left font-medium">ชื่อ</th>
@@ -412,7 +416,11 @@ const getPersonDisplayName = (record: DailyAttendanceRecord) => {
             </thead>
           </table>
 
-          <table v-else class="w-full" style="table-layout: fixed">
+          <table
+            v-else
+            class="w-full [&_th]:px-4 [&_td]:px-4"
+            style="table-layout: fixed"
+          >
             <thead class="bg-muted/50">
               <tr>
                 <th class="py-2 text-left font-medium">ชื่อ - นามสกุล</th>
@@ -425,7 +433,11 @@ const getPersonDisplayName = (record: DailyAttendanceRecord) => {
           </table>
 
           <div class="min-h-0 flex-1 overflow-auto">
-            <table v-if="!isLeaveTab" class="w-full" style="table-layout: fixed">
+            <table
+              v-if="!isLeaveTab"
+              class="w-full [&_th]:px-4 [&_td]:px-4"
+              style="table-layout: fixed"
+            >
               <tbody>
                 <tr v-if="loading">
                   <td colspan="4" class="py-8 text-center">
@@ -481,7 +493,11 @@ const getPersonDisplayName = (record: DailyAttendanceRecord) => {
               </tbody>
             </table>
 
-            <table v-else class="w-full" style="table-layout: fixed">
+            <table
+              v-else
+              class="w-full [&_th]:px-4 [&_td]:px-4"
+              style="table-layout: fixed"
+            >
               <tbody>
                 <tr v-if="loading">
                   <td colspan="5" class="py-8 text-center">
@@ -520,7 +536,7 @@ const getPersonDisplayName = (record: DailyAttendanceRecord) => {
 
           <div
             v-if="!loading && (isLeaveTab ? leaveRecords.length > 0 : teachers.length > 0)"
-            class="flex shrink-0 items-center justify-end gap-2 border-t py-2"
+            class="flex shrink-0 items-center justify-end gap-2 border-t px-4 py-2"
           >
             <span class="text-muted-foreground mr-auto text-sm">
               แสดง {{ isLeaveTab ? leaveRecords.length : teachers.length }} รายการจาก
