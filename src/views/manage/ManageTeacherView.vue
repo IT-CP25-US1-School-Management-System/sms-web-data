@@ -277,7 +277,7 @@ const handleReportTemplateSuccess = () => {
 
 const getTeacherType = (teacher: PersonData) => {
   const isGov = (teacher.is_government as any) === true || (teacher.is_government as any) === 'true'
-  return isGov ? 'ข้าราชการ' : 'ครูอัตราจ้าง'
+  return isGov ? 'ข้าราชการ' : 'ลูกจ้างชั่วคราว'
 }
 
 const getAttendanceStatusLabel = (status: AttendanceStatus) => {
@@ -334,7 +334,7 @@ const getPersonDisplayName = (record: DailyAttendanceRecord) => {
             :class="activeTab !== 'contract' && 'text-muted-foreground hover:bg-transparent'"
             @click="changeTab('contract')"
           >
-            ครูอัตราจ้าง
+            ลูกจ้างชั่วคราว
           </Button>
           <Button
             :variant="activeTab === 'leave' ? 'default' : 'ghost'"

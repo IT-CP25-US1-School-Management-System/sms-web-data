@@ -10,7 +10,7 @@ import {
   sortDropdownOptionsByThaiLabel,
 } from '@/lib/helpers'
 import { createDatasetRow, getDatasetRows, updateDatasetRow } from '@/stores/dataset'
-import { useTeacherStore } from '@/stores/teachers'
+import { updateTeacher, useTeacherStore } from '@/stores/teachers'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { toast } from 'vue-sonner'
@@ -53,15 +53,47 @@ function getPersonId() {
   return undefined
 }
 
-const displayEmploymentData = computed(() =>
-  employmentData.value.length
-    ? employmentData.value
-    : [
-        {
-          id: 'empty-employment',
-        },
-      ],
-)
+function resolvePositionLabel(roleId?: string | number | null, fallback?: string) {
+  const normalizedRoleId = roleId !== undefined && roleId !== null ? String(roleId).trim() : ''
+  if (normalizedRoleId && roleLabelById.has(normalizedRoleId)) {
+    return roleLabelById.get(normalizedRoleId) || ''
+  }
+  return fallback || ''
+}
+
+function resolveRoleId(value?: string | number | null) {
+  const normalizedValue = value !== undefined && value !== null ? String(value).trim() : ''
+  if (!normalizedValue) return ''
+
+  if (roleLabelById.has(normalizedValue)) return normalizedValue
+
+  const matchedOption = positionOptions.value.find(
+    (option) => option.value === normalizedValue || option.label === normalizedValue,
+  )
+
+  return matchedOption?.value || ''
+}
+
+const displayEmploymentData = computed(() => {
+  if (employmentData.value.length) return employmentData.value
+
+  const teacherData =
+    teacherStore.currentTeacher && typeof teacherStore.currentTeacher === 'object'
+      ? teacherStore.currentTeacher
+      : undefined
+
+  return [
+    withCalculatedEmploymentAges({
+      id: 'empty-employment',
+      person_id: getPersonId() || teacherData?.id || '',
+      position:
+        teacherData?.role_id !== undefined && teacherData?.role_id !== null
+          ? String(teacherData.role_id)
+          : '',
+      created_at: new Date().toISOString(),
+    }),
+  ]
+})
 
 const hasChanges = computed(
   () => JSON.stringify(employmentData.value) !== JSON.stringify(initialEmploymentData.value),
@@ -102,7 +134,7 @@ function calculateYearsFromDate(value?: string | Date | null) {
   return date ? String(calAge(date)) : ''
 }
 
-function withCalculatedEmploymentAges(values: Record<string, any>) {
+function withCalculatedEmploymentAges(values: Record<string, any>): Record<string, any> {
   return {
     ...values,
     'total-work-years': calculateYearsFromDate(values.first_contract_start),
@@ -127,6 +159,7 @@ function buildEmploymentPayload(values: Record<string, any>, personId: string) {
     ...payloadValues,
     id: values.id && values.id !== 'empty-employment' ? values.id : generateUUID(),
     person_id: values.person_id || personId,
+    position: resolvePositionLabel(values.position, values.position),
     social_security:
       values.social_security !== undefined &&
       values.social_security !== null &&
@@ -138,6 +171,31 @@ function buildEmploymentPayload(values: Record<string, any>, personId: string) {
     period_end: normalizeDateForPayload(values.period_end),
     created_at: values.created_at || new Date().toISOString(),
     updated_at: new Date().toISOString(),
+  }
+}
+
+function buildPersonDataPayload(source: Record<string, any> | undefined, payload: Record<string, any>) {
+  const storePersonData =
+    teacherStore.currentTeacher && typeof teacherStore.currentTeacher === 'object'
+      ? teacherStore.currentTeacher
+      : {}
+  const sourcePersonData =
+    source?.person_data && typeof source.person_data === 'object' ? source.person_data : {}
+  const personData = {
+    ...storePersonData,
+    ...sourcePersonData,
+  }
+  const resolvedPersonId =
+    personData.id ?? source?.person_id ?? payload.person_id ?? getPersonId() ?? undefined
+  const resolvedCreatedAt =
+    personData.created_at ?? payload.created_at ?? source?.created_at ?? new Date().toISOString()
+
+  return {
+    ...personData,
+    id: resolvedPersonId,
+    created_at: resolvedCreatedAt,
+    updated_at: new Date().toISOString(),
+    role_id: resolveRoleId(payload.position) || undefined,
   }
 }
 
@@ -167,16 +225,15 @@ function handleSectionChange(
 function formatEmploymentRecord(record: Record<string, any>) {
   const personData =
     record.person_data && typeof record.person_data === 'object' ? record.person_data : undefined
-  const resolvedPosition =
-    personData?.roles?.roles_name ||
-    personData?.roles?.roles_name_th ||
-    (personData?.role_id ? roleLabelById.get(String(personData.role_id)) : '') ||
-    record.position ||
-    ''
+  const resolvedPosition = resolvePositionLabel(
+    personData?.role_id,
+    personData?.roles?.roles_name || personData?.roles?.roles_name_th || record.position || '',
+  )
 
   return withCalculatedEmploymentAges({
     ...record,
-    position: resolvedPosition,
+    position: resolveRoleId(personData?.role_id || record.position),
+    position_label: resolvedPosition,
     first_contract_start: formatDateInput(record.first_contract_start),
     period_start: formatDateInput(record.period_start),
     period_end: formatDateInput(record.period_end),
@@ -204,7 +261,7 @@ async function fetchRoleLabels() {
         })
         positionOptions.value = mappedRoles.map((role) => ({
           label: role.label,
-          value: role.label,
+          value: role.id,
         }))
         formRenderKey.value += 1
         return
@@ -282,6 +339,7 @@ async function persistEmploymentData() {
 
   for (const record of recordsToPersist) {
     const payload = buildEmploymentPayload(record, personId)
+    const personPayload = buildPersonDataPayload(record, payload)
 
     if (record.id && record.id !== 'empty-employment') {
       await updateDatasetRow(
@@ -291,6 +349,12 @@ async function persistEmploymentData() {
         payload,
         EMPLOYMENT_DATASET_CONFIG.VIEW_NAME,
       )
+      await updateTeacher(personId, personPayload)
+      teacherStore.setCurrentTeacher({
+        ...(teacherStore.currentTeacher || {}),
+        ...personPayload,
+        id: personId,
+      })
       continue
     }
 
@@ -300,6 +364,12 @@ async function persistEmploymentData() {
       payload,
       EMPLOYMENT_DATASET_CONFIG.VIEW_NAME,
     )
+    await updateTeacher(personId, personPayload)
+    teacherStore.setCurrentTeacher({
+      ...(teacherStore.currentTeacher || {}),
+      ...personPayload,
+      id: personId,
+    })
   }
 }
 
