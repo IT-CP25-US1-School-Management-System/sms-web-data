@@ -26,6 +26,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Spinner } from '@/components/ui/spinner'
 import { type DateValue, CalendarDate } from '@internationalized/date'
 import type { DateRange } from 'reka-ui'
+import { formatThaiBuddhistDate, THAI_BUDDHIST_LOCALE } from '@/lib/helpers'
 import { computed, ref, watch } from 'vue'
 
 // (removed example global form - using per-entry VeeForm instead)
@@ -956,10 +957,7 @@ function getMaxDateValue(field: FieldItem) {
 }
 
 function formatDisplayDate(str: string | undefined): string {
-  if (!str) return ''
-  const [y, m, d] = str.split('-')
-  if (!y || !m || !d) return ''
-  return `${d}/${m}/${y}`
+  return formatThaiBuddhistDate(str)
 }
 
 // Date-range helpers  (stored as "YYYY-MM-DD~YYYY-MM-DD")
@@ -1200,6 +1198,7 @@ function formatDisplayDateRange(str: string | undefined): string {
                               <PopoverContent class="w-auto p-0" align="start">
                                 <Calendar
                                   :model-value="stringToDateValue(veeField.value as string)"
+                                  :locale="THAI_BUDDHIST_LOCALE"
                                   layout="month-and-year"
                                   :max-value="getMaxDateValue(fieldItem)"
                                   @update:model-value="
@@ -1250,6 +1249,7 @@ function formatDisplayDateRange(str: string | undefined): string {
                               <PopoverContent class="w-auto p-0" align="start">
                                 <RangeCalendar
                                   :model-value="stringToDateRange(veeField.value as string)"
+                                  :locale="THAI_BUDDHIST_LOCALE"
                                   @update:model-value="
                                     (val: DateRange) => {
                                       if (val.start) {
@@ -1668,6 +1668,7 @@ function formatDisplayDateRange(str: string | undefined): string {
                                 <PopoverContent class="w-auto p-0" align="start">
                                   <Calendar
                                     :model-value="stringToDateValue(subEntry[subField.name])"
+                                    :locale="THAI_BUDDHIST_LOCALE"
                                     layout="month-and-year"
                                     :max-value="getMaxDateValue(subField)"
                                     @update:model-value="
@@ -1719,6 +1720,7 @@ function formatDisplayDateRange(str: string | undefined): string {
                                 <PopoverContent class="w-auto p-0" align="start">
                                   <RangeCalendar
                                     :model-value="stringToDateRange(subEntry[subField.name])"
+                                    :locale="THAI_BUDDHIST_LOCALE"
                                     @update:model-value="
                                       (val: DateRange) => {
                                         if (val.start) {

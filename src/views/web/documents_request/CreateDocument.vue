@@ -20,7 +20,7 @@ import { Form as VeeForm, Field as VeeField, ErrorMessage } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { z } from 'zod'
 import { toast } from 'vue-sonner'
-import { generateUUID } from '@/lib/helpers'
+import { formatThaiBuddhistDate, generateUUID, THAI_BUDDHIST_LOCALE } from '@/lib/helpers'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { type DateValue, CalendarDate } from '@internationalized/date'
@@ -185,10 +185,7 @@ function dateValueToString(dv: DateValue): string {
 }
 
 function formatDisplayDate(str: string | undefined): string {
-  if (!str) return ''
-  const [y, m, d] = str.split('-')
-  if (!y || !m || !d) return ''
-  return `${d}/${m}/${y}`
+  return formatThaiBuddhistDate(str)
 }
 
 /* ──────────────────── File upload helpers ──────────────────── */
@@ -2010,6 +2007,7 @@ onMounted(() => {
                       <PopoverContent class="w-auto p-0" align="start">
                         <Calendar
                           :model-value="stringToDateValue(field.value as string)"
+                          :locale="THAI_BUDDHIST_LOCALE"
                           layout="month-and-year"
                           @update:model-value="
                             (val: DateValue | undefined) => {
@@ -2048,6 +2046,7 @@ onMounted(() => {
                       <PopoverContent class="w-auto p-0" align="start">
                         <Calendar
                           :model-value="stringToDateValue(field.value as string)"
+                          :locale="THAI_BUDDHIST_LOCALE"
                           layout="month-and-year"
                           @update:model-value="
                             (val: DateValue | undefined) => {

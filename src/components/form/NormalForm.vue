@@ -22,6 +22,7 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { type DateValue, CalendarDate } from '@internationalized/date'
+import { formatThaiBuddhistDate, THAI_BUDDHIST_LOCALE } from '@/lib/helpers'
 import { computed, ref, watch } from 'vue'
 
 export type NormalFormOption = {
@@ -388,10 +389,7 @@ function getMaxDateValue(field: NormalFormField) {
 }
 
 function formatDisplayDate(str: string | undefined): string {
-  if (!str) return ''
-  const [y, m, d] = str.split('-')
-  if (!y || !m || !d) return ''
-  return `${d}/${m}/${y}`
+  return formatThaiBuddhistDate(str)
 }
 
 const comboboxOpen = ref<Record<string, boolean>>({})
@@ -502,6 +500,7 @@ function handleCheckboxGroupUpdate(
                     <PopoverContent class="w-auto p-0" align="start">
                       <Calendar
                         :model-value="stringToDateValue(field.value as string)"
+                        :locale="THAI_BUDDHIST_LOCALE"
                         layout="month-and-year"
                         :max-value="getMaxDateValue(fieldItem)"
                         @update:model-value="

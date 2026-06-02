@@ -27,7 +27,7 @@ import { toast } from 'vue-sonner'
 import type { DocumentRequest } from '@/types/document_request'
 import { getDocumentRequests, deleteDocumentRequest } from '@/stores/document_request'
 import { ROUTE_NAMES } from '@/lib/constants'
-import { getPrefixName } from '@/lib/helpers'
+import { formatDateTime as formatThaiDateTime, getPrefixName } from '@/lib/helpers'
 
 const router = useRouter()
 
@@ -220,13 +220,7 @@ const cancelDelete = () => {
 // }
 
 function formatDate(dateString: string) {
-  return new Date(dateString).toLocaleDateString('th-TH', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  return formatThaiDateTime(dateString)
 }
 
 function getStatusColor(

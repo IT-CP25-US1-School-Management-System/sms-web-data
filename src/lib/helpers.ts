@@ -1,22 +1,69 @@
-export const formatDate = (date: string | Date): string => {
-  const d = new Date(date)
-  return d.toLocaleDateString('th-TH', {
+export const THAI_LOCALE = 'th-TH'
+export const THAI_BUDDHIST_LOCALE = 'th-TH-u-ca-buddhist'
+export const THAI_TIME_ZONE = 'Asia/Bangkok'
+
+const DATE_ONLY_PATTERN = /^(\d{4})-(\d{1,2})-(\d{1,2})$/
+
+function toDisplayDate(date: string | Date): Date {
+  if (typeof date === 'string') {
+    const parts = date.match(DATE_ONLY_PATTERN)
+    if (parts) {
+      const [, year, month, day] = parts
+      return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day), 12))
+    }
+  }
+
+  return new Date(date)
+}
+
+function isValidDate(date: Date) {
+  return !Number.isNaN(date.getTime())
+}
+
+export const formatThaiBuddhistDate = (date?: string | Date | null): string => {
+  if (!date) return ''
+  const d = toDisplayDate(date)
+  if (!isValidDate(d)) return ''
+
+  return new Intl.DateTimeFormat(THAI_BUDDHIST_LOCALE, {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
-  })
+    timeZone: THAI_TIME_ZONE,
+  }).format(d)
 }
 
-export const formatDateTime = (date: string | Date): string => {
-  const d = new Date(date)
-  return d.toLocaleDateString('th-TH', {
+export const formatThaiBuddhistDateRange = (dateRange?: string | null): string => {
+  if (!dateRange) return ''
+
+  const [startDate = '', endDate = ''] = dateRange.split('~')
+  const start = formatThaiBuddhistDate(startDate)
+  const end = formatThaiBuddhistDate(endDate)
+
+  if (!start) return ''
+  if (!end || start === end) return start
+  return `${start} - ${end}`
+}
+
+export const formatThaiBuddhistDateTime = (date?: string | Date | null): string => {
+  if (!date) return ''
+  const d = toDisplayDate(date)
+  if (!isValidDate(d)) return ''
+
+  return new Intl.DateTimeFormat(THAI_BUDDHIST_LOCALE, {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
-  })
+    hour12: false,
+    timeZone: THAI_TIME_ZONE,
+  }).format(d)
 }
+
+export const formatDate = (date: string | Date): string => formatThaiBuddhistDate(date)
+
+export const formatDateTime = (date: string | Date): string => formatThaiBuddhistDateTime(date)
 
 export const formatDateInput = (date?: string | Date | null): string => {
   if (!date) return ''
@@ -30,27 +77,18 @@ export const formatDateInput = (date?: string | Date | null): string => {
 
 export const formatTime = (date: string | Date): string => {
   const d = new Date(date)
-  return d.toLocaleTimeString('th-TH', {
+  if (!isValidDate(d)) return ''
+
+  return new Intl.DateTimeFormat(THAI_LOCALE, {
     hour: '2-digit',
     minute: '2-digit',
-  })
+    hour12: false,
+    timeZone: THAI_TIME_ZONE,
+  }).format(d)
 }
 
 export const formatDateThaiInput = (date?: string | Date | null): string => {
-  if (!date) return ''
-
-  const formatDateParts = (value: string) => {
-    const [year, month, day] = value.split('-')
-    if (!year || !month || !day) return ''
-    return `${day}-${month}-${year}`
-  }
-
-  if (typeof date === 'string') {
-    return formatDateParts(date.split('T')[0] || '')
-  }
-
-  const isoString = date.toISOString()
-  return formatDateParts(isoString.split('T')[0] || '')
+  return formatThaiBuddhistDate(date)
 }
 
 export const formatPrice = (price: number) => {
