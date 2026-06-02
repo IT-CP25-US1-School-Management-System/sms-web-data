@@ -22,7 +22,7 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { type DateValue, CalendarDate } from '@internationalized/date'
-import { formatThaiBuddhistDate } from '@/lib/helpers'
+import { formatThaiBuddhistDate, parseGregorianDateParts } from '@/lib/helpers'
 import { computed, ref, watch } from 'vue'
 
 export type NormalFormOption = {
@@ -367,10 +367,9 @@ function formatFileSize(bytes: number): string {
 const datePopoverOpen = ref<Record<string, boolean>>({})
 
 function stringToDateValue(str: string | undefined): DateValue | undefined {
-  if (!str) return undefined
-  const [y, m, d] = str.split('-').map(Number)
-  if (!y || !m || !d) return undefined
-  return new CalendarDate(y, m, d)
+  const parts = parseGregorianDateParts(str)
+  if (!parts) return undefined
+  return new CalendarDate(parts.year, parts.month, parts.day)
 }
 
 function dateValueToString(dv: DateValue): string {

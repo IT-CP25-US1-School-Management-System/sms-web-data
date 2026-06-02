@@ -20,7 +20,7 @@ import { Form as VeeForm, Field as VeeField, ErrorMessage } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { z } from 'zod'
 import { toast } from 'vue-sonner'
-import { formatThaiBuddhistDate, generateUUID } from '@/lib/helpers'
+import { formatThaiBuddhistDate, generateUUID, parseGregorianDateParts } from '@/lib/helpers'
 import ThaiBuddhistCalendar from '@/components/form/ThaiBuddhistCalendar.vue'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { type DateValue, CalendarDate } from '@internationalized/date'
@@ -171,10 +171,9 @@ const downloadFileName4_2 = ref('')
 const datePopoverOpen = ref<Record<string, boolean>>({})
 
 function stringToDateValue(str: string | undefined): DateValue | undefined {
-  if (!str) return undefined
-  const [y, m, d] = str.split('-').map(Number)
-  if (!y || !m || !d) return undefined
-  return new CalendarDate(y, m, d)
+  const parts = parseGregorianDateParts(str)
+  if (!parts) return undefined
+  return new CalendarDate(parts.year, parts.month, parts.day)
 }
 
 function dateValueToString(dv: DateValue): string {

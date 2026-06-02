@@ -26,7 +26,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Spinner } from '@/components/ui/spinner'
 import { type DateValue, CalendarDate } from '@internationalized/date'
 import type { DateRange } from 'reka-ui'
-import { formatThaiBuddhistDate } from '@/lib/helpers'
+import { formatThaiBuddhistDate, parseGregorianDateParts } from '@/lib/helpers'
 import { computed, ref, watch } from 'vue'
 
 // (removed example global form - using per-entry VeeForm instead)
@@ -935,10 +935,9 @@ function updateSubEntryValue(
 const datePopoverOpen = ref<Record<string, boolean>>({})
 
 function stringToDateValue(str: string | undefined): DateValue | undefined {
-  if (!str) return undefined
-  const [y, m, d] = str.split('-').map(Number)
-  if (!y || !m || !d) return undefined
-  return new CalendarDate(y, m, d)
+  const parts = parseGregorianDateParts(str)
+  if (!parts) return undefined
+  return new CalendarDate(parts.year, parts.month, parts.day)
 }
 
 function dateValueToString(dv: DateValue): string {

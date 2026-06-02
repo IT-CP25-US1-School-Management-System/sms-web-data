@@ -4,6 +4,31 @@ export const THAI_GREGORIAN_LOCALE = 'th-TH-u-ca-gregory'
 export const THAI_TIME_ZONE = 'Asia/Bangkok'
 
 const DATE_ONLY_PATTERN = /^(\d{4})-(\d{1,2})-(\d{1,2})$/
+const DATE_INPUT_PATTERN = /^(\d{4})-(\d{1,2})-(\d{1,2})/
+
+export type GregorianDateParts = {
+  year: number
+  month: number
+  day: number
+}
+
+export const parseGregorianDateParts = (date?: string | Date | null): GregorianDateParts | null => {
+  if (!date) return null
+
+  const value = typeof date === 'string' ? date : date.toISOString()
+  const parts = value.match(DATE_INPUT_PATTERN)
+  if (!parts) return null
+
+  const [, year, month, day] = parts
+  const parsed = {
+    year: Number(year),
+    month: Number(month),
+    day: Number(day),
+  }
+
+  if (!parsed.year || !parsed.month || !parsed.day) return null
+  return parsed
+}
 
 function toDisplayDate(date: string | Date): Date {
   if (typeof date === 'string') {

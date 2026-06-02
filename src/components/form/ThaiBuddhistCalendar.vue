@@ -4,9 +4,9 @@ import type { HTMLAttributes, Ref } from 'vue'
 import type { LayoutTypes } from '@/components/ui/calendar'
 import { getLocalTimeZone, today } from '@internationalized/date'
 import { createReusableTemplate, reactiveOmit, useVModel } from '@vueuse/core'
-import { CalendarRoot, useDateFormatter, useForwardPropsEmits } from 'reka-ui'
+import { CalendarRoot, useDateFormatter, useForwardProps } from 'reka-ui'
 import { createYear, createYearRange, toDate } from 'reka-ui/date'
-import { computed, toRaw } from 'vue'
+import { computed, ref, toRaw, watch } from 'vue'
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 import {
   CalendarCell,
@@ -39,7 +39,16 @@ const props = withDefaults(
 )
 const emits = defineEmits<CalendarRootEmits>()
 
-const delegatedProps = reactiveOmit(props, 'class', 'layout', 'placeholder', 'yearRange', 'locale')
+const delegatedProps = reactiveOmit(
+  props,
+  'class',
+  'layout',
+  'placeholder',
+  'yearRange',
+  'locale',
+  'modelValue',
+  'defaultValue',
+)
 
 const placeholder = useVModel(props, 'placeholder', emits, {
   passive: true,
@@ -47,6 +56,8 @@ const placeholder = useVModel(props, 'placeholder', emits, {
 }) as Ref<DateValue>
 
 const formatter = useDateFormatter(THAI_GREGORIAN_LOCALE)
+const internalModelValue = ref<DateValue | undefined>()
+const syncedModelKey = ref('')
 
 const yearRange = computed(() => {
   return (
@@ -77,10 +88,43 @@ function formatThaiBuddhistHeading(date: DateValue) {
   return `${formatter.custom(toDate(date), { month: 'long' })} ${formatThaiBuddhistYear(date.year)}`
 }
 
+function getSingleDateValue(value: CalendarRootProps['modelValue']) {
+  if (Array.isArray(value)) return value[value.length - 1]?.copy()
+  return value?.copy()
+}
+
+function getDateValueKey(value: CalendarRootProps['modelValue']) {
+  return getSingleDateValue(value)?.toString() ?? ''
+}
+
+function syncModelValue(value: CalendarRootProps['modelValue']) {
+  const nextValue = getSingleDateValue(value)
+  internalModelValue.value = nextValue
+  if (nextValue) {
+    placeholder.value = nextValue.copy()
+  }
+}
+
+function handleModelValueUpdate(value: DateValue | undefined) {
+  internalModelValue.value = value?.copy()
+  syncedModelKey.value = value?.toString() ?? ''
+  emits('update:modelValue', value)
+}
+
+watch(
+  () => getDateValueKey(props.modelValue),
+  (nextKey) => {
+    if (nextKey === syncedModelKey.value) return
+    syncedModelKey.value = nextKey
+    syncModelValue(props.modelValue)
+  },
+  { immediate: true },
+)
+
 const [DefineMonthTemplate, ReuseMonthTemplate] = createReusableTemplate<{ date: DateValue }>()
 const [DefineYearTemplate, ReuseYearTemplate] = createReusableTemplate<{ date: DateValue }>()
 
-const forwarded = useForwardPropsEmits(delegatedProps, emits)
+const forwarded = useForwardProps(delegatedProps)
 </script>
 
 <template>
@@ -142,9 +186,11 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
     v-slot="{ grid, weekDays, date }"
     v-bind="forwarded"
     v-model:placeholder="placeholder"
+    :model-value="internalModelValue"
     :locale="THAI_GREGORIAN_LOCALE"
     data-slot="calendar"
     :class="cn('p-3', props.class)"
+    @update:model-value="handleModelValueUpdate"
   >
     <CalendarHeader class="pt-0">
       <nav class="absolute inset-x-0 top-0 flex items-center justify-between gap-1">
