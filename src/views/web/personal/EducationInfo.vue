@@ -3,7 +3,7 @@ import NormalForm from '@/components/form/NormalForm.vue'
 import SkeletonCard from '@/components/SkeletonCard.vue'
 import { DATASET_GET } from '@/lib/constants'
 import { getDatasetRows } from '@/stores/dataset'
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { toast } from 'vue-sonner'
 
 // TODO: เปลี่ยนเป็น false เมื่อต้องการดูอย่างเดียว (readonly)
@@ -11,6 +11,9 @@ const isEditMode = true
 
 const loading = ref(false)
 const educationData = ref<Record<string, any>[]>([])
+const visibleEducationData = computed<Record<string, any>[]>(() =>
+  educationData.value.length ? educationData.value : [{}],
+)
 async function getEducationRecordData() {
   loading.value = true
   try {
@@ -44,8 +47,8 @@ onMounted(() => {
   <div
     v-else
     class="mx-6 flex flex-col gap-4"
-    v-for="item in educationData.length ? educationData : [{}]"
-    :key="item.id"
+    v-for="item in visibleEducationData"
+    :key="item.id || 'empty-education-record'"
   >
     <NormalForm
       :isDropdown="false"
