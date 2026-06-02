@@ -5,9 +5,9 @@ import { Form as VeeForm, Field as VeeField } from 'vee-validate'
 import { z } from 'zod'
 
 import { Button } from '@/components/ui/button'
-import { Calendar } from '@/components/ui/calendar'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { RangeCalendar } from '@/components/ui/range-calendar'
+import ThaiBuddhistCalendar from '@/components/form/ThaiBuddhistCalendar.vue'
+import ThaiBuddhistRangeCalendar from '@/components/form/ThaiBuddhistRangeCalendar.vue'
 
 import { ChevronUp, CirclePlus, CalendarIcon, Trash2, X, ArrowDownToLine } from 'lucide-vue-next'
 
@@ -26,7 +26,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Spinner } from '@/components/ui/spinner'
 import { type DateValue, CalendarDate } from '@internationalized/date'
 import type { DateRange } from 'reka-ui'
-import { formatThaiBuddhistDate, THAI_BUDDHIST_LOCALE } from '@/lib/helpers'
+import { formatThaiBuddhistDate } from '@/lib/helpers'
 import { computed, ref, watch } from 'vue'
 
 // (removed example global form - using per-entry VeeForm instead)
@@ -1196,9 +1196,8 @@ function formatDisplayDateRange(str: string | undefined): string {
                                 </Button>
                               </PopoverTrigger>
                               <PopoverContent class="w-auto p-0" align="start">
-                                <Calendar
+                                <ThaiBuddhistCalendar
                                   :model-value="stringToDateValue(veeField.value as string)"
-                                  :locale="THAI_BUDDHIST_LOCALE"
                                   layout="month-and-year"
                                   :max-value="getMaxDateValue(fieldItem)"
                                   @update:model-value="
@@ -1247,9 +1246,8 @@ function formatDisplayDateRange(str: string | undefined): string {
                                 </Button>
                               </PopoverTrigger>
                               <PopoverContent class="w-auto p-0" align="start">
-                                <RangeCalendar
+                                <ThaiBuddhistRangeCalendar
                                   :model-value="stringToDateRange(veeField.value as string)"
-                                  :locale="THAI_BUDDHIST_LOCALE"
                                   @update:model-value="
                                     (val: DateRange) => {
                                       if (val.start) {
@@ -1666,9 +1664,8 @@ function formatDisplayDateRange(str: string | undefined): string {
                                   </Button>
                                 </PopoverTrigger>
                                 <PopoverContent class="w-auto p-0" align="start">
-                                  <Calendar
+                                  <ThaiBuddhistCalendar
                                     :model-value="stringToDateValue(subEntry[subField.name])"
-                                    :locale="THAI_BUDDHIST_LOCALE"
                                     layout="month-and-year"
                                     :max-value="getMaxDateValue(subField)"
                                     @update:model-value="
@@ -1718,9 +1715,8 @@ function formatDisplayDateRange(str: string | undefined): string {
                                   </Button>
                                 </PopoverTrigger>
                                 <PopoverContent class="w-auto p-0" align="start">
-                                  <RangeCalendar
+                                  <ThaiBuddhistRangeCalendar
                                     :model-value="stringToDateRange(subEntry[subField.name])"
-                                    :locale="THAI_BUDDHIST_LOCALE"
                                     @update:model-value="
                                       (val: DateRange) => {
                                         if (val.start) {

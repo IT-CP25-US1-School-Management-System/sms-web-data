@@ -20,8 +20,8 @@ import { Form as VeeForm, Field as VeeField, ErrorMessage } from 'vee-validate'
 import { toTypedSchema } from '@vee-validate/zod'
 import { z } from 'zod'
 import { toast } from 'vue-sonner'
-import { formatThaiBuddhistDate, generateUUID, THAI_BUDDHIST_LOCALE } from '@/lib/helpers'
-import { Calendar } from '@/components/ui/calendar'
+import { formatThaiBuddhistDate, generateUUID } from '@/lib/helpers'
+import ThaiBuddhistCalendar from '@/components/form/ThaiBuddhistCalendar.vue'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { type DateValue, CalendarDate } from '@internationalized/date'
 import { useAuthStore } from '@/stores/auth'
@@ -2005,9 +2005,8 @@ onMounted(() => {
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent class="w-auto p-0" align="start">
-                        <Calendar
+                        <ThaiBuddhistCalendar
                           :model-value="stringToDateValue(field.value as string)"
-                          :locale="THAI_BUDDHIST_LOCALE"
                           layout="month-and-year"
                           @update:model-value="
                             (val: DateValue | undefined) => {
@@ -2044,9 +2043,8 @@ onMounted(() => {
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent class="w-auto p-0" align="start">
-                        <Calendar
+                        <ThaiBuddhistCalendar
                           :model-value="stringToDateValue(field.value as string)"
-                          :locale="THAI_BUDDHIST_LOCALE"
                           layout="month-and-year"
                           @update:model-value="
                             (val: DateValue | undefined) => {

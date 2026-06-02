@@ -1,5 +1,6 @@
 export const THAI_LOCALE = 'th-TH'
 export const THAI_BUDDHIST_LOCALE = 'th-TH-u-ca-buddhist'
+export const THAI_GREGORIAN_LOCALE = 'th-TH-u-ca-gregory'
 export const THAI_TIME_ZONE = 'Asia/Bangkok'
 
 const DATE_ONLY_PATTERN = /^(\d{4})-(\d{1,2})-(\d{1,2})$/

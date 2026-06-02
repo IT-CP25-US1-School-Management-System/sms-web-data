@@ -4,8 +4,8 @@ import { Form as VeeForm, Field as VeeField } from 'vee-validate'
 import { z } from 'zod'
 
 import { Button } from '@/components/ui/button'
-import { Calendar } from '@/components/ui/calendar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import ThaiBuddhistCalendar from '@/components/form/ThaiBuddhistCalendar.vue'
 
 import { CalendarIcon, X } from 'lucide-vue-next'
 
@@ -22,7 +22,7 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { type DateValue, CalendarDate } from '@internationalized/date'
-import { formatThaiBuddhistDate, THAI_BUDDHIST_LOCALE } from '@/lib/helpers'
+import { formatThaiBuddhistDate } from '@/lib/helpers'
 import { computed, ref, watch } from 'vue'
 
 export type NormalFormOption = {
@@ -498,9 +498,8 @@ function handleCheckboxGroupUpdate(
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent class="w-auto p-0" align="start">
-                      <Calendar
+                      <ThaiBuddhistCalendar
                         :model-value="stringToDateValue(field.value as string)"
-                        :locale="THAI_BUDDHIST_LOCALE"
                         layout="month-and-year"
                         :max-value="getMaxDateValue(fieldItem)"
                         @update:model-value="
