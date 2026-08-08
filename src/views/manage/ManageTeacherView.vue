@@ -49,6 +49,7 @@ const showReportTemplateDialog = ref(false)
 const showExportReportDialog = ref(false)
 const teacherToDelete = ref<PersonData | null>(null)
 const deleting = ref(false)
+const perPageInput = ref(15)
 
 const pagination = ref<PaginationData>({
   page: 1,
@@ -177,7 +178,7 @@ const changeTab = (tab: TabType) => {
   pagination.value.page = 1
 }
 
-watch([() => activeTab.value, () => pagination.value.page], () => {
+watch([() => activeTab.value, () => pagination.value.page, () => pagination.value.per_page], () => {
   void fetchCurrentTabData()
 })
 
@@ -196,6 +197,16 @@ onMounted(() => {
 
 const goToPage = (page: number) => {
   pagination.value.page = page
+}
+
+const handlePerPageChange = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const perPage = Math.max(1, Math.floor(Number(input.value) || 15))
+
+  perPageInput.value = perPage
+  input.value = String(perPage)
+  pagination.value.page = 1
+  pagination.value.per_page = perPage
 }
 
 const previousPage = () => {
@@ -403,7 +414,7 @@ const getPersonDisplayName = (record: DailyAttendanceRecord) => {
         <div class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border">
           <table
             v-if="!isLeaveTab"
-            class="w-full [&_th]:px-4 [&_td]:px-4"
+            class="w-full [&_td]:px-4 [&_th]:px-4"
             style="table-layout: fixed"
           >
             <thead class="bg-muted/50">
@@ -416,11 +427,7 @@ const getPersonDisplayName = (record: DailyAttendanceRecord) => {
             </thead>
           </table>
 
-          <table
-            v-else
-            class="w-full [&_th]:px-4 [&_td]:px-4"
-            style="table-layout: fixed"
-          >
+          <table v-else class="w-full [&_td]:px-4 [&_th]:px-4" style="table-layout: fixed">
             <thead class="bg-muted/50">
               <tr>
                 <th class="py-2 text-left font-medium">ชื่อ - นามสกุล</th>
@@ -435,7 +442,7 @@ const getPersonDisplayName = (record: DailyAttendanceRecord) => {
           <div class="min-h-0 flex-1 overflow-auto">
             <table
               v-if="!isLeaveTab"
-              class="w-full [&_th]:px-4 [&_td]:px-4"
+              class="w-full [&_td]:px-4 [&_th]:px-4"
               style="table-layout: fixed"
             >
               <tbody>
@@ -493,11 +500,7 @@ const getPersonDisplayName = (record: DailyAttendanceRecord) => {
               </tbody>
             </table>
 
-            <table
-              v-else
-              class="w-full [&_th]:px-4 [&_td]:px-4"
-              style="table-layout: fixed"
-            >
+            <table v-else class="w-full [&_td]:px-4 [&_th]:px-4" style="table-layout: fixed">
               <tbody>
                 <tr v-if="loading">
                   <td colspan="5" class="py-8 text-center">
@@ -543,8 +546,20 @@ const getPersonDisplayName = (record: DailyAttendanceRecord) => {
               {{ pagination.total_rows }} รายการทั้งหมด
             </span>
 
+            <label class="flex items-center gap-2 text-sm">
+              <span class="text-muted-foreground whitespace-nowrap">จำนวนต่อหน้า</span>
+              <Input
+                :model-value="perPageInput"
+                type="number"
+                min="1"
+                class="h-8 w-20"
+                :disabled="loading"
+                @change="handlePerPageChange"
+              />
+            </label>
+
             <Button variant="ghost" size="sm" :disabled="!canPreviousPage" @click="previousPage">
-              ← ก่อนหน้า
+              ก่อนหน้า
             </Button>
 
             <template v-for="(pageNum, index) in getVisiblePages" :key="index">
@@ -560,7 +575,7 @@ const getPersonDisplayName = (record: DailyAttendanceRecord) => {
             </template>
 
             <Button variant="ghost" size="sm" :disabled="!canNextPage" @click="nextPage">
-              ถัดไป →
+              ถัดไป
             </Button>
           </div>
         </div>
