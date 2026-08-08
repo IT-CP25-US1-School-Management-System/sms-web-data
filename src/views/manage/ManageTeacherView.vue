@@ -94,10 +94,10 @@ const fetchTeachers = async () => {
         {
           table_name: 'person_data',
           field: 'first_name_th',
-          operator: 'like',
+          operator: 'LIKE',
           value: `%${query}%`,
         },
-        { table_name: 'person_data', field: 'last_name_th', operator: 'like', value: `%${query}%` },
+        { table_name: 'person_data', field: 'last_name_th', operator: 'LIKE', value: `%${query}%` },
       ])
     }
 
