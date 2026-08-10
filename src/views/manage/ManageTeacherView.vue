@@ -5,6 +5,7 @@ import MainLayout from '@/layouts/manage/MainLayout.vue'
 import CreateAttendanceDialog from '@/views/manage/CreateAttendanceDialog.vue'
 import CreateAttendanceReportTemplateDialog from '@/views/manage/CreateAttendanceReportTemplateDialog.vue'
 import ExportAttendanceReportDialog from '@/views/manage/ExportAttendanceReportDialog.vue'
+import ExportTeacherDataDialog from '@/views/manage/ExportTeacherDataDialog.vue'
 import { Button } from '@/components/ui/button'
 import { ROUTE_NAMES } from '@/lib/constants'
 import { Input } from '@/components/ui/input'
@@ -25,7 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Search, Plus, MoreHorizontal, Pencil, Trash2, Loader2 } from 'lucide-vue-next'
+import { Search, Plus, MoreHorizontal, Pencil, Trash2, Loader2, Download } from 'lucide-vue-next'
 import { usePagination } from '@/composables/usePagination'
 import type { PaginationData } from '@/composables/usePagination'
 import { toast } from 'vue-sonner'
@@ -47,6 +48,7 @@ const showDeleteDialog = ref(false)
 const showAttendanceDialog = ref(false)
 const showReportTemplateDialog = ref(false)
 const showExportReportDialog = ref(false)
+const showExportTeacherDialog = ref(false)
 const teacherToDelete = ref<PersonData | null>(null)
 const deleting = ref(false)
 const perPageInput = ref(15)
@@ -374,6 +376,15 @@ const getPersonDisplayName = (record: DailyAttendanceRecord) => {
           <div class="flex items-center gap-2">
             <Button
               v-if="!isLeaveTab"
+              variant="outline"
+              :disabled="loading"
+              @click="showExportTeacherDialog = true"
+            >
+              <Download class="mr-2 h-4 w-4" />
+              ดาวน์โหลด Excel
+            </Button>
+            <Button
+              v-if="!isLeaveTab"
               class="bg-green-600 hover:bg-green-700"
               :disabled="loading"
               @click="handleAddTeacher"
@@ -620,6 +631,10 @@ const getPersonDisplayName = (record: DailyAttendanceRecord) => {
     <ExportAttendanceReportDialog
       :open="showExportReportDialog"
       @close="showExportReportDialog = false"
+    />
+    <ExportTeacherDataDialog
+      :open="showExportTeacherDialog"
+      @close="showExportTeacherDialog = false"
     />
   </MainLayout>
 </template>

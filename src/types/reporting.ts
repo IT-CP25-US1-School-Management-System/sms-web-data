@@ -1,7 +1,7 @@
 export interface ExportJobRequest {
   dataset_id: string
   view: string
-  format: string
+  format: 'csv' | 'xlsx'
   version: string
 }
 
@@ -10,7 +10,13 @@ export interface ExportJobResponse {
 }
 
 export interface FileUrl {
-  status: string
+  status: 'pending' | 'queued' | 'in_progress' | 'processing' | 'succeeded' | 'failed'
+  dataset_id?: string
+  view?: string
+  original_filename?: string | null
+  file_size?: number | null
+  format?: 'csv' | 'xlsx'
+  version?: string
   created_at?: string | null
   completed_at?: string | null
   started_at?: string | null
