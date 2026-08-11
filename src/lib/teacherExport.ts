@@ -357,6 +357,99 @@ const THAI_WORDS: Record<string, string> = {
   year: 'ปี',
 }
 
+const DATE_COLUMN_PATTERN =
+  /(^date$|_date$|_at$|(^|_)period_(start|end)$|(^|_)first_contract_start$)/
+
+function formatBuddhistDateParts(
+  year: number,
+  month: number,
+  day: number,
+  time?: { hour: number; minute: number; second: number },
+): string {
+  const buddhistYear = year >= 2400 ? year : year + 543
+  const date = `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${buddhistYear}`
+
+  if (!time) return date
+  return `${date} ${String(time.hour).padStart(2, '0')}:${String(time.minute).padStart(2, '0')}:${String(time.second).padStart(2, '0')}`
+}
+
+function formatZonedBuddhistDate(date: Date, includeTime: boolean): string {
+  const formatter = new Intl.DateTimeFormat('en-GB-u-ca-buddhist-nu-latn', {
+    timeZone: 'Asia/Bangkok',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    ...(includeTime
+      ? {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hourCycle: 'h23' as const,
+        }
+      : {}),
+  })
+  const parts = Object.fromEntries(
+    formatter
+      .formatToParts(date)
+      .filter((part) => part.type !== 'literal')
+      .map((part) => [part.type, part.value]),
+  )
+  const dateValue = `${parts.day}/${parts.month}/${parts.year}`
+
+  return includeTime ? `${dateValue} ${parts.hour}:${parts.minute}:${parts.second}` : dateValue
+}
+
+export function formatThaiBuddhistDate(rawHeader: unknown, rawValue: unknown): unknown {
+  const header = String(rawHeader ?? '')
+    .trim()
+    .toLowerCase()
+  if (!DATE_COLUMN_PATTERN.test(header) || rawValue === null || rawValue === undefined) {
+    return rawValue
+  }
+
+  const value = String(rawValue).trim()
+  if (!value) return rawValue
+
+  const dayFirstMatch = value.match(
+    /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/,
+  )
+  if (dayFirstMatch) {
+    const [, day, month, year, hour, minute, second] = dayFirstMatch
+    return formatBuddhistDateParts(
+      Number(year),
+      Number(month),
+      Number(day),
+      hour
+        ? { hour: Number(hour), minute: Number(minute), second: Number(second || 0) }
+        : undefined,
+    )
+  }
+
+  const isoMatch = value.match(
+    /^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s](\d{1,2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?$/i,
+  )
+  if (!isoMatch) return rawValue
+
+  const [, year, month, day, hour, minute, second, timezone] = isoMatch
+  const includeTime = Boolean(hour)
+
+  if (timezone) {
+    const parsedDate = new Date(value.replace(' ', 'T'))
+    if (!Number.isNaN(parsedDate.getTime())) {
+      return formatZonedBuddhistDate(parsedDate, includeTime)
+    }
+  }
+
+  return formatBuddhistDateParts(
+    Number(year),
+    Number(month),
+    Number(day),
+    includeTime
+      ? { hour: Number(hour), minute: Number(minute), second: Number(second || 0) }
+      : undefined,
+  )
+}
+
 export function getThaiColumnLabel(rawHeader: unknown): string {
   const header = String(rawHeader ?? '')
     .replace(/^\uFEFF/, '')

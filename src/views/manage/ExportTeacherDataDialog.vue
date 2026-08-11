@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dialog'
 import { exportData, getUrlFile } from '@/stores/reporting'
 import {
+  formatThaiBuddhistDate,
   getThaiColumnLabel,
   TEACHER_EXPORT_GROUPS,
   TEACHER_EXPORT_SOURCES,
@@ -128,7 +129,10 @@ function readCsv(XLSX: XlsxModule, csv: string): CsvTable {
 function createWorksheet(XLSX: XlsxModule, table: CsvTable) {
   if (table.headers.length === 0) return XLSX.utils.aoa_to_sheet([['ไม่พบข้อมูล']])
 
-  const normalizedRows = [makeUniqueHeaders(table.headers), ...table.rows]
+  const formattedRows = table.rows.map((row) =>
+    row.map((value, columnIndex) => formatThaiBuddhistDate(table.headers[columnIndex], value)),
+  )
+  const normalizedRows = [makeUniqueHeaders(table.headers), ...formattedRows]
   const worksheet = XLSX.utils.aoa_to_sheet(normalizedRows)
   const columnWidths = normalizedRows[0]!.map((header, columnIndex) => {
     const contentWidth = normalizedRows
