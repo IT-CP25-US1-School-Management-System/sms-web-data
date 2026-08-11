@@ -174,10 +174,10 @@ export const MANAGE_TEACHER_DATASET = {
 } as const
 
 export const FILE_KEY_TEMPLATES = {
-  DOCUMENT_TYPE_2: '991791fe-b8f7-45f3-83b3-5e54ded44abb',
-  DOCUMENT_TYPE_3: '33f007b3-b2b1-4988-9b67-f1a8c57868e0',
-  DOCUMENT_TYPE_4_1: '1f1a3159-eeb1-49ab-a028-b4b2c49fb208',
-  DOCUMENT_TYPE_4_2: '0af20097-ea63-4019-a29b-e6adee1cd835',
+  DOCUMENT_TYPE_2: '2c311394-f755-4dc2-aa1d-90de295cc47b',
+  DOCUMENT_TYPE_3: '13ca26cd-f6aa-44ef-88ee-8ee16443dc5f',
+  DOCUMENT_TYPE_4_1: '3ac5aa56-f965-4513-acd3-f722814cf448',
+  DOCUMENT_TYPE_4_2: '199d6cd6-397c-42fa-8c6a-b454bd385275',
 } as const
 
 export type DatasetSensitivity = (typeof DATASET_SENSITIVITY)[keyof typeof DATASET_SENSITIVITY]
