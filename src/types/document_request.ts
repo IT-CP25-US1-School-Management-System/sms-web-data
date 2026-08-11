@@ -102,6 +102,22 @@ export interface RequestHistory {
   rights_auth_qty?: number | null
 }
 
+export interface RequestCommitteePA {
+  id: string
+  request_id: string
+  subject_group: string
+  teaching_level_1: string
+  teaching_level_2: string
+  subject_name: string
+  teaching_hours_per_week: number
+  support_hours_per_week: number
+  dev_quality_hours_per_week: number
+  policy_hours_per_week: number
+  committee_name_1: string
+  committee_name_2: string
+  committee_name_3: string
+}
+
 // API Response Types
 export interface DocumentRequestListResponse {
   data: DocumentRequest[]

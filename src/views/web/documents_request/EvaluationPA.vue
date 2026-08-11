@@ -23,7 +23,7 @@ import { useAuthStore } from '@/stores/auth'
 import { createDatasetRow } from '@/stores/dataset'
 import { createFileDocument } from '@/stores/document'
 import type { CreateFileDocumentParams, FileDocument } from '@/types/document'
-import type { DocumentLink, DocumentRequest } from '@/types/document_request'
+import type { DocumentLink, DocumentRequest, RequestCommitteePA } from '@/types/document_request'
 import { DOCUMENT_EDIT } from '@/lib/constants'
 
 const fileMap = ref<Record<string, File[]>>({})
@@ -65,6 +65,15 @@ const documentLink = ref<DocumentLink>({
   created_at: '',
 })
 
+function hourSchema(requiredMessage: string) {
+  return z
+    .union([z.string(), z.number()])
+    .refine(
+      (value) => value !== '' && Number.isFinite(Number(value)) && Number(value) >= 0,
+      requiredMessage,
+    )
+}
+
 const validationSchema = computed(() => {
   return toTypedSchema(
     z.object({
@@ -72,12 +81,10 @@ const validationSchema = computed(() => {
       teaching_level_1: z.string().min(1, 'ปฏิบัติการสอนชั้น/ระดับ จำเป็นต้องกรอก'),
       teaching_level_2: z.string().min(1, 'ปฏิบัติการสอนชั้น/ระดับ จำเป็นต้องกรอก'),
       subject_name: z.string().min(1, 'รายวิชา จำเป็นต้องกรอก'),
-      teaching_hours_per_week: z.string().min(1, 'การสอนตามตารางสอน จำเป็นต้องกรอก'),
-      support_hours_per_week: z
-        .string()
-        .min(1, 'งานส่งเสริมและสนับสนุนการจัดการเรียนรู้ จำเป็นต้องกรอก'),
-      dev_quality_hours_per_week: z.string().min(1, 'งานพัฒนาคุณภาพการศึกษา จำเป็นต้องกรอก'),
-      policy_hours_per_week: z.string().min(1, 'งานตอบสนองนโยบายและจุดเน้น จำเป็นต้องกรอก'),
+      teaching_hours_per_week: hourSchema('การสอนตามตารางสอน จำเป็นต้องกรอก'),
+      support_hours_per_week: hourSchema('งานส่งเสริมและสนับสนุนการจัดการเรียนรู้ จำเป็นต้องกรอก'),
+      dev_quality_hours_per_week: hourSchema('งานพัฒนาคุณภาพการศึกษา จำเป็นต้องกรอก'),
+      policy_hours_per_week: hourSchema('งานตอบสนองนโยบายและจุดเน้น จำเป็นต้องกรอก'),
       committee_name_1: z.string().min(1, 'คนที่ 1 จำเป็นต้องกรอก'),
       committee_name_2: z.string().min(1, 'คนที่ 2 จำเป็นต้องกรอก'),
       committee_name_3: z.string().min(1, 'คนที่ 3 จำเป็นต้องกรอก'),
@@ -208,9 +215,30 @@ function resetEvaluationPAForm() {
   })
 }
 
-function buildDocumentDetailPayload(_values: Record<string, any>) {
-  // TODO: คุณเติม logic และ version ของ dataset สำหรับ Evaluation PA ที่นี่
-  return null as { version: string; data: Record<string, any> } | null
+function toNumber(value: unknown) {
+  return Number(value)
+}
+
+function buildDocumentDetailPayload(values: Record<string, any>): RequestCommitteePA {
+  if (!documentRequest.value.id) {
+    throw new Error('ไม่พบรหัสคำร้องหลัก')
+  }
+
+  return {
+    id: generateUUID(),
+    request_id: documentRequest.value.id,
+    subject_group: String(values.subject_group ?? ''),
+    teaching_level_1: String(values.teaching_level_1 ?? ''),
+    teaching_level_2: String(values.teaching_level_2 ?? ''),
+    subject_name: String(values.subject_name ?? ''),
+    teaching_hours_per_week: toNumber(values.teaching_hours_per_week),
+    support_hours_per_week: toNumber(values.support_hours_per_week),
+    dev_quality_hours_per_week: toNumber(values.dev_quality_hours_per_week),
+    policy_hours_per_week: toNumber(values.policy_hours_per_week),
+    committee_name_1: String(values.committee_name_1 ?? ''),
+    committee_name_2: String(values.committee_name_2 ?? ''),
+    committee_name_3: String(values.committee_name_3 ?? ''),
+  }
 }
 
 async function createDocumentType() {
@@ -295,14 +323,16 @@ async function storeFile(documentIds: string[]) {
 }
 
 async function createDocumentDetail(values: Record<string, any>) {
-  const payload = buildDocumentDetailPayload(values)
-  if (!payload) return null
-
-  const datasetId = 'document_create'
+  const data = buildDocumentDetailPayload(values)
 
   try {
-    await createDatasetRow(datasetId, payload.version, payload.data)
-    return payload.data
+    await createDatasetRow<RequestCommitteePA>(
+      DOCUMENT_EDIT.DATASET_ID,
+      DOCUMENT_EDIT.DATASET_VERSION_COMMITTEE_PA,
+      data,
+      DOCUMENT_EDIT.VIEW_COMMITTEE_PA,
+    )
+    return data
   } catch (error: any) {
     console.error('Create Document Detail API Error:', error)
     console.error('Error Response:', error?.response?.data)
@@ -435,7 +465,9 @@ async function submitPA2Form() {
             </VeeField>
             <VeeField name="teaching_level_1" v-slot="{ field, errors }">
               <Field :data-invalid="!!errors.length">
-                <FieldLabel>ปฏิบัติการสอนชั้น/ระดับ <span class="text-red-500">*</span></FieldLabel>
+                <FieldLabel>
+                  ปฏิบัติการสอนชั้น/ระดับ รายการที่ 1 <span class="text-red-500">*</span>
+                </FieldLabel>
                 <Input
                   :model-value="field.value as string"
                   @update:model-value="
@@ -452,7 +484,9 @@ async function submitPA2Form() {
             </VeeField>
             <VeeField name="teaching_level_2" v-slot="{ field, errors }">
               <Field :data-invalid="!!errors.length">
-                <FieldLabel>ปฏิบัติการสอนชั้น/ระดับ <span class="text-red-500">*</span></FieldLabel>
+                <FieldLabel>
+                  ปฏิบัติการสอนชั้น/ระดับ รายการที่ 2 <span class="text-red-500">*</span>
+                </FieldLabel>
                 <Input
                   :model-value="field.value as string"
                   @update:model-value="
@@ -500,7 +534,9 @@ async function submitPA2Form() {
                       teaching_hours_per_week = String(v ?? '')
                     }
                   "
-                  type="text"
+                  type="number"
+                  min="0"
+                  step="0.01"
                   placeholder="จำนวนชั่วโมง / สัปดาห์"
                 />
                 <FieldError v-if="errors.length" :errors="errors" />
@@ -520,7 +556,9 @@ async function submitPA2Form() {
                       support_hours_per_week = String(v ?? '')
                     }
                   "
-                  type="text"
+                  type="number"
+                  min="0"
+                  step="0.01"
                   placeholder="จำนวนชั่วโมง / สัปดาห์"
                 />
                 <FieldError v-if="errors.length" :errors="errors" />
@@ -540,7 +578,9 @@ async function submitPA2Form() {
                       dev_quality_hours_per_week = String(v ?? '')
                     }
                   "
-                  type="text"
+                  type="number"
+                  min="0"
+                  step="0.01"
                   placeholder="จำนวนชั่วโมง / สัปดาห์"
                 />
                 <FieldError v-if="errors.length" :errors="errors" />
@@ -559,7 +599,9 @@ async function submitPA2Form() {
                       policy_hours_per_week = String(v ?? '')
                     }
                   "
-                  type="text"
+                  type="number"
+                  min="0"
+                  step="0.01"
                   placeholder="จำนวนชั่วโมง / สัปดาห์"
                 />
                 <FieldError v-if="errors.length" :errors="errors" />

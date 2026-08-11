@@ -103,6 +103,8 @@ export const DOCUMENT_EDIT = {
   DATASET_ID: 'document_create',
   DATASET_VERSION_DOCUMENT_LINK: 'v1.1.0',
   DATASET_VERSION_DOCUMENT_REQUEST: 'v1.0.0',
+  DATASET_VERSION_COMMITTEE_PA: 'v1.2.3',
+  VIEW_COMMITTEE_PA: 'req_committee_pa_view',
 } as const
 
 export const DOCUMENT_DELETE = {
