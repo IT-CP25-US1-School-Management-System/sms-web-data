@@ -37,7 +37,6 @@ const authStore = useAuthStore()
 
 const subject_group = ref('')
 const teaching_level_1 = ref('')
-const teaching_level_2 = ref('')
 const subject_name = ref('')
 const teaching_hours_per_week = ref('')
 const support_hours_per_week = ref('')
@@ -79,7 +78,6 @@ const validationSchema = computed(() => {
     z.object({
       subject_group: z.string().min(1, 'กลุ่มสาระ จำเป็นต้องเลือก'),
       teaching_level_1: z.string().min(1, 'ปฏิบัติการสอนชั้น/ระดับ จำเป็นต้องกรอก'),
-      teaching_level_2: z.string().min(1, 'ปฏิบัติการสอนชั้น/ระดับ จำเป็นต้องกรอก'),
       subject_name: z.string().min(1, 'รายวิชา จำเป็นต้องกรอก'),
       teaching_hours_per_week: hourSchema('การสอนตามตารางสอน จำเป็นต้องกรอก'),
       support_hours_per_week: hourSchema('งานส่งเสริมและสนับสนุนการจัดการเรียนรู้ จำเป็นต้องกรอก'),
@@ -99,7 +97,6 @@ const validationSchema = computed(() => {
 const initialValues = computed(() => ({
   subject_group: subject_group.value,
   teaching_level_1: teaching_level_1.value,
-  teaching_level_2: teaching_level_2.value,
   subject_name: subject_name.value,
   teaching_hours_per_week: teaching_hours_per_week.value,
   support_hours_per_week: support_hours_per_week.value,
@@ -178,7 +175,6 @@ function getSelectedFiles(): File[] {
 function resetEvaluationPAForm() {
   subject_group.value = ''
   teaching_level_1.value = ''
-  teaching_level_2.value = ''
   subject_name.value = ''
   teaching_hours_per_week.value = ''
   support_hours_per_week.value = ''
@@ -198,7 +194,6 @@ function resetEvaluationPAForm() {
     values: {
       subject_group: '',
       teaching_level_1: '',
-      teaching_level_2: '',
       subject_name: '',
       teaching_hours_per_week: '',
       support_hours_per_week: '',
@@ -229,7 +224,7 @@ function buildDocumentDetailPayload(values: Record<string, any>): RequestCommitt
     request_id: documentRequest.value.id,
     subject_group: String(values.subject_group ?? ''),
     teaching_level_1: String(values.teaching_level_1 ?? ''),
-    teaching_level_2: String(values.teaching_level_2 ?? ''),
+    teaching_level_2: '',
     subject_name: String(values.subject_name ?? ''),
     teaching_hours_per_week: toNumber(values.teaching_hours_per_week),
     support_hours_per_week: toNumber(values.support_hours_per_week),
@@ -380,7 +375,6 @@ async function submitPA2Form() {
 
   formRef.value?.setFieldValue('subject_group', subject_group.value)
   formRef.value?.setFieldValue('teaching_level_1', teaching_level_1.value)
-  formRef.value?.setFieldValue('teaching_level_2', teaching_level_2.value)
   formRef.value?.setFieldValue('subject_name', subject_name.value)
   formRef.value?.setFieldValue('teaching_hours_per_week', teaching_hours_per_week.value)
   formRef.value?.setFieldValue('support_hours_per_week', support_hours_per_week.value)
@@ -397,7 +391,6 @@ async function submitPA2Form() {
   const fieldNames = [
     'subject_group',
     'teaching_level_1',
-    'teaching_level_2',
     'subject_name',
     'teaching_hours_per_week',
     'support_hours_per_week',
@@ -465,34 +458,13 @@ async function submitPA2Form() {
             </VeeField>
             <VeeField name="teaching_level_1" v-slot="{ field, errors }">
               <Field :data-invalid="!!errors.length">
-                <FieldLabel>
-                  ปฏิบัติการสอนชั้น/ระดับ รายการที่ 1 <span class="text-red-500">*</span>
-                </FieldLabel>
+                <FieldLabel>ปฏิบัติการสอนชั้น/ระดับ <span class="text-red-500">*</span></FieldLabel>
                 <Input
                   :model-value="field.value as string"
                   @update:model-value="
                     (v) => {
                       field.onChange(v)
                       teaching_level_1 = String(v ?? '')
-                    }
-                  "
-                  type="text"
-                  placeholder=""
-                />
-                <FieldError v-if="errors.length" :errors="errors" />
-              </Field>
-            </VeeField>
-            <VeeField name="teaching_level_2" v-slot="{ field, errors }">
-              <Field :data-invalid="!!errors.length">
-                <FieldLabel>
-                  ปฏิบัติการสอนชั้น/ระดับ รายการที่ 2 <span class="text-red-500">*</span>
-                </FieldLabel>
-                <Input
-                  :model-value="field.value as string"
-                  @update:model-value="
-                    (v) => {
-                      field.onChange(v)
-                      teaching_level_2 = String(v ?? '')
                     }
                   "
                   type="text"
