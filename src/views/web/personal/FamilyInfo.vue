@@ -6,7 +6,13 @@ import provincesJson from '@/assets/thai-province-data/provinces.json'
 import districtsJson from '@/assets/thai-province-data/districts.json'
 import subDistrictsJson from '@/assets/thai-province-data/sub_districts.json'
 import { DATASET_GET, DATASET_EDIT } from '@/lib/constants'
-import { getDatasetRows, updateDatasetRow } from '@/stores/dataset'
+import { formatDateInput, generateUUID, PREFIX_NAME_BY_ID } from '@/lib/helpers'
+import {
+  createDatasetRow,
+  deleteDatasetRow,
+  getDatasetRows,
+  updateDatasetRow,
+} from '@/stores/dataset'
 import type { District, Province, SubDistrict } from '@/types/address'
 import type { FamilyMember } from '@/types/teacher'
 import { onMounted, ref } from 'vue'
@@ -40,15 +46,26 @@ type CreateFormSection = {
 }
 
 const loading = ref(false)
+const busyEntries = ref<Record<number, 'save' | 'delete'>>({})
 const familyData = ref<Record<string, any>[]>([])
 const familyFields = ref<CreateFormSection[][]>([])
+const personId = ref('')
+
+const FAMILY_DATASET = {
+  DATASET_ID: DATASET_EDIT.DATASET_ID,
+  DATASET_VERSION: DATASET_EDIT.DATASET_VERSION_FAMILY,
+  VIEW_NAME: 'family_update',
+} as const
 
 const action = ref('update')
 const modalTopic = ref('ข้อมูลครอบครัว')
 const modalValue = ref('')
 const confirmModal = ref(false)
-const pendingGroupIndex = ref<number | null>(null)
-const pendingValues = ref<Record<string, any>>({})
+const pendingAction = ref<
+  | { type: 'save'; index: number; values: Record<string, any> }
+  | { type: 'delete'; index: number; recordId?: string }
+  | null
+>(null)
 
 const provinceData = provincesJson as Province[]
 const districtData = districtsJson as District[]
@@ -58,6 +75,7 @@ const provinceOptions = provinceData.map((province) => ({
   label: province.name_th,
   value: String(province.id),
 }))
+const prefixOptions = Object.entries(PREFIX_NAME_BY_ID).map(([value, label]) => ({ label, value }))
 
 const provinceNameMap = new Map(
   provinceOptions.map((option) => [String(option.value), option.label]),
@@ -124,9 +142,15 @@ function mapFamilyMemberForForm(
 ) {
   return {
     ...member,
-
-    prefix_name: (member as Record<string, any>)?.prefixes?.prefixes_name_th || '',
-    is_alive: member.is_alive ? 'มีชีวิต' : 'ไม่มีชีวิต',
+    prefix_id: member.prefix_id ? String(member.prefix_id) : '',
+    is_alive:
+      member.is_alive === undefined || member.is_alive === null
+        ? ''
+        : member.is_alive
+          ? 'มีชีวิต'
+          : 'ไม่มีชีวิต',
+    phone: member.phone ?? '',
+    email: member.email ?? '',
     province_code: member.province_code ?? '',
     district_code: member.district_code ?? '',
     subdistrict_code: member.subdistrict_code ?? '',
@@ -152,77 +176,77 @@ function createFamilyFields(values: Record<string, any>): CreateFormSection[] {
           label: 'ความสัมพันธ์',
           type: 'text',
           isShow: true,
-          placeholder: '-',
-          disabled: true,
+          placeholder: 'เช่น บิดา / มารดา / คู่สมรส',
         },
         {
-          name: 'prefix_name',
+          name: 'prefix_id',
           label: 'คำนำหน้า',
-          type: 'text',
-          placeholder: '-',
-          disabled: true,
+          type: 'select',
+          options: prefixOptions,
+          placeholder: 'เลือกคำนำหน้า',
         },
         {
           name: 'first_name_th',
           label: 'ชื่อ',
           type: 'text',
           isShow: true,
-          placeholder: '-',
-          disabled: true,
+          placeholder: 'กรุณาระบุชื่อ',
         },
         {
           name: 'last_name_th',
           label: 'นามสกุล',
           type: 'text',
           isShow: true,
-          placeholder: '-',
-          disabled: true,
+          placeholder: 'กรุณาระบุนามสกุล',
         },
         {
           name: 'former_last_name_th',
           label: 'นามสกุลเดิม',
           type: 'text',
-          placeholder: '-',
-          disabled: true,
+          placeholder: 'กรุณาระบุนามสกุลเดิม',
         },
         {
           name: 'middle_name_th',
           label: 'ชื่อกลาง',
           type: 'text',
-          placeholder: '-',
-          disabled: true,
+          placeholder: 'กรุณาระบุชื่อกลาง',
         },
         {
           name: 'national_id',
           label: 'เลขบัตรประชาชน',
           type: 'text',
-          placeholder: '-',
-          disabled: true,
+          placeholder: 'กรุณาระบุเลขบัตรประชาชน',
         },
         {
           name: 'gender',
           label: 'เพศ',
-          type: 'text',
-          disabled: true,
-          placeholder: '-',
+          type: 'select',
+          placeholder: 'เลือกเพศ',
+          options: [
+            { label: 'ชาย', value: 'male' },
+            { label: 'หญิง', value: 'female' },
+            { label: 'อื่นๆ', value: 'other' },
+          ],
         },
         {
           name: 'is_alive',
           label: 'การมีชีวิต',
-          type: 'text',
-          placeholder: '-',
-          disabled: true,
+          type: 'select',
+          placeholder: 'เลือกสถานะการมีชีวิต',
+          options: [
+            { label: 'มีชีวิต', value: 'มีชีวิต' },
+            { label: 'ไม่มีชีวิต', value: 'ไม่มีชีวิต' },
+          ],
         },
         {
           name: 'birth_date',
           label: 'วัน / เดือน / ปี เกิด',
           type: 'date',
-          placeholder: '-',
-          disabled: true,
+          placeholder: 'วว / ดด / ปปปป',
         },
         {
           name: 'phone',
-          label: 'เบอร์โทรศัพท์',
+          label: 'โทรศัพท์',
           type: 'text',
           required: true,
           placeholder: '0xxxxxxxxx',
@@ -231,15 +255,22 @@ function createFamilyFields(values: Record<string, any>): CreateFormSection[] {
           name: 'email',
           label: 'อีเมล',
           type: 'email',
-          required: true,
-          placeholder: 'example@email.com',
+          required: false,
+          placeholder: 'เช่น name@example.com',
         },
         {
           name: 'marital_status',
           label: 'สถานภาพ',
-          type: 'text',
-          placeholder: '-',
-          disabled: true,
+          type: 'select',
+          placeholder: 'เลือกสถานภาพ',
+          options: [
+            { label: 'โสด', value: 'โสด' },
+            { label: 'สมรส', value: 'สมรส' },
+            { label: 'หม้าย', value: 'หม้าย' },
+            { label: 'หย่าร้าง', value: 'หย่าร้าง' },
+            { label: 'แยกกันอยู่', value: 'แยกกันอยู่' },
+            { label: 'เสียชีวิต', value: 'เสียชีวิต' },
+          ],
         },
       ],
     },
@@ -367,8 +398,11 @@ function syncFamilyAddress(index: number, incomingValues?: Record<string, any>) 
   }
 }
 
-function normalizeFamilyPayload(currentMember: Record<string, any>, values?: Record<string, any>) {
-  const mergedValues = {
+function normalizeFamilyPayload(
+  currentMember: Record<string, any>,
+  values?: Record<string, any>,
+): Record<string, any> {
+  const mergedValues: Record<string, any> = {
     ...currentMember,
     ...values,
   }
@@ -390,6 +424,71 @@ function normalizeFamilyPayload(currentMember: Record<string, any>, values?: Rec
   }
 }
 
+function normalizeText(value: unknown) {
+  const text = String(value ?? '').trim()
+  return text || undefined
+}
+
+function normalizeAliveStatus(value: unknown) {
+  if (value === 'มีชีวิต') return true
+  if (value === 'ไม่มีชีวิต') return false
+  return Boolean(value)
+}
+
+function normalizeGender(value: unknown): FamilyMember['gender'] | undefined {
+  if (value === 'male' || value === 'female' || value === 'other') return value
+  if (value === 'ชาย') return 'male'
+  if (value === 'หญิง') return 'female'
+  if (value === 'อื่นๆ') return 'other'
+  return undefined
+}
+
+function buildFamilyPayload(
+  source: Record<string, any>,
+  values?: Record<string, any>,
+  mode: 'create' | 'update' = 'update',
+) {
+  const normalizedValues = normalizeFamilyPayload(source, values)
+  const now = new Date().toISOString()
+
+  return {
+    ...source,
+    ...values,
+    id: String(normalizedValues.id || source.id || generateUUID()),
+    person_id: String(normalizedValues.person_id || personId.value),
+    relation_type: String(normalizedValues.relation_type || '').trim(),
+    prefix_id: normalizedValues.prefix_id ? String(normalizedValues.prefix_id) : undefined,
+    first_name_th: String(normalizedValues.first_name_th || '').trim(),
+    middle_name_th: normalizeText(normalizedValues.middle_name_th),
+    last_name_th: String(normalizedValues.last_name_th || '').trim(),
+    former_last_name_th: normalizeText(normalizedValues.former_last_name_th),
+    national_id: normalizeText(normalizedValues.national_id),
+    gender: normalizeGender(normalizedValues.gender),
+    is_alive: normalizeAliveStatus(normalizedValues.is_alive),
+    birth_date: formatDateInput(normalizedValues.birth_date) || undefined,
+    phone: normalizeText(normalizedValues.phone),
+    email: normalizeText(normalizedValues.email),
+    marital_status: normalizeText(normalizedValues.marital_status),
+    house_no: normalizeText(normalizedValues.house_no),
+    moo: normalizeText(normalizedValues.moo),
+    building: normalizeText(normalizedValues.building),
+    soi: normalizeText(normalizedValues.soi),
+    road: normalizeText(normalizedValues.road),
+    province_code: normalizeText(normalizedValues.province_code),
+    district_code: normalizeText(normalizedValues.district_code),
+    subdistrict_code: normalizeText(normalizedValues.subdistrict_code),
+    province: normalizeText(normalizedValues.province),
+    district: normalizeText(normalizedValues.district),
+    subdistrict: normalizeText(normalizedValues.subdistrict),
+    postal_code: normalizeText(normalizedValues.postal_code),
+    created_at:
+      mode === 'create'
+        ? now
+        : normalizeText(normalizedValues.created_at) || normalizeText(source.created_at) || now,
+    updated_at: mode === 'update' ? now : undefined,
+  }
+}
+
 async function getFamilyData() {
   loading.value = true
   try {
@@ -398,9 +497,9 @@ async function getFamilyData() {
       page: 1,
       per_page: 50,
     })
-    console.log('Family API Response:', response)
-    const rootPrefixName =
-      (response.data[0] as Record<string, any> | undefined)?.prefixes?.prefixes_name_th || ''
+    const rootRecord = response.data[0] as Record<string, any> | undefined
+    personId.value = String(rootRecord?.id || rootRecord?.person_id || '')
+    const rootPrefixName = rootRecord?.prefixes?.prefixes_name_th || ''
     familyData.value = (response.data[0]?.family_members || []).map((member: FamilyMember) =>
       mapFamilyMemberForForm({
         ...member,
@@ -409,7 +508,9 @@ async function getFamilyData() {
           (rootPrefixName ? { prefixes_name_th: rootPrefixName } : undefined),
       }),
     )
-    familyFields.value = familyData.value.map((member) => createFamilyFields(member))
+    familyFields.value = familyData.value.length
+      ? familyData.value.map((member) => createFamilyFields(member))
+      : [createFamilyFields({})]
   } catch (error: any) {
     toast.error(`โหลดข้อมูลครอบครัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`, {
       position: 'bottom-right',
@@ -420,9 +521,13 @@ async function getFamilyData() {
 
 async function updateFamilyData(groupIndex: number, values?: Record<string, any>) {
   const currentMember = familyData.value[groupIndex]
+  const source = {
+    ...(currentMember || {}),
+    person_id: currentMember?.person_id || personId.value,
+  }
 
-  if (!currentMember?.id) {
-    toast.error('ไม่พบข้อมูลสมาชิกครอบครัวที่ต้องการบันทึก', {
+  if (!source.person_id) {
+    toast.error('ไม่พบข้อมูลผู้ใช้งาน กรุณาบันทึกข้อมูลส่วนบุคคลก่อน', {
       position: 'bottom-right',
     })
     return
@@ -431,66 +536,86 @@ async function updateFamilyData(groupIndex: number, values?: Record<string, any>
   loading.value = true
 
   try {
-    const normalizedValues = normalizeFamilyPayload(
-      currentMember,
-      values,
-    ) as Partial<FamilyMember> & Record<string, any>
-    const payload: Partial<FamilyMember> = {
-      ...currentMember,
-      ...normalizedValues,
-      is_alive: currentMember.is_alive === 'มีชีวิต',
-      road: normalizedValues.road ?? currentMember.road ?? '',
-      soi: normalizedValues.soi ?? currentMember.soi ?? '',
-      building: normalizedValues.building ?? currentMember.building ?? '',
-      updated_at: new Date().toISOString(),
-    }
-
-    const response = await updateDatasetRow(
-      DATASET_EDIT.DATASET_ID,
-      DATASET_EDIT.DATASET_VERSION_FAMILY,
-      currentMember.id,
-      payload,
-    )
-
-    const nextFamilyData = [...familyData.value]
-    nextFamilyData[groupIndex] = mapFamilyMemberForForm({
-      ...currentMember,
-      ...payload,
-    })
-    familyData.value = nextFamilyData
-
-    const nextFamilyFields = [...familyFields.value]
-    nextFamilyFields[groupIndex] = createFamilyFields(nextFamilyData[groupIndex] || {})
-    familyFields.value = nextFamilyFields
-
-    if ((response as { message?: string }).message === 'success') {
-      toast.success('บันทึกข้อมูลข้อมูลครอบครัวสำเร็จ', {
-        position: 'bottom-right',
-      })
+    if (currentMember?.id) {
+      const payload = buildFamilyPayload(source, values, 'update')
+      await updateDatasetRow(
+        FAMILY_DATASET.DATASET_ID,
+        FAMILY_DATASET.DATASET_VERSION,
+        currentMember.id,
+        payload,
+        FAMILY_DATASET.VIEW_NAME,
+      )
     } else {
-      toast.error('อัปเดตข้อมูลครอบครัวไม่สำเร็จ', {
-        position: 'bottom-right',
-      })
+      const payload = buildFamilyPayload(source, values, 'create')
+      await createDatasetRow(
+        FAMILY_DATASET.DATASET_ID,
+        FAMILY_DATASET.DATASET_VERSION,
+        payload,
+        FAMILY_DATASET.VIEW_NAME,
+      )
     }
+
+    await getFamilyData()
+    toast.success('บันทึกข้อมูลครอบครัวสำเร็จ', { position: 'bottom-right' })
   } catch (error: any) {
     toast.error(
-      `อัปเดตข้อมูลครอบครัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`,
+      `บันทึกข้อมูลครอบครัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`,
       {
         position: 'bottom-right',
       },
     )
+  } finally {
+    loading.value = false
   }
-
-  loading.value = false
 }
 
-function updateData(confirmed: boolean) {
-  if (confirmed && pendingGroupIndex.value !== null) {
-    void updateFamilyData(pendingGroupIndex.value, pendingValues.value)
+async function deleteFamilyData(index: number, familyMemberId?: string) {
+  if (!familyMemberId) {
+    familyData.value.splice(index, 1)
+    familyFields.value = familyData.value.length
+      ? familyData.value.map((member) => createFamilyFields(member))
+      : [createFamilyFields({})]
+    return
   }
-  pendingGroupIndex.value = null
-  pendingValues.value = {}
+
+  try {
+    await deleteDatasetRow(
+      FAMILY_DATASET.DATASET_ID,
+      FAMILY_DATASET.DATASET_VERSION,
+      familyMemberId,
+      FAMILY_DATASET.VIEW_NAME,
+    )
+    await getFamilyData()
+    toast.success('ลบข้อมูลครอบครัวสำเร็จ', { position: 'bottom-right' })
+  } catch (error: any) {
+    toast.error(`ลบข้อมูลครอบครัวไม่สำเร็จ: ${error?.response?.data?.message || error.message}`)
+  }
+}
+
+async function updateData(confirmed: boolean) {
+  if (!confirmed) {
+    pendingAction.value = null
+    confirmModal.value = false
+    return
+  }
+
   confirmModal.value = false
+  if (!pendingAction.value) return
+
+  const currentAction = pendingAction.value
+  pendingAction.value = null
+  busyEntries.value = { ...busyEntries.value, [currentAction.index]: currentAction.type }
+
+  try {
+    if (currentAction.type === 'save') {
+      await updateFamilyData(currentAction.index, currentAction.values)
+    } else {
+      await deleteFamilyData(currentAction.index, currentAction.recordId)
+    }
+  } finally {
+    const { [currentAction.index]: _busyEntry, ...restBusyEntries } = busyEntries.value
+    busyEntries.value = restBusyEntries
+  }
 }
 
 function shouldSyncFamilyAddress(groupIndex: number, values?: Record<string, any>) {
@@ -511,8 +636,27 @@ function handleChange(groupIndex: number, values?: Record<string, any>) {
 }
 
 function handleSave(groupIndex: number, values?: Record<string, any>) {
-  pendingGroupIndex.value = groupIndex
-  pendingValues.value = values || {}
+  if (busyEntries.value[groupIndex]) return
+  syncFamilyAddress(groupIndex, values)
+  pendingAction.value = { type: 'save', index: groupIndex, values: values || {} }
+  action.value = familyData.value[groupIndex]?.id ? 'update' : 'add'
+  modalValue.value =
+    [values?.first_name_th, values?.last_name_th].filter(Boolean).join(' ') ||
+    values?.relation_type ||
+    ''
+  confirmModal.value = true
+}
+
+function handleDelete(groupIndex: number, familyMemberId?: string) {
+  if (busyEntries.value[groupIndex]) return
+  pendingAction.value = { type: 'delete', index: groupIndex, recordId: familyMemberId }
+  action.value = 'delete'
+  modalValue.value =
+    [familyData.value[groupIndex]?.first_name_th, familyData.value[groupIndex]?.last_name_th]
+      .filter(Boolean)
+      .join(' ') ||
+    familyData.value[groupIndex]?.relation_type ||
+    ''
   confirmModal.value = true
 }
 
@@ -529,13 +673,15 @@ onMounted(() => {
   <div v-else class="mx-6 flex flex-col gap-4">
     <CreateForm
       :isDropdown="true"
-      :readonly="true"
+      :busyEntries="busyEntries"
       :deferCommitOnSave="true"
+      :deferDeleteOnConfirm="true"
       :values="familyData"
-      :canDelete="false"
+      :canDelete="true"
       :fields="familyFields"
       @change="handleChange"
       @save="handleSave"
+      @delete="handleDelete"
     />
   </div>
 

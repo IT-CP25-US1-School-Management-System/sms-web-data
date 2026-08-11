@@ -88,6 +88,10 @@ export async function deleteDatasetRow(
   datasetId: string,
   version: string,
   key: string,
+  viewName?: string,
 ): Promise<void> {
-  await dataApiInstance.delete(`v1/datasets/${datasetId}/versions/${version}/data/key/${key}`)
+  const params = viewName ? { view: viewName } : undefined
+  await dataApiInstance.delete(`v1/datasets/${datasetId}/versions/${version}/data/key/${key}`, {
+    params,
+  })
 }
