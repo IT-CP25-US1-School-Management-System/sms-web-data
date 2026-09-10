@@ -90,6 +90,7 @@ const validationSchema = computed(() => {
       'pa2-eval1-count': z.number().min(1, 'PA2 กรรมการคนที่ 1 จำเป็นต้องแนบไฟล์'),
       'pa2-eval2-count': z.number().min(1, 'PA2 กรรมการคนที่ 2 จำเป็นต้องแนบไฟล์'),
       'pa2-eval3-count': z.number().min(1, 'PA2 กรรมการคนที่ 3 จำเป็นต้องแนบไฟล์'),
+      'pa3-count': z.number().min(1, 'PA3 จำเป็นต้องแนบไฟล์'),
     }),
   )
 })
@@ -109,6 +110,7 @@ const initialValues = computed(() => ({
   'pa2-eval1-count': fileMap.value['pa2-eval1']?.length || 0,
   'pa2-eval2-count': fileMap.value['pa2-eval2']?.length || 0,
   'pa2-eval3-count': fileMap.value['pa2-eval3']?.length || 0,
+  'pa3-count': fileMap.value['pa3']?.length || 0,
 }))
 
 const groupSubjectOptions = [
@@ -206,6 +208,7 @@ function resetEvaluationPAForm() {
       'pa2-eval1-count': 0,
       'pa2-eval2-count': 0,
       'pa2-eval3-count': 0,
+      'pa3-count': 0,
     },
   })
 }
@@ -387,6 +390,7 @@ async function submitPA2Form() {
   formRef.value?.setFieldValue('pa2-eval1-count', fileMap.value['pa2-eval1']?.length || 0)
   formRef.value?.setFieldValue('pa2-eval2-count', fileMap.value['pa2-eval2']?.length || 0)
   formRef.value?.setFieldValue('pa2-eval3-count', fileMap.value['pa2-eval3']?.length || 0)
+  formRef.value?.setFieldValue('pa3-count', fileMap.value['pa3']?.length || 0)
 
   const fieldNames = [
     'subject_group',
@@ -403,6 +407,7 @@ async function submitPA2Form() {
     'pa2-eval1-count',
     'pa2-eval2-count',
     'pa2-eval3-count',
+    'pa3-count',
   ]
 
   for (const fieldName of fieldNames) {
@@ -672,7 +677,7 @@ async function submitPA2Form() {
                   <div
                     v-for="(file, i) in fileMap['pa2-pa1']"
                     :key="i"
-                    class="border-muted bg-muted/40 flex min-h-11 w-full max-w-xl items-center gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
+                    class="border-muted bg-muted/40 flex min-h-11 w-fit max-w-xl items-center gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
                   >
                     <span class="truncate">{{ file.name }}</span>
                     <span class="text-muted-foreground shrink-0 text-xs">{{
@@ -718,7 +723,7 @@ async function submitPA2Form() {
                   <div
                     v-for="(file, i) in fileMap['pa2-eval1']"
                     :key="i"
-                    class="border-muted bg-muted/40 flex min-h-11 w-full max-w-xl items-center gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
+                    class="border-muted bg-muted/40 flex min-h-11 w-fit max-w-xl items-center gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
                   >
                     <span class="truncate">{{ file.name }}</span>
                     <span class="text-muted-foreground shrink-0 text-xs">{{
@@ -819,7 +824,7 @@ async function submitPA2Form() {
                   <div
                     v-for="(file, i) in fileMap['pa2-eval3']"
                     :key="i"
-                    class="border-muted bg-muted/40 flex min-h-11 w-full max-w-xl items-center gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
+                    class="border-muted bg-muted/40 flex min-h-11 w-fit max-w-xl items-center gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
                   >
                     <span class="truncate">{{ file.name }}</span>
                     <span class="text-muted-foreground shrink-0 text-xs">{{
@@ -839,6 +844,51 @@ async function submitPA2Form() {
                   class="mt-2 text-sm text-red-600"
                 >
                   {{ getFileErrorMessage('pa2-eval3', errors) }}
+                </p>
+              </div>
+            </VeeField>
+
+            <VeeField name="pa3-count" v-slot="{ errors }">
+              <div>
+                <p class="mb-1 text-sm font-semibold">PA3<span class="text-red-500">*</span></p>
+                <p class="text-muted-foreground mb-2 text-xs">
+                  ตั้งชื่อไฟล์ : กลุ่มสาระ-ชื่อ-สกุล-คศ.ปัจจุบัน-pa3
+                </p>
+                <input
+                  :ref="
+                    (el: any) => {
+                      if (el) fileInputRefs['pa3'] = el as HTMLInputElement
+                    }
+                  "
+                  type="file"
+                  class="hidden"
+                  accept=".pdf"
+                  @change="handleFileSelect($event, 'pa3')"
+                />
+                <Button type="button" class="cursor-pointer" @click="triggerFileInput('pa3')">
+                  <FileText class="mr-1 h-4 w-4" /> อัปโหลดไฟล์
+                </Button>
+                <div v-if="fileMap['pa3']?.length" class="mt-2 flex flex-col gap-1">
+                  <div
+                    v-for="(file, i) in fileMap['pa3']"
+                    :key="i"
+                    class="border-muted bg-muted/40 flex min-h-11 w-fit max-w-xl items-center gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
+                  >
+                    <span class="truncate">{{ file.name }}</span>
+                    <span class="text-muted-foreground shrink-0 text-xs">{{
+                      formatFileSize(file.size)
+                    }}</span>
+                    <button
+                      type="button"
+                      class="hover:text-destructive text-muted-foreground cursor-pointer rounded p-0.5"
+                      @click="removeFile('pa3', i)"
+                    >
+                      <X class="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+                <p v-if="getFileErrorMessage('pa3', errors)" class="mt-2 text-sm text-red-600">
+                  {{ getFileErrorMessage('pa3', errors) }}
                 </p>
               </div>
             </VeeField>
