@@ -120,6 +120,7 @@ const academicRankFields: CreateFormSection[][] = [
           isShow: true,
           placeholder: '',
           options: [
+            { label: 'ว9', value: 'ว9' },
             { label: 'ว13', value: 'ว13' },
             { label: 'ว17', value: 'ว17' },
             { label: 'ว21', value: 'ว21' },
