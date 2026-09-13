@@ -8,7 +8,6 @@ import DocumentFileRow from '@/components/DocumentFileRow.vue'
 import DocumentPreviewDialog from '@/components/DocumentPreviewDialog.vue'
 import { ROUTE_NAMES } from '@/lib/constants'
 import { documentRequestFullName } from '@/lib/documentRequest'
-import { formatThaiBuddhistDateTime } from '@/lib/helpers'
 import { classifyPAFile, PA_FILE_GROUPS } from '@/lib/pa'
 import {
   isRequestType,
@@ -38,7 +37,22 @@ const previewDialogOpen = ref(false)
 const previewResource = ref<FileDocument | null>(null)
 let generation = 0
 
-const overviewFields = computed(() => (request.value ? requestOverviewFields(request.value) : []))
+const rejectionReason = computed(() => {
+  if (request.value?.status !== 'ไม่อนุมัติ') return ''
+  return (
+    sortedApprovalLogs(request.value)
+      .find((log) => log.action === 'ไม่อนุมัติ' && log.comment?.trim())
+      ?.comment?.trim() || '-'
+  )
+})
+const overviewFields = computed(() => {
+  if (!request.value) return []
+  const fields = requestOverviewFields(request.value)
+  if (request.value.status === 'ไม่อนุมัติ') {
+    fields.push({ label: 'เหตุผลที่ไม่อนุมัติ', value: rejectionReason.value })
+  }
+  return fields
+})
 const detailSection = computed(() => (request.value ? requestDetailSection(request.value) : null))
 const detailMessage = computed(() =>
   request.value && !detailSection.value ? requestDetailMessage(request.value) : '',
@@ -46,7 +60,6 @@ const detailMessage = computed(() =>
 const attachmentTitle = computed(() =>
   request.value ? requestAttachmentTitle(request.value) : 'ไฟล์แนบคำร้อง',
 )
-const approvalLogs = computed(() => (request.value ? sortedApprovalLogs(request.value) : []))
 const groupedFiles = computed(() => {
   const groups = new Map<string, DocumentLinkWithResource[]>()
   for (const link of request.value?.document_links || []) {
@@ -203,29 +216,6 @@ watch(() => route.params.id, load, { immediate: true })
       >
         {{ detailMessage }}
       </p>
-
-      <section v-if="approvalLogs.length" class="overflow-hidden rounded-lg border">
-        <h2 class="bg-muted border-b px-4 py-3 font-semibold">ประวัติการดำเนินการ</h2>
-        <div class="divide-y">
-          <div
-            v-for="log in approvalLogs"
-            :key="log.id"
-            class="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-start sm:justify-between"
-          >
-            <div class="min-w-0">
-              <Badge :variant="log.action === 'ไม่อนุมัติ' ? 'destructive' : 'secondary'">
-                {{ log.action }}
-              </Badge>
-              <p v-if="log.comment" class="mt-2 break-words whitespace-pre-wrap">
-                {{ log.comment }}
-              </p>
-            </div>
-            <time class="text-muted-foreground shrink-0 text-sm">
-              {{ formatThaiBuddhistDateTime(log.created_at) || '-' }}
-            </time>
-          </div>
-        </div>
-      </section>
 
       <section class="overflow-hidden rounded-lg border">
         <h2 class="bg-muted border-b px-4 py-3 font-semibold">{{ attachmentTitle }}</h2>
