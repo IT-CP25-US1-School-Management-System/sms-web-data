@@ -1,17 +1,12 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
 import { toast } from 'vue-sonner'
-import { Loader2, MoreHorizontal, Pencil, Plus, Search, Trash2 } from 'lucide-vue-next'
+import { Loader2, Pencil, Plus, Search, Trash2 } from 'lucide-vue-next'
 import CreateStudentModal from '@/views/manage/CreateStudentModal.vue'
+import TableActions from '@/components/TableActions.vue'
 import { usePagination } from '@/composables/usePagination'
 import type { PaginationData } from '@/composables/usePagination'
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import MainLayout from '@/layouts/manage/MainLayout.vue'
 import { deleteStudent, getStudents } from '@/stores/students'
@@ -23,6 +18,10 @@ const searchQuery = ref('')
 const showCreateModal = ref(false)
 const selectedStudentId = ref<string | null>(null)
 const selectedStudent = ref<Student | null>(null)
+const rowActions = [
+  { key: 'edit', label: 'แก้ไข', icon: Pencil },
+  { key: 'delete', label: 'ลบ', icon: Trash2, destructive: true },
+]
 
 const pagination = ref<PaginationData>({
   page: 1,
@@ -124,7 +123,9 @@ const handleEdit = (student: Student) => {
 }
 
 const handleDelete = async (student: Student) => {
-  if (!confirm(`คุณต้องการลบนักเรียน ${student.first_name_th} ${student.last_name_th} ใช่หรือไม่?`)) {
+  if (
+    !confirm(`คุณต้องการลบนักเรียน ${student.first_name_th} ${student.last_name_th} ใช่หรือไม่?`)
+  ) {
     return
   }
 
@@ -140,6 +141,11 @@ const handleDelete = async (student: Student) => {
       description: error.message || 'ไม่สามารถลบข้อมูลนักเรียนได้',
     })
   }
+}
+
+const handleRowAction = (action: string, student: Student) => {
+  if (action === 'edit') handleEdit(student)
+  if (action === 'delete') void handleDelete(student)
 }
 
 const handleAddStudent = () => {
@@ -175,7 +181,11 @@ const handleModalClose = () => {
             :disabled="loading"
           />
         </div>
-        <Button class="bg-green-600 hover:bg-green-700" @click="handleAddStudent" :disabled="loading">
+        <Button
+          class="bg-green-600 hover:bg-green-700"
+          @click="handleAddStudent"
+          :disabled="loading"
+        >
           <Plus class="mr-2 h-4 w-4" />
           เพิ่มรายชื่อ
         </Button>
@@ -201,7 +211,7 @@ const handleModalClose = () => {
           </table>
 
           <div class="min-h-0 flex-1 overflow-auto">
-            <table class="w-full [&_th]:px-4 [&_td]:px-4" style="table-layout: fixed">
+            <table class="w-full [&_td]:px-4 [&_th]:px-4" style="table-layout: fixed">
               <thead class="bg-muted/50 sticky top-0 z-10">
                 <tr>
                   <th class="py-2 text-left font-medium">ชื่อ</th>
@@ -240,28 +250,11 @@ const handleModalClose = () => {
                   <td class="py-2 text-center align-middle">{{ student.grade_level }}</td>
                   <td class="py-2 text-center align-middle">{{ student.class_section }}</td>
                   <td class="py-2 align-middle">
-                    <div class="flex justify-center">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger as-child>
-                          <Button variant="ghost" size="sm">
-                            <MoreHorizontal class="h-5 w-5" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" class="flex flex-row gap-1 p-1">
-                          <DropdownMenuItem @click="handleEdit(student)" class="cursor-pointer">
-                            <Pencil class="mr-2 h-4 w-4" />
-                            แก้ไข
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            @click="handleDelete(student)"
-                            class="cursor-pointer text-red-600"
-                          >
-                            <Trash2 class="mr-2 h-4 w-4" />
-                            ลบ
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
+                    <TableActions
+                      :actions="rowActions"
+                      :menu-label="`การดำเนินการ ${student.first_name_th} ${student.last_name_th}`"
+                      @select="handleRowAction($event, student)"
+                    />
                   </td>
                 </tr>
               </tbody>
@@ -311,5 +304,4 @@ const handleModalClose = () => {
   />
 </template>
 
-<style scoped>
-</style>
+<style scoped></style>

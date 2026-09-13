@@ -5,6 +5,7 @@ import { Eye, FileX2, Loader2 } from 'lucide-vue-next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import TableActions from '@/components/TableActions.vue'
 import { usePagination, type PaginationData } from '@/composables/usePagination'
 import { DATASET_GET, ROUTE_NAMES } from '@/lib/constants'
 import { formatThaiBuddhistDateTime, getDateTimestamp } from '@/lib/helpers'
@@ -28,6 +29,8 @@ const columns = [
   { label: 'วันที่ส่งคำร้อง', width: '28%' },
   { label: 'การดำเนินการ', width: '12%' },
 ]
+
+const rowActions = [{ key: 'detail', label: 'ดูรายละเอียด', icon: Eye }]
 
 const paginatedRequests = computed(() => {
   const start = (pagination.value.page - 1) * pagination.value.per_page
@@ -83,6 +86,10 @@ function changePerPage(event: Event) {
 
 function openDetail(request: DocumentRequest) {
   void router.push({ name: ROUTE_NAMES.TRACK_DOCUMENT_DETAIL, params: { id: request.id } })
+}
+
+function handleRowAction(action: string, request: DocumentRequest) {
+  if (action === 'detail') openDetail(request)
 }
 
 onMounted(load)
@@ -158,14 +165,11 @@ onMounted(load)
                   {{ formatThaiBuddhistDateTime(request.created_at) || '-' }}
                 </td>
                 <td class="py-3 text-center align-middle">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    :aria-label="`ดูรายละเอียด ${request.document_type || 'คำร้อง'}`"
-                    @click.stop="openDetail(request)"
-                  >
-                    <Eye class="mr-2 h-4 w-4" />ดูรายละเอียด
-                  </Button>
+                  <TableActions
+                    :actions="rowActions"
+                    :menu-label="`การดำเนินการ ${request.document_type || 'คำร้อง'}`"
+                    @select="handleRowAction($event, request)"
+                  />
                 </td>
               </tr>
             </tbody>

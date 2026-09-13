@@ -7,15 +7,10 @@ import CreateAttendanceReportTemplateDialog from '@/views/manage/CreateAttendanc
 import ExportAttendanceReportDialog from '@/views/manage/ExportAttendanceReportDialog.vue'
 import ExportTeacherDataDialog from '@/views/manage/ExportTeacherDataDialog.vue'
 import { Button } from '@/components/ui/button'
+import TableActions from '@/components/TableActions.vue'
 import { ROUTE_NAMES } from '@/lib/constants'
 import { Input } from '@/components/ui/input'
 import { formatDate, getPrefixName } from '@/lib/helpers'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,7 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Search, Plus, MoreHorizontal, Pencil, Trash2, Loader2, Download } from 'lucide-vue-next'
+import { Search, Plus, Pencil, Trash2, Loader2, Download } from 'lucide-vue-next'
 import { usePagination } from '@/composables/usePagination'
 import type { PaginationData } from '@/composables/usePagination'
 import { toast } from 'vue-sonner'
@@ -38,6 +33,10 @@ import { deleteUser } from '@/stores/api'
 type TabType = 'all' | 'government' | 'contract' | 'leave'
 
 const router = useRouter()
+const rowActions = [
+  { key: 'edit', label: 'แก้ไข', icon: Pencil },
+  { key: 'delete', label: 'ลบ', icon: Trash2, destructive: true },
+]
 
 const teachers = ref<PersonData[]>([])
 const leaveRecords = ref<DailyAttendanceRecord[]>([])
@@ -230,6 +229,11 @@ const handleEdit = (teacher: PersonData) => {
 const handleDelete = (teacher: PersonData) => {
   teacherToDelete.value = teacher
   showDeleteDialog.value = true
+}
+
+const handleRowAction = (action: string, teacher: PersonData) => {
+  if (action === 'edit') handleEdit(teacher)
+  if (action === 'delete') handleDelete(teacher)
 }
 
 const confirmDelete = async () => {
@@ -484,28 +488,11 @@ const getPersonDisplayName = (record: DailyAttendanceRecord) => {
                   <td class="py-2 align-middle">{{ teacher.last_name_th }}</td>
                   <td class="py-2 text-center align-middle">{{ getTeacherType(teacher) }}</td>
                   <td class="py-2 align-middle">
-                    <div class="flex justify-center">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger as-child>
-                          <Button variant="ghost" size="sm">
-                            <MoreHorizontal class="h-5 w-5" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" class="flex flex-row gap-1 p-1">
-                          <DropdownMenuItem class="cursor-pointer" @click="handleEdit(teacher)">
-                            <Pencil class="mr-2 h-4 w-4" />
-                            แก้ไข
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            class="cursor-pointer text-red-600"
-                            @click="handleDelete(teacher)"
-                          >
-                            <Trash2 class="mr-2 h-4 w-4" />
-                            ลบ
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
+                    <TableActions
+                      :actions="rowActions"
+                      :menu-label="`การดำเนินการ ${teacher.first_name_th} ${teacher.last_name_th}`"
+                      @select="handleRowAction($event, teacher)"
+                    />
                   </td>
                 </tr>
               </tbody>

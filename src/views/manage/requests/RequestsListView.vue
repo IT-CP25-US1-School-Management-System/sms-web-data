@@ -1,18 +1,13 @@
 <script setup lang="ts">
 import { onBeforeUnmount, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Loader2, MoreHorizontal, Pencil, Search, Trash2 } from 'lucide-vue-next'
+import { Loader2, Pencil, Search, Trash2 } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
 import MainLayout from '@/layouts/manage/MainLayout.vue'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+import TableActions from '@/components/TableActions.vue'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -48,6 +43,11 @@ const columns = [
   { label: 'สถานะ', width: '17%' },
   { label: 'วันที่ส่งคำร้อง', width: '20%' },
   { label: 'การดำเนินการ', width: '12%' },
+]
+
+const rowActions = [
+  { key: 'edit', label: 'แก้ไข', icon: Pencil },
+  { key: 'delete', label: 'ลบ', icon: Trash2, destructive: true },
 ]
 
 let generation = 0
@@ -157,6 +157,11 @@ onBeforeUnmount(() => {
 
 function handleEdit(request: DocumentRequest) {
   void router.push({ name: ROUTE_NAMES.REQUEST_EDIT, params: { id: request.id } })
+}
+
+function handleRowAction(action: string, request: DocumentRequest) {
+  if (action === 'edit') handleEdit(request)
+  if (action === 'delete') handleDelete(request)
 }
 
 function handleDelete(request: DocumentRequest) {
@@ -296,30 +301,11 @@ function cancelDelete() {
                         {{ formatThaiBuddhistDate(request.created_at) || '-' }}
                       </td>
                       <td class="py-2 align-middle">
-                        <div class="flex justify-center" @click.stop @keydown.stop>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger as-child>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                :aria-label="`การดำเนินการ ${documentRequestFullName(request)}`"
-                              >
-                                <MoreHorizontal class="h-5 w-5" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" class="flex flex-row gap-1 p-1">
-                              <DropdownMenuItem class="cursor-pointer" @click="handleEdit(request)">
-                                <Pencil class="mr-2 h-4 w-4" />แก้ไข
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                class="cursor-pointer text-red-600"
-                                @click="handleDelete(request)"
-                              >
-                                <Trash2 class="mr-2 h-4 w-4" />ลบ
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
+                        <TableActions
+                          :actions="rowActions"
+                          :menu-label="`การดำเนินการ ${documentRequestFullName(request)}`"
+                          @select="handleRowAction($event, request)"
+                        />
                       </td>
                     </tr>
                   </tbody>

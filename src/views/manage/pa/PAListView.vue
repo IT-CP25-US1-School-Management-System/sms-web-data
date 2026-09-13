@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Download, Eye, Loader2, MoreHorizontal, Search } from 'lucide-vue-next'
+import { Download, Eye, Loader2, Search } from 'lucide-vue-next'
 import MainLayout from '@/layouts/manage/MainLayout.vue'
 import PAExportDialog from '@/views/manage/pa/PAExportDialog.vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import TableActions from '@/components/TableActions.vue'
 import {
   Select,
   SelectContent,
@@ -14,12 +15,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { usePagination, type PaginationData } from '@/composables/usePagination'
 import { ROUTE_NAMES } from '@/lib/constants'
 import { formatThaiBuddhistDate } from '@/lib/helpers'
@@ -58,6 +53,8 @@ const columns = [
   { label: 'วันที่ส่งคำร้อง', width: '18%' },
   { label: 'การดำเนินการ', width: '13%' },
 ]
+
+const rowActions = [{ key: 'detail', label: 'ดูรายละเอียด', icon: Eye }]
 
 let generation = 0
 let searchTimeout: ReturnType<typeof setTimeout> | undefined
@@ -128,6 +125,10 @@ function openDetail(item: PAListItem) {
     name: ROUTE_NAMES.MANAGE_PA_DETAIL,
     params: { id: item.request.id },
   })
+}
+
+function handleRowAction(action: string, item: PAListItem) {
+  if (action === 'detail') openDetail(item)
 }
 </script>
 
@@ -274,27 +275,11 @@ function openDetail(item: PAListItem) {
                         {{ formatThaiBuddhistDate(item.request.created_at) || '-' }}
                       </td>
                       <td class="py-2 align-middle">
-                        <div class="flex justify-center" @click.stop @keydown.stop>
-                          <DropdownMenu
-                            ><DropdownMenuTrigger as-child
-                              ><Button
-                                variant="ghost"
-                                size="sm"
-                                :aria-label="`การดำเนินการ ${item.fullName}`"
-                                ><MoreHorizontal class="h-5 w-5" /></Button></DropdownMenuTrigger
-                            ><DropdownMenuContent align="end" class="flex flex-row gap-1 p-1"
-                              ><DropdownMenuItem as-child class="cursor-pointer"
-                                ><RouterLink
-                                  :to="{
-                                    name: ROUTE_NAMES.MANAGE_PA_DETAIL,
-                                    params: { id: item.request.id },
-                                  }"
-                                  ><Eye class="mr-2 h-4 w-4" />ดูรายละเอียด</RouterLink
-                                ></DropdownMenuItem
-                              ></DropdownMenuContent
-                            ></DropdownMenu
-                          >
-                        </div>
+                        <TableActions
+                          :actions="rowActions"
+                          :menu-label="`การดำเนินการ ${item.fullName}`"
+                          @select="handleRowAction($event, item)"
+                        />
                       </td>
                     </tr>
                   </tbody>
