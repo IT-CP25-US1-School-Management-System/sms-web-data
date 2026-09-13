@@ -17,12 +17,14 @@ export interface DocumentRequest {
   // Joined data from logs and links
   approval_logs?: ApprovalLog[]
   document_links?: DocumentLink[]
-  request_general?: RequestGeneral[]
-  request_general_documents?: RequestGeneral[]
-  request_history?: RequestHistory[]
-  request_history_changes?: RequestHistory[]
-  request_education_records?: RequestEducationRecords[]
-  request_education_records_changes?: RequestEducationRecords[]
+  request_general?: RequestGeneral | RequestGeneral[] | null
+  request_general_documents?: RequestGeneral | RequestGeneral[] | null
+  request_history?: RequestHistory | RequestHistory[] | null
+  request_history_changes?: RequestHistory | RequestHistory[] | null
+  request_education_records?: RequestEducationRecords | RequestEducationRecords[] | null
+  request_education_records_changes?: RequestEducationRecords | RequestEducationRecords[] | null
+  request_committee_pa?: RequestCommitteePA | RequestCommitteePA[] | null
+  req_committee_pa?: RequestCommitteePA | RequestCommitteePA[] | null
 }
 
 export interface PersonData {

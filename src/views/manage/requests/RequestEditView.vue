@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { ROUTE_NAMES } from '@/lib/constants'
 import { documentRequestFullName } from '@/lib/documentRequest'
 import { formatThaiBuddhistDate, formatThaiBuddhistDateTime } from '@/lib/helpers'
+import { classifyPAFile, PA_FILE_GROUPS } from '@/lib/pa'
 import { useAuthStore } from '@/stores/auth'
 import { getFileDocumentRows } from '@/stores/document'
 import {
@@ -18,8 +19,14 @@ import {
   getDocumentRequestById,
   updateDocumentRequest,
 } from '@/stores/document_request'
+import { getPAData } from '@/stores/pa'
 import type { FileDocument } from '@/types/document'
-import type { ApprovalLog, DocumentLink, DocumentRequest } from '@/types/document_request'
+import type {
+  ApprovalLog,
+  DocumentLink,
+  DocumentRequest,
+  RequestCommitteePA,
+} from '@/types/document_request'
 
 type DetailField = { label: string; value: string | number }
 type DetailSection = { title: string; fields: DetailField[] }
@@ -38,61 +45,106 @@ const documentResources = ref<Record<string, FileDocument | null>>({})
 const previewDialogOpen = ref(false)
 const previewResource = ref<FileDocument | null>(null)
 
+function firstRelation<T>(value: T | T[] | null | undefined): T | null {
+  return Array.isArray(value) ? value[0] || null : value || null
+}
+
 const requestGeneralDetail = computed(
   () =>
-    request.value?.request_general_documents?.[0] || request.value?.request_general?.[0] || null,
+    firstRelation(request.value?.request_general_documents) ||
+    firstRelation(request.value?.request_general),
 )
 const requestHistoryDetail = computed(
-  () => request.value?.request_history_changes?.[0] || request.value?.request_history?.[0] || null,
+  () =>
+    firstRelation(request.value?.request_history_changes) ||
+    firstRelation(request.value?.request_history),
 )
 const requestEducationDetail = computed(
   () =>
-    request.value?.request_education_records_changes?.[0] ||
-    request.value?.request_education_records?.[0] ||
-    null,
+    firstRelation(request.value?.request_education_records_changes) ||
+    firstRelation(request.value?.request_education_records),
 )
+const requestPADetail = computed(
+  () =>
+    firstRelation(request.value?.request_committee_pa) ||
+    firstRelation(request.value?.req_committee_pa),
+)
+
+function isDocumentType(fragment: string) {
+  return request.value?.document_type?.includes(fragment) ?? false
+}
+
+function quantityLabel(value: number | null | undefined) {
+  return value && value > 0 ? `${value} ฉบับ` : 'ไม่ได้ขอ'
+}
+
+function bankLabel(value: string | null | undefined) {
+  const labels: Record<string, string> = {
+    krungthai: 'ธนาคารกรุงไทย',
+    bangkok: 'ธนาคารกรุงเทพ',
+    kasikorn: 'ธนาคารกสิกรไทย',
+    scb: 'ธนาคารไทยพาณิชย์',
+    gsb: 'ธนาคารออมสิน',
+  }
+  return value ? labels[value] || value : '-'
+}
 const overviewFields = computed<DetailField[]>(() => {
   const item = request.value
   if (!item) return []
-  return [
+  const fields: DetailField[] = [
     { label: 'ประเภทเอกสาร', value: display(item.document_type) },
-    { label: 'หัวข้อคำร้อง', value: display(item.title) },
-    { label: 'รายละเอียด', value: display(item.description) },
-    { label: 'จำนวน', value: display(item.quantity) },
-    { label: 'วันที่เริ่มต้น', value: formatThaiBuddhistDate(item.start_date) || '-' },
-    { label: 'วันสิ้นสุด', value: formatThaiBuddhistDate(item.end_date) || '-' },
     { label: 'วันที่ส่งคำร้อง', value: formatThaiBuddhistDateTime(item.created_at) || '-' },
   ]
+  if (item.title) fields.splice(1, 0, { label: 'หัวข้อคำร้อง', value: item.title })
+  if (item.description) fields.splice(-1, 0, { label: 'รายละเอียด', value: item.description })
+  if (item.quantity !== null && item.quantity !== undefined)
+    fields.splice(-1, 0, { label: 'จำนวน', value: item.quantity })
+  if (item.start_date)
+    fields.splice(-1, 0, {
+      label: 'วันที่เริ่มต้น',
+      value: formatThaiBuddhistDate(item.start_date) || '-',
+    })
+  if (item.end_date)
+    fields.splice(-1, 0, {
+      label: 'วันสิ้นสุด',
+      value: formatThaiBuddhistDate(item.end_date) || '-',
+    })
+  return fields
 })
 const detailSection = computed<DetailSection | null>(() => {
-  const general = requestGeneralDetail.value
-  if (general)
+  if (isDocumentType('คำร้องขอเอกสาร')) {
+    const general = requestGeneralDetail.value
+    if (!general) return null
     return {
       title: 'รายละเอียดคำร้องขอเอกสาร',
       fields: [
-        { label: 'จำนวนใบรับรองเงินเดือน', value: display(general.salary_cert_qty) },
-        { label: 'จำนวนใบรับรองการทำงาน', value: display(general.work_cert_qty) },
-        { label: 'ธนาคารรับสิทธิ', value: display(general.rights_auth_bank) },
-        { label: 'จำนวนสิทธิ', value: display(general.rights_auth_qty) },
+        { label: 'ใบรับรองเงินเดือน', value: quantityLabel(general.salary_cert_qty) },
+        { label: 'ใบรับรองการปฏิบัติงาน', value: quantityLabel(general.work_cert_qty) },
+        { label: 'ธนาคารรับสิทธิ', value: bankLabel(general.rights_auth_bank) },
+        { label: 'เอกสารหนังสือผ่านสิทธิ์', value: quantityLabel(general.rights_auth_qty) },
         { label: 'ข้อมูลเงินเดือน', value: display(general.salary_info) },
         { label: 'เงินวิทยฐานะ', value: display(general.academic_allowance) },
         { label: 'เงินค่าตอบแทน', value: display(general.compensation_allowance) },
       ],
     }
-  const history = requestHistoryDetail.value
-  if (history)
+  }
+  if (isDocumentType('เปลี่ยนแปลง')) {
+    const history = requestHistoryDetail.value
+    if (!history) return null
     return {
       title: 'รายละเอียดแบบรายงานเปลี่ยนแปลง',
       fields: [
         { label: 'เพิ่มวุฒิการศึกษา', value: booleanLabel(history.is_qualification_added) },
         { label: 'จดทะเบียนสมรส', value: booleanLabel(history.is_marriage_registered) },
         { label: 'จดทะเบียนหย่า', value: booleanLabel(history.is_divorce_registered) },
-        { label: 'ธนาคารรับสิทธิ', value: display(history.rights_auth_bank) },
-        { label: 'จำนวนสิทธิ', value: display(history.rights_auth_qty) },
+        { label: 'ธนาคารรับสิทธิ', value: bankLabel(history.rights_auth_bank) },
+        { label: 'เอกสารหนังสือผ่านสิทธิ์', value: quantityLabel(history.rights_auth_qty) },
       ],
     }
-  const education = requestEducationDetail.value
-  if (education)
+  }
+  if (isDocumentType('เพิ่มวุ')) {
+    const education = requestEducationDetail.value
+    if (!education) return null
     return {
       title: 'รายละเอียดคำร้องขอเพิ่มวุฒิการศึกษา',
       fields: [
@@ -122,18 +174,73 @@ const detailSection = computed<DetailSection | null>(() => {
         { label: 'ก.พ. รับรอง', value: booleanLabel(education.is_recognized_by_ocsc) },
       ],
     }
+  }
+  if (isDocumentType('การประเมินPA')) {
+    const pa = requestPADetail.value
+    if (!pa) return null
+    return paDetailSection(pa)
+  }
   return null
+})
+
+function paDetailSection(pa: RequestCommitteePA): DetailSection {
+  return {
+    title: 'รายละเอียดการประเมิน PA',
+    fields: [
+      { label: 'กลุ่มสาระ', value: display(pa.subject_group) },
+      { label: 'ปฏิบัติการสอนชั้น/ระดับ', value: display(pa.teaching_level_1) },
+      { label: 'รายวิชา', value: display(pa.subject_name) },
+      { label: 'เงินเดือนปัจจุบัน', value: display(pa.salary) },
+      { label: 'การสอนตามตารางสอน', value: display(pa.teaching_hours_per_week) },
+      {
+        label: 'งานส่งเสริมและสนับสนุนการจัดการเรียนรู้',
+        value: display(pa.support_hours_per_week),
+      },
+      { label: 'งานพัฒนาคุณภาพการศึกษา', value: display(pa.dev_quality_hours_per_week) },
+      { label: 'งานตอบสนองนโยบายและจุดเน้น', value: display(pa.policy_hours_per_week) },
+      { label: 'กรรมการคนที่ 1', value: display(pa.committee_name_1) },
+      { label: 'กรรมการคนที่ 2', value: display(pa.committee_name_2) },
+      { label: 'กรรมการคนที่ 3', value: display(pa.committee_name_3) },
+    ],
+  }
+}
+
+const detailUnavailableMessage = computed(() => {
+  if (detailSection.value) return ''
+  if (isDocumentType('บัตรประจำตัว') || isDocumentType('ต่างประเทศ'))
+    return 'รายละเอียดของคำร้องประเภทนี้อยู่ในไฟล์แนบด้านล่าง'
+  if (isDocumentType('การส่งเอกสารPA')) return 'รายละเอียดการส่งเอกสารอยู่ในไฟล์แนบด้านล่าง'
+  return 'ไม่พบข้อมูลรายละเอียดที่ผูกกับคำร้องนี้'
+})
+
+const attachmentTitle = computed(() => {
+  if (isDocumentType('บัตรประจำตัว')) return 'เอกสารคำขอบัตรประจำตัว'
+  if (isDocumentType('ต่างประเทศ')) return 'เอกสารคำร้องขออนุญาตไปต่างประเทศ'
+  if (isDocumentType('เปลี่ยนแปลง')) return 'เอกสารประกอบแบบรายงานเปลี่ยนแปลง'
+  if (isDocumentType('เพิ่มวุ')) return 'เอกสารประกอบคำร้องขอเพิ่มวุฒิการศึกษา'
+  if (isDocumentType('การประเมินPA') || isDocumentType('การส่งเอกสารPA'))
+    return 'เอกสารประกอบการประเมิน PA'
+  return 'ไฟล์แนบคำร้อง'
 })
 const groupedDocumentLinks = computed(() => {
   const grouped = new Map<string, DocumentLinkWithResource[]>()
   for (const link of request.value?.document_links || []) {
-    const purpose = link.purpose?.trim() || 'ไฟล์แนบ'
     const resolved = { ...link, resource: documentResources.value[link.document_key] ?? null }
-    const current = grouped.get(purpose)
+    const purpose = link.purpose?.trim() || 'ไฟล์แนบ'
+    const groupId = isDocumentType('การประเมินPA')
+      ? classifyPAFile(resolved.resource?.original_filename || '', purpose)
+      : purpose
+    const current = grouped.get(groupId)
     if (current) current.push(resolved)
-    else grouped.set(purpose, [resolved])
+    else grouped.set(groupId, [resolved])
   }
-  return Array.from(grouped.entries()).map(([purpose, links]) => ({ purpose, links }))
+  return Array.from(grouped.entries()).map(([groupId, links]) => ({
+    groupId,
+    label: isDocumentType('การประเมินPA')
+      ? PA_FILE_GROUPS.find((group) => group.id === groupId)?.label || 'ไฟล์อื่น ๆ'
+      : groupId,
+    links,
+  }))
 })
 const isSaveDisabled = computed(
   () => loading.value || saving.value || !status.value || status.value === initialStatus.value,
@@ -177,11 +284,20 @@ async function fetchRequest() {
   loading.value = true
   error.value = ''
   try {
-    const response = await getDocumentRequestById(String(route.params.id))
-    request.value = response.data
-    status.value = response.data.status || 'กำลังดำเนินการ'
+    const id = String(route.params.id)
+    const response = await getDocumentRequestById(id)
+    let data = response.data
+    if (data.document_type?.includes('การประเมินPA')) {
+      try {
+        data = (await getPAData(id)) as DocumentRequest
+      } catch {
+        // ใช้ข้อมูลคำร้องจากชุดข้อมูล Manage ต่อได้ หากชุดข้อมูล PA ยังไม่มีรายการนี้
+      }
+    }
+    request.value = data
+    status.value = data.status || 'กำลังดำเนินการ'
     initialStatus.value = status.value
-    await fetchDocumentResources(response.data.document_links || [])
+    await fetchDocumentResources(data.document_links || [])
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : 'ไม่สามารถโหลดข้อมูลคำร้องเอกสารได้'
   } finally {
@@ -316,8 +432,15 @@ onMounted(fetchRequest)
           </dl>
         </section>
 
+        <p
+          v-else-if="detailUnavailableMessage"
+          class="text-muted-foreground rounded-lg border px-4 py-3 text-sm"
+        >
+          {{ detailUnavailableMessage }}
+        </p>
+
         <section class="overflow-hidden rounded-lg border">
-          <h2 class="bg-muted border-b px-4 py-3 font-semibold">ไฟล์แนบคำร้อง</h2>
+          <h2 class="bg-muted border-b px-4 py-3 font-semibold">{{ attachmentTitle }}</h2>
           <div v-if="loadingDocumentResources" class="text-muted-foreground p-4 text-sm">
             กำลังโหลดเอกสาร...
           </div>
@@ -328,8 +451,8 @@ onMounted(fetchRequest)
             ไม่มีไฟล์แนบ
           </div>
           <div v-else class="divide-y">
-            <div v-for="group in groupedDocumentLinks" :key="group.purpose" class="p-4">
-              <h3 class="mb-3 text-sm font-semibold">{{ group.purpose }}</h3>
+            <div v-for="group in groupedDocumentLinks" :key="group.groupId" class="p-4">
+              <h3 class="mb-3 text-sm font-semibold">{{ group.label }}</h3>
               <div class="space-y-2">
                 <DocumentFileRow
                   v-for="link in group.links"

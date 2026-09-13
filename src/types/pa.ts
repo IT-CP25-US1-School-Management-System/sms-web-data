@@ -15,7 +15,10 @@ export interface PAAssessment extends Omit<RequestCommitteePA, 'subject_group'> 
   subject_group?: string | null
 }
 
-export interface PARequest extends Omit<DocumentRequest, 'person_data'> {
+export interface PARequest extends Omit<
+  DocumentRequest,
+  'person_data' | 'request_committee_pa' | 'req_committee_pa'
+> {
   department_id?: number | string | null
   person_data?: RequestPersonData | RequestPersonData[] | null
   req_committee_pa?: PAAssessment | PAAssessment[] | null
