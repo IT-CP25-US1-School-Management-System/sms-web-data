@@ -94,6 +94,28 @@ const currentBreadcrumbs = computed(() => {
       to: { name: ROUTE_NAMES.IMPORT_DATA },
       isLast: true,
     })
+  } else if (
+    [ROUTE_NAMES.MANAGE_PA, ROUTE_NAMES.MANAGE_PA_DETAIL, ROUTE_NAMES.MANAGE_PA_FILES].some(
+      (name) => name === routeName,
+    )
+  ) {
+    breadcrumbs.push({
+      label: 'การประเมิน PA',
+      icon: FileText,
+      to: { name: ROUTE_NAMES.MANAGE_PA },
+      isLast: routeName === ROUTE_NAMES.MANAGE_PA,
+    })
+    if (routeName !== ROUTE_NAMES.MANAGE_PA) {
+      breadcrumbs.push({
+        label: 'รายละเอียดการประเมิน PA',
+        icon: FileText,
+        to: { name: ROUTE_NAMES.MANAGE_PA_DETAIL, params: { id: route.params.id } },
+        isLast: routeName === ROUTE_NAMES.MANAGE_PA_DETAIL,
+      })
+    }
+    if (routeName === ROUTE_NAMES.MANAGE_PA_FILES) {
+      breadcrumbs.push({ label: 'ดาวน์โหลดไฟล์', icon: FileText, to: null, isLast: true })
+    }
   } else if (routeName === ROUTE_NAMES.REQUEST_LIST) {
     breadcrumbs.push({
       label: breadcrumbConfig.RequestList.label,

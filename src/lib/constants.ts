@@ -46,6 +46,9 @@ export const ROUTE_NAMES = {
   IMPORT_DATA: 'ImportData',
   REQUEST_LIST: 'RequestList',
   REQUEST_EDIT: 'RequestEdit',
+  MANAGE_PA: 'ManagePA',
+  MANAGE_PA_DETAIL: 'ManagePADetail',
+  MANAGE_PA_FILES: 'ManagePAFiles',
 } as const
 
 export const DATASET_SENSITIVITY = {

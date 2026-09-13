@@ -7,6 +7,8 @@ import type {
   CreateUserResponse,
 } from '@/types/auth'
 import router from '@/router'
+import type { FileDocument, FileDocumentResponse } from '@/types/document'
+import { rememberPALoginReturn } from '@/lib/paLoginReturn'
 import { ROUTE_NAMES } from '@/lib/constants'
 
 const AUTH_BASE_URL = import.meta.env.VITE_API_BASE_URL_AUTH
@@ -20,6 +22,32 @@ if (!AUTH_BASE_URL || !DATA_BASE_URL || !DOCUMENT_BASE_URL) {
 }
 
 let currentTokens: AuthTokens | null = null
+
+export async function downloadDocumentFile(key: string): Promise<{ blob: Blob; filename: string }> {
+  const response = await documentApiInstance.get<FileDocumentResponse<FileDocument>>(
+    `/v1/documents/resource/${encodeURIComponent(key)}`,
+  )
+  const resource = response.data.data
+  const url = new URL(resource.url, window.location.origin)
+  if (!['https:', 'http:'].includes(url.protocol)) throw new Error('ลิงก์ไฟล์ไม่ถูกต้อง')
+  const service = new URL(DOCUMENT_BASE_URL, window.location.origin)
+  let blob: Blob
+  if (
+    url.origin === service.origin &&
+    url.pathname.startsWith(`${service.pathname.replace(/\/$/, '')}/`)
+  ) {
+    // Protected document endpoints use the existing token refresh interceptor.
+    blob = (await documentApiInstance.get<Blob>(url.href, { responseType: 'blob' })).data
+  } else {
+    // Storage URLs returned by the service must never receive the API bearer token.
+    const file = await fetch(url, { credentials: 'include' })
+    if (!file.ok) throw new Error('ดาวน์โหลดไฟล์ไม่สำเร็จ')
+    blob = await file.blob()
+  }
+  return { blob, filename: resource.original_filename || 'เอกสาร' }
+}
+
+export const downloadPAFile = downloadDocumentFile
 
 /**
  * Set authentication tokens for API calls
@@ -96,6 +124,7 @@ dataApiInstance.interceptors.response.use(
       } catch (refreshError) {
         console.error('Session refresh failed:', refreshError)
         setTokens(null)
+        rememberPALoginReturn(router.currentRoute.value.name, router.currentRoute.value.fullPath)
         router.push({ name: ROUTE_NAMES.LOGIN })
         return Promise.reject(new Error('Session expired. Please login again.'))
       }
@@ -127,6 +156,7 @@ documentApiInstance.interceptors.response.use(
       } catch (refreshError) {
         console.error('Session refresh failed:', refreshError)
         setTokens(null)
+        rememberPALoginReturn(router.currentRoute.value.name, router.currentRoute.value.fullPath)
         router.push({ name: ROUTE_NAMES.LOGIN })
         return Promise.reject(new Error('Session expired. Please login again.'))
       }

@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Shield, Loader2, Key } from 'lucide-vue-next'
 import { ROUTE_NAMES } from '@/lib/constants'
+import { consumePALoginReturn } from '@/lib/paLoginReturn'
 import ModeToggle from '@/components/ModeToggle.vue'
 
 const route = useRoute()
@@ -34,7 +35,7 @@ const handleCallback = async () => {
         description: 'ยินดีต้อนรับเข้าสู่ระบบ SMs Data Management',
       })
 
-      router.push({ name: ROUTE_NAMES.HOME })
+      router.push(consumePALoginReturn(router) || { name: ROUTE_NAMES.HOME })
     } catch (error: any) {
       showError('เข้าสู่ระบบไม่สำเร็จ', {
         description: 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ',

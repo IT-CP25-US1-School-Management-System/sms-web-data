@@ -13,7 +13,7 @@ export interface DocumentRequest {
   updated_at?: string | null
 
   // Joined data from person_data table
-  person_data?: PersonData[]
+  person_data?: PersonData | PersonData[] | null
   // Joined data from logs and links
   approval_logs?: ApprovalLog[]
   document_links?: DocumentLink[]

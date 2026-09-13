@@ -99,6 +99,13 @@ const menuConfig: {
       routeName: ROUTE_NAMES.REQUEST_LIST,
       children: null,
     },
+    {
+      id: 'pa-assessments',
+      label: 'การประเมิน PA',
+      icon: FileText,
+      routeName: ROUTE_NAMES.MANAGE_PA,
+      children: null,
+    },
   ],
   settings: [
     {

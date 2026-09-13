@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ROUTE_NAMES } from '@/lib/constants'
+import { rememberPALoginReturn } from '@/lib/paLoginReturn'
 import { getTeacherById, useTeacherStore } from '@/stores/teachers'
 
 const validateTeacherIdGuard = async (to: any) => {
@@ -202,7 +203,7 @@ const router = createRouter({
       component: () => import('@/views/manage/ManageTeacherView.vue'),
       meta: { requiresAuth: true, adminOnly: true },
     },
-    
+
     {
       path: '/manage/teachers/add',
       component: () => import('@/views/manage/add-edit-teacher/personal/PersonalView.vue'),
@@ -332,6 +333,24 @@ const router = createRouter({
       meta: { requiresAuth: true, adminOnly: true },
     },
     {
+      path: '/manage/pa',
+      name: ROUTE_NAMES.MANAGE_PA,
+      component: () => import('@/views/manage/pa/PAListView.vue'),
+      meta: { requiresAuth: true, adminOnly: true },
+    },
+    {
+      path: '/manage/pa/:id',
+      name: ROUTE_NAMES.MANAGE_PA_DETAIL,
+      component: () => import('@/views/manage/pa/PADetailView.vue'),
+      meta: { requiresAuth: true, adminOnly: true },
+    },
+    {
+      path: '/manage/pa/:id/files',
+      name: ROUTE_NAMES.MANAGE_PA_FILES,
+      component: () => import('@/views/manage/pa/PAFilesView.vue'),
+      meta: { requiresAuth: true, adminOnly: true },
+    },
+    {
       path: '/:pathMatch(.*)*',
       name: ROUTE_NAMES.NOT_FOUND,
       component: () => import('@/views/NotFoundView.vue'),
@@ -359,12 +378,14 @@ router.beforeEach(async (to, _from, next) => {
         await authStore.checkSession()
       } catch (error) {
         console.log('Session check failed, redirecting to login:', error)
+        rememberPALoginReturn(to.name, to.fullPath)
         next({ name: ROUTE_NAMES.LOGIN })
         return
       }
     }
 
     if (!authStore.isAuthenticated) {
+      rememberPALoginReturn(to.name, to.fullPath)
       next({ name: ROUTE_NAMES.LOGIN })
       return
     }
@@ -388,4 +409,3 @@ router.beforeEach(async (to, _from, next) => {
 })
 
 export default router
-
