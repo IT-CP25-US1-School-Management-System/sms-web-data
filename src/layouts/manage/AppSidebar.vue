@@ -101,7 +101,7 @@ const menuConfig: {
     },
     {
       id: 'pa-assessments',
-      label: 'การประเมิน PA',
+      label: 'สรุปผลการประเมิน PA',
       icon: FileText,
       routeName: ROUTE_NAMES.MANAGE_PA,
       children: null,

@@ -249,7 +249,7 @@ const menuConfig: {
     },
     {
       id: 'pa-results',
-      label: 'การประเมิน PA',
+      label: 'สรุปผลการประเมิน PA',
       icon: ClipboardCheck,
       routeName: ROUTE_NAMES.WEB_PA,
       children: null,

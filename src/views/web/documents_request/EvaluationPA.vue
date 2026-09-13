@@ -25,6 +25,7 @@ import { createFileDocument } from '@/stores/document'
 import type { CreateFileDocumentParams, FileDocument } from '@/types/document'
 import type { DocumentLink, DocumentRequest, RequestCommitteePA } from '@/types/document_request'
 import { DOCUMENT_EDIT } from '@/lib/constants'
+import { PA_UPLOAD_FIELDS, preparePAUploadFile, type PAUploadKey } from '@/lib/paUpload'
 
 const fileMap = ref<Record<string, File[]>>({})
 const fileInputRefs = ref<Record<string, HTMLInputElement | null>>({})
@@ -38,6 +39,7 @@ const authStore = useAuthStore()
 const subject_group = ref('')
 const teaching_level_1 = ref('')
 const subject_name = ref('')
+const salary = ref('')
 const teaching_hours_per_week = ref('')
 const support_hours_per_week = ref('')
 const dev_quality_hours_per_week = ref('')
@@ -79,6 +81,7 @@ const validationSchema = computed(() => {
       subject_group: z.string().min(1, 'กลุ่มสาระ จำเป็นต้องเลือก'),
       teaching_level_1: z.string().min(1, 'ปฏิบัติการสอนชั้น/ระดับ จำเป็นต้องกรอก'),
       subject_name: z.string().min(1, 'รายวิชา จำเป็นต้องกรอก'),
+      salary: hourSchema('เงินเดือนปัจจุบัน จำเป็นต้องกรอก'),
       teaching_hours_per_week: hourSchema('การสอนตามตารางสอน จำเป็นต้องกรอก'),
       support_hours_per_week: hourSchema('งานส่งเสริมและสนับสนุนการจัดการเรียนรู้ จำเป็นต้องกรอก'),
       dev_quality_hours_per_week: hourSchema('งานพัฒนาคุณภาพการศึกษา จำเป็นต้องกรอก'),
@@ -99,6 +102,7 @@ const initialValues = computed(() => ({
   subject_group: subject_group.value,
   teaching_level_1: teaching_level_1.value,
   subject_name: subject_name.value,
+  salary: salary.value,
   teaching_hours_per_week: teaching_hours_per_week.value,
   support_hours_per_week: support_hours_per_week.value,
   dev_quality_hours_per_week: dev_quality_hours_per_week.value,
@@ -124,10 +128,12 @@ const groupSubjectOptions = [
   { label: 'ภาษาต่างประเทศ', value: 'foreign' },
 ]
 
-function handleFileSelect(event: Event, key: string, multiple = false) {
+function handleFileSelect(event: Event, key: PAUploadKey, multiple = false) {
   const input = event.target as HTMLInputElement
   const files = Array.from(input?.files || [])
-  const acceptedFiles = files.filter((file) => file.size <= MAX_FILE_SIZE)
+  const acceptedFiles = files
+    .filter((file) => file.size <= MAX_FILE_SIZE)
+    .map((file) => preparePAUploadFile(file, key))
   const rejectedFiles = files.filter((file) => file.size > MAX_FILE_SIZE)
   if (!fileMap.value[key]) fileMap.value[key] = []
   if (multiple) {
@@ -142,7 +148,7 @@ function handleFileSelect(event: Event, key: string, multiple = false) {
   formRef.value?.validateField?.(countField)
 }
 
-function removeFile(key: string, idx: number) {
+function removeFile(key: PAUploadKey, idx: number) {
   fileMap.value[key]?.splice(idx, 1)
   fileSizeErrors.value[key] = undefined
   const countField = `${key}-count`
@@ -160,7 +166,7 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-function triggerFileInput(key: string) {
+function triggerFileInput(key: PAUploadKey) {
   fileInputRefs.value[key]?.click()
 }
 
@@ -170,14 +176,17 @@ function getCurrentUserName() {
   )
 }
 
-function getSelectedFiles(): File[] {
-  return Object.values(fileMap.value).flatMap((files) => files ?? [])
+function getSelectedFiles() {
+  return PA_UPLOAD_FIELDS.flatMap((field) =>
+    (fileMap.value[field.key] || []).map((file) => ({ field, file })),
+  )
 }
 
 function resetEvaluationPAForm() {
   subject_group.value = ''
   teaching_level_1.value = ''
   subject_name.value = ''
+  salary.value = ''
   teaching_hours_per_week.value = ''
   support_hours_per_week.value = ''
   dev_quality_hours_per_week.value = ''
@@ -197,6 +206,7 @@ function resetEvaluationPAForm() {
       subject_group: '',
       teaching_level_1: '',
       subject_name: '',
+      salary: '',
       teaching_hours_per_week: '',
       support_hours_per_week: '',
       dev_quality_hours_per_week: '',
@@ -229,6 +239,7 @@ function buildDocumentDetailPayload(values: Record<string, any>): RequestCommitt
     teaching_level_1: String(values.teaching_level_1 ?? ''),
     teaching_level_2: '',
     subject_name: String(values.subject_name ?? ''),
+    salary: toNumber(values.salary),
     teaching_hours_per_week: toNumber(values.teaching_hours_per_week),
     support_hours_per_week: toNumber(values.support_hours_per_week),
     dev_quality_hours_per_week: toNumber(values.dev_quality_hours_per_week),
@@ -272,17 +283,20 @@ async function uploadFile() {
   }
 
   try {
-    const uploadedKeys: string[] = []
+    const uploadedFiles: { documentKey: string; category: string }[] = []
 
-    for (const file of files) {
+    for (const { file, field } of files) {
       const response = await createFileDocument<FileDocument>(file, params)
       if (!response.data?.resource_id) {
         throw new Error('อัปโหลดไฟล์ไม่สำเร็จ')
       }
-      uploadedKeys.push(response.data.resource_id)
+      uploadedFiles.push({
+        documentKey: response.data.resource_id,
+        category: field.category,
+      })
     }
 
-    return uploadedKeys
+    return uploadedFiles
   } catch (error: any) {
     console.error('Document Upload API Error:', error)
     console.error('Error Response:', error?.response?.data)
@@ -293,17 +307,17 @@ async function uploadFile() {
   }
 }
 
-async function storeFile(documentIds: string[]) {
+async function storeFile(uploadedFiles: { documentKey: string; category: string }[]) {
   const datasetId = DOCUMENT_EDIT.DATASET_ID //'document_create'
   const version = DOCUMENT_EDIT.DATASET_VERSION_DOCUMENT_LINK //'v1.1.0'
 
   try {
-    for (const documentId of documentIds) {
+    for (const uploadedFile of uploadedFiles) {
       documentLink.value = {
-        document_key: documentId,
+        document_key: uploadedFile.documentKey,
         entity_table: 'document_request',
         entity_id: documentRequest.value.id,
-        purpose: 'การประเมินPA',
+        purpose: uploadedFile.category,
         person_id: documentRequest.value.person_id,
         created_at: new Date().toISOString(),
       }
@@ -346,14 +360,6 @@ async function createDocumentDetail(values: Record<string, any>) {
 
 async function onSubmit(values: Record<string, any>) {
   isSubmitting.value = true
-  const payload: Record<string, any> = { ...values }
-  payload.files = { ...fileMap.value }
-
-  try {
-    console.log('EvaluationPA submit payload:', JSON.parse(JSON.stringify(payload)))
-  } catch (_error) {
-    // ignore
-  }
 
   try {
     await createDocumentType()
@@ -379,6 +385,7 @@ async function submitPA2Form() {
   formRef.value?.setFieldValue('subject_group', subject_group.value)
   formRef.value?.setFieldValue('teaching_level_1', teaching_level_1.value)
   formRef.value?.setFieldValue('subject_name', subject_name.value)
+  formRef.value?.setFieldValue('salary', salary.value)
   formRef.value?.setFieldValue('teaching_hours_per_week', teaching_hours_per_week.value)
   formRef.value?.setFieldValue('support_hours_per_week', support_hours_per_week.value)
   formRef.value?.setFieldValue('dev_quality_hours_per_week', dev_quality_hours_per_week.value)
@@ -396,6 +403,7 @@ async function submitPA2Form() {
     'subject_group',
     'teaching_level_1',
     'subject_name',
+    'salary',
     'teaching_hours_per_week',
     'support_hours_per_week',
     'dev_quality_hours_per_week',
@@ -420,7 +428,7 @@ async function submitPA2Form() {
 }
 </script>
 <template>
-  <div class="mx-6 flex flex-col gap-4 pb-6">
+  <div class="mx-4 flex flex-col gap-4 pb-6 sm:mx-6">
     <Card class="w-full gap-0 pb-6">
       <CardHeader class="pb-0">
         <CardTitle>รายละเอียดการประเมิน PA</CardTitle>
@@ -434,9 +442,7 @@ async function submitPA2Form() {
           @submit="onSubmit"
         >
           <Separator class="my-4" />
-          <div
-            class="mb-4 grid grid-cols-1 items-end gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
-          >
+          <div class="mb-4 grid grid-cols-1 items-end gap-4 sm:grid-cols-2 xl:grid-cols-3">
             <VeeField name="subject_group" v-slot="{ field, errors }">
               <Field :data-invalid="!!errors.length">
                 <FieldLabel>กลุ่มสาระ <span class="text-red-500">*</span></FieldLabel>
@@ -495,11 +501,29 @@ async function submitPA2Form() {
                 <FieldError v-if="errors.length" :errors="errors" />
               </Field>
             </VeeField>
+            <VeeField name="salary" v-slot="{ field, errors }">
+              <Field :data-invalid="!!errors.length">
+                <FieldLabel>เงินเดือนปัจจุบัน <span class="text-red-500">*</span></FieldLabel>
+                <Input
+                  :model-value="field.value as string"
+                  @update:model-value="
+                    (v) => {
+                      field.onChange(v)
+                      salary = String(v ?? '')
+                    }
+                  "
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  inputmode="decimal"
+                  placeholder="จำนวนเงิน (บาท)"
+                />
+                <FieldError v-if="errors.length" :errors="errors" />
+              </Field>
+            </VeeField>
           </div>
 
-          <div
-            class="mb-4 grid grid-cols-1 items-end gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
-          >
+          <div class="mb-4 grid grid-cols-1 items-end gap-4 sm:grid-cols-2 xl:grid-cols-3">
             <VeeField name="teaching_hours_per_week" v-slot="{ field, errors }">
               <Field :data-invalid="!!errors.length">
                 <FieldLabel>การสอนตามตารางสอน <span class="text-red-500">*</span></FieldLabel>
@@ -586,9 +610,7 @@ async function submitPA2Form() {
             </VeeField>
           </div>
 
-          <div
-            class="mb-4 grid grid-cols-1 items-end gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
-          >
+          <div class="mb-4 grid grid-cols-1 items-end gap-4 sm:grid-cols-2 xl:grid-cols-3">
             <VeeField name="committee_name_1" v-slot="{ field, errors }">
               <Field :data-invalid="!!errors.length">
                 <FieldLabel
@@ -650,245 +672,70 @@ async function submitPA2Form() {
             </VeeField>
           </div>
 
-          <div class="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <VeeField name="pa2-pa1-count" v-slot="{ errors }">
-              <div>
-                <p class="mb-1 text-sm font-semibold">
-                  ข้อตกลงPA (PA1) <span class="text-red-500">*</span>
-                </p>
-                <p class="text-muted-foreground mb-2 text-xs">
-                  ตั้งชื่อไฟล์ : กลุ่มสาระ-ชื่อ-สกุล-คศ.ปัจจุบัน-pa1
-                </p>
-                <input
-                  :ref="
-                    (el: any) => {
-                      if (el) fileInputRefs['pa2-pa1'] = el as HTMLInputElement
-                    }
-                  "
-                  type="file"
-                  class="hidden"
-                  accept=".pdf"
-                  @change="handleFileSelect($event, 'pa2-pa1')"
-                />
-                <Button type="button" class="cursor-pointer" @click="triggerFileInput('pa2-pa1')">
-                  <FileText class="mr-1 h-4 w-4" /> อัปโหลดไฟล์
-                </Button>
-                <div v-if="fileMap['pa2-pa1']?.length" class="mt-2 flex flex-col gap-1">
-                  <div
-                    v-for="(file, i) in fileMap['pa2-pa1']"
-                    :key="i"
-                    class="border-muted bg-muted/40 flex min-h-11 w-fit max-w-xl items-center gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
-                  >
-                    <span class="truncate">{{ file.name }}</span>
-                    <span class="text-muted-foreground shrink-0 text-xs">{{
-                      formatFileSize(file.size)
-                    }}</span>
-                    <button
-                      type="button"
-                      class="hover:text-destructive text-muted-foreground rounded p-0.5"
-                      @click="removeFile('pa2-pa1', i)"
-                    >
-                      <X class="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
-                <p v-if="getFileErrorMessage('pa2-pa1', errors)" class="mt-2 text-sm text-red-600">
-                  {{ getFileErrorMessage('pa2-pa1', errors) }}
-                </p>
-              </div>
-            </VeeField>
-            <VeeField name="pa2-eval1-count" v-slot="{ errors }">
-              <div>
-                <p class="mb-1 text-sm font-semibold">
-                  PA2 (กรรมการคนที่1 ผู้อำนวยการ) <span class="text-red-500">*</span>
-                </p>
-                <p class="text-muted-foreground mb-2 text-xs">
-                  ตั้งชื่อไฟล์ : กลุ่มสาระ-ชื่อ-สกุล-คศ.ปัจจุบัน-pa2-กรรมการ1
-                </p>
-                <input
-                  :ref="
-                    (el: any) => {
-                      if (el) fileInputRefs['pa2-eval1'] = el as HTMLInputElement
-                    }
-                  "
-                  type="file"
-                  class="hidden"
-                  accept=".pdf"
-                  @change="handleFileSelect($event, 'pa2-eval1')"
-                />
-                <Button type="button" class="cursor-pointer" @click="triggerFileInput('pa2-eval1')">
-                  <FileText class="mr-1 h-4 w-4" /> อัปโหลดไฟล์
-                </Button>
-                <div v-if="fileMap['pa2-eval1']?.length" class="mt-2 flex flex-col gap-1">
-                  <div
-                    v-for="(file, i) in fileMap['pa2-eval1']"
-                    :key="i"
-                    class="border-muted bg-muted/40 flex min-h-11 w-fit max-w-xl items-center gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
-                  >
-                    <span class="truncate">{{ file.name }}</span>
-                    <span class="text-muted-foreground shrink-0 text-xs">{{
-                      formatFileSize(file.size)
-                    }}</span>
-                    <button
-                      type="button"
-                      class="hover:text-destructive text-muted-foreground rounded p-0.5"
-                      @click="removeFile('pa2-eval1', i)"
-                    >
-                      <X class="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
-                <p
-                  v-if="getFileErrorMessage('pa2-eval1', errors)"
-                  class="mt-2 text-sm text-red-600"
-                >
-                  {{ getFileErrorMessage('pa2-eval1', errors) }}
-                </p>
-              </div>
-            </VeeField>
+          <div class="mt-6 mb-3">
+            <h3 class="font-semibold">เอกสารประกอบการประเมิน</h3>
+            <p class="text-muted-foreground mt-1 text-sm">
+              แนบไฟล์ PDF ไม่เกิน 15 MB และตั้งชื่อไฟล์ตามตัวอย่างของแต่ละรายการ
+            </p>
           </div>
 
-          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <VeeField name="pa2-eval2-count" v-slot="{ errors }">
-              <div>
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <VeeField
+              v-for="uploadField in PA_UPLOAD_FIELDS"
+              :key="uploadField.key"
+              :name="uploadField.countField"
+              v-slot="{ errors }"
+            >
+              <div class="flex min-w-0 flex-col rounded-lg border p-4">
                 <p class="mb-1 text-sm font-semibold">
-                  PA2 (กรรมการคนที่ 2) <span class="text-red-500">*</span>
+                  {{ uploadField.label }} <span class="text-red-500">*</span>
                 </p>
-                <p class="text-muted-foreground mb-2 text-xs">
-                  ตั้งชื่อไฟล์ : กลุ่มสาระ-ชื่อ-สกุล-คศ.ปัจจุบัน-pa2-กรรมการ2
+                <p class="text-muted-foreground mb-3 text-xs">
+                  ตั้งชื่อไฟล์ : {{ uploadField.filenameHint }}
                 </p>
                 <input
                   :ref="
                     (el: any) => {
-                      if (el) fileInputRefs['pa2-eval2'] = el as HTMLInputElement
+                      if (el) fileInputRefs[uploadField.key] = el as HTMLInputElement
                     }
                   "
                   type="file"
                   class="hidden"
                   accept=".pdf"
-                  @change="handleFileSelect($event, 'pa2-eval2')"
+                  @change="handleFileSelect($event, uploadField.key)"
                 />
-                <Button type="button" class="cursor-pointer" @click="triggerFileInput('pa2-eval2')">
+                <Button
+                  type="button"
+                  class="w-full cursor-pointer sm:w-fit"
+                  @click="triggerFileInput(uploadField.key)"
+                >
                   <FileText class="mr-1 h-4 w-4" /> อัปโหลดไฟล์
                 </Button>
-                <div v-if="fileMap['pa2-eval2']?.length" class="mt-2 flex flex-col gap-1">
+                <div v-if="fileMap[uploadField.key]?.length" class="mt-3 flex flex-col gap-1">
                   <div
-                    v-for="(file, i) in fileMap['pa2-eval2']"
-                    :key="i"
-                    class="border-muted bg-muted/40 flex min-h-11 w-fit max-w-xl items-center gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
+                    v-for="(file, i) in fileMap[uploadField.key]"
+                    :key="`${file.name}-${i}`"
+                    class="border-muted bg-muted/40 flex min-h-11 w-full min-w-0 items-center gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
                   >
-                    <span class="truncate">{{ file.name }}</span>
+                    <span class="min-w-0 flex-1 truncate">{{ file.name }}</span>
                     <span class="text-muted-foreground shrink-0 text-xs">{{
                       formatFileSize(file.size)
                     }}</span>
                     <button
                       type="button"
-                      class="hover:text-destructive text-muted-foreground cursor-pointer rounded p-0.5"
-                      @click="removeFile('pa2-eval2', i)"
+                      class="hover:text-destructive text-muted-foreground shrink-0 cursor-pointer rounded p-0.5"
+                      :aria-label="`นำไฟล์ ${file.name} ออก`"
+                      @click="removeFile(uploadField.key, i)"
                     >
                       <X class="h-3.5 w-3.5" />
                     </button>
                   </div>
                 </div>
                 <p
-                  v-if="getFileErrorMessage('pa2-eval2', errors)"
+                  v-if="getFileErrorMessage(uploadField.key, errors)"
                   class="mt-2 text-sm text-red-600"
                 >
-                  {{ getFileErrorMessage('pa2-eval2', errors) }}
-                </p>
-              </div>
-            </VeeField>
-            <VeeField name="pa2-eval3-count" v-slot="{ errors }">
-              <div>
-                <p class="mb-1 text-sm font-semibold">
-                  PA2 (กรรมการคนที่ 3) <span class="text-red-500">*</span>
-                </p>
-                <p class="text-muted-foreground mb-2 text-xs">
-                  ตั้งชื่อไฟล์ : กลุ่มสาระ-ชื่อ-สกุล-คศ.ปัจจุบัน-pa2-กรรมการ3
-                </p>
-                <input
-                  :ref="
-                    (el: any) => {
-                      if (el) fileInputRefs['pa2-eval3'] = el as HTMLInputElement
-                    }
-                  "
-                  type="file"
-                  class="hidden"
-                  accept=".pdf"
-                  @change="handleFileSelect($event, 'pa2-eval3')"
-                />
-                <Button type="button" class="cursor-pointer" @click="triggerFileInput('pa2-eval3')">
-                  <FileText class="mr-1 h-4 w-4" /> อัปโหลดไฟล์
-                </Button>
-                <div v-if="fileMap['pa2-eval3']?.length" class="mt-2 flex flex-col gap-1">
-                  <div
-                    v-for="(file, i) in fileMap['pa2-eval3']"
-                    :key="i"
-                    class="border-muted bg-muted/40 flex min-h-11 w-fit max-w-xl items-center gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
-                  >
-                    <span class="truncate">{{ file.name }}</span>
-                    <span class="text-muted-foreground shrink-0 text-xs">{{
-                      formatFileSize(file.size)
-                    }}</span>
-                    <button
-                      type="button"
-                      class="hover:text-destructive text-muted-foreground cursor-pointer rounded p-0.5"
-                      @click="removeFile('pa2-eval3', i)"
-                    >
-                      <X class="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
-                <p
-                  v-if="getFileErrorMessage('pa2-eval3', errors)"
-                  class="mt-2 text-sm text-red-600"
-                >
-                  {{ getFileErrorMessage('pa2-eval3', errors) }}
-                </p>
-              </div>
-            </VeeField>
-
-            <VeeField name="pa3-count" v-slot="{ errors }">
-              <div>
-                <p class="mb-1 text-sm font-semibold">PA3<span class="text-red-500">*</span></p>
-                <p class="text-muted-foreground mb-2 text-xs">
-                  ตั้งชื่อไฟล์ : กลุ่มสาระ-ชื่อ-สกุล-คศ.ปัจจุบัน-pa3
-                </p>
-                <input
-                  :ref="
-                    (el: any) => {
-                      if (el) fileInputRefs['pa3'] = el as HTMLInputElement
-                    }
-                  "
-                  type="file"
-                  class="hidden"
-                  accept=".pdf"
-                  @change="handleFileSelect($event, 'pa3')"
-                />
-                <Button type="button" class="cursor-pointer" @click="triggerFileInput('pa3')">
-                  <FileText class="mr-1 h-4 w-4" /> อัปโหลดไฟล์
-                </Button>
-                <div v-if="fileMap['pa3']?.length" class="mt-2 flex flex-col gap-1">
-                  <div
-                    v-for="(file, i) in fileMap['pa3']"
-                    :key="i"
-                    class="border-muted bg-muted/40 flex min-h-11 w-fit max-w-xl items-center gap-3 rounded-xl border px-3 py-2 text-sm shadow-sm"
-                  >
-                    <span class="truncate">{{ file.name }}</span>
-                    <span class="text-muted-foreground shrink-0 text-xs">{{
-                      formatFileSize(file.size)
-                    }}</span>
-                    <button
-                      type="button"
-                      class="hover:text-destructive text-muted-foreground cursor-pointer rounded p-0.5"
-                      @click="removeFile('pa3', i)"
-                    >
-                      <X class="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
-                <p v-if="getFileErrorMessage('pa3', errors)" class="mt-2 text-sm text-red-600">
-                  {{ getFileErrorMessage('pa3', errors) }}
+                  {{ getFileErrorMessage(uploadField.key, errors) }}
                 </p>
               </div>
             </VeeField>

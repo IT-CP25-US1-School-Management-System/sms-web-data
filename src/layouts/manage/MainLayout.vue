@@ -100,14 +100,14 @@ const currentBreadcrumbs = computed(() => {
     )
   ) {
     breadcrumbs.push({
-      label: 'การประเมิน PA',
+      label: 'สรุปผลการประเมิน PA',
       icon: FileText,
       to: { name: ROUTE_NAMES.MANAGE_PA },
       isLast: routeName === ROUTE_NAMES.MANAGE_PA,
     })
     if (routeName !== ROUTE_NAMES.MANAGE_PA) {
       breadcrumbs.push({
-        label: 'รายละเอียดการประเมิน PA',
+        label: 'รายละเอียดสรุปผลการประเมิน PA',
         icon: FileText,
         to: { name: ROUTE_NAMES.MANAGE_PA_DETAIL, params: { id: route.params.id } },
         isLast: routeName === ROUTE_NAMES.MANAGE_PA_DETAIL,

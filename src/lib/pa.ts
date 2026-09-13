@@ -239,9 +239,10 @@ export function classifyPAFile(filename: string, purpose = ''): PAFileCategory {
     .toLowerCase()
     .replace(/\.[^.]+$/, '')
     .replace(/[ _]+/g, '-')
-  if (/(?:^|-)pa1$/.test(name)) return 'pa1'
-  if (/(?:^|-)pa3$/.test(name)) return 'pa3'
-  const committee = name.match(/(?:^|-)pa2-กรรมการ-?([123])$/)
+  if (/^pa1(?:-|$)|(?:^|-)pa1$/.test(name)) return 'pa1'
+  if (/^pa3(?:-|$)|(?:^|-)pa3$/.test(name)) return 'pa3'
+  const committee =
+    name.match(/^pa2-กรรมการ-?([123])(?:-|$)/) || name.match(/(?:^|-)pa2-กรรมการ-?([123])$/)
   if (committee) return `pa2-${committee[1]}` as PAFileCategory
   return 'other'
 }

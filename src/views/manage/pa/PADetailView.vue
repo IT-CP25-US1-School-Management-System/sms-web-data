@@ -65,7 +65,7 @@ watch(() => route.params.id, load, { immediate: true })
         </button>
       </div>
 
-      <h1 class="mx-6 text-2xl font-bold">รายละเอียดการประเมิน PA</h1>
+      <h1 class="mx-6 text-2xl font-bold">รายละเอียดสรุปผลการประเมิน PA</h1>
 
       <div
         v-if="detail"
