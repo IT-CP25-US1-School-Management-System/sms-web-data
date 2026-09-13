@@ -35,8 +35,12 @@ export async function getDatasetRowByKey<T = Record<string, any>>(
   version: string,
   key: string,
   viewName?: string,
+  pagination?: Pick<DatasetQueryParams, 'page' | 'per_page'>,
 ): Promise<DatasetRowResponse<T>> {
-  const params = viewName ? { view: viewName } : {}
+  const params = {
+    ...(viewName ? { view: viewName } : {}),
+    ...pagination,
+  }
   const response = await dataApiInstance.get<DatasetRowResponse<T>>(
     `/v1/datasets/${datasetId}/versions/${version}/data/key/${key}`,
     { params },

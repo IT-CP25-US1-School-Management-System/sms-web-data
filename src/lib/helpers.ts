@@ -37,6 +37,12 @@ function toDisplayDate(date: string | Date): Date {
       const [, year, month, day] = parts
       return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day), 12))
     }
+
+    // Dataset timestamps are UTC, but some views omit the trailing timezone marker.
+    // Normalize those values so every view displays the same Bangkok date and time.
+    if (/^\d{4}-\d{1,2}-\d{1,2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$/.test(date)) {
+      return new Date(`${date}Z`)
+    }
   }
 
   return new Date(date)
@@ -90,6 +96,12 @@ export const formatThaiBuddhistDateTime = (date?: string | Date | null): string 
 export const formatDate = (date: string | Date): string => formatThaiBuddhistDate(date)
 
 export const formatDateTime = (date: string | Date): string => formatThaiBuddhistDateTime(date)
+
+export const getDateTimestamp = (date?: string | Date | null): number => {
+  if (!date) return 0
+  const parsed = toDisplayDate(date)
+  return isValidDate(parsed) ? parsed.getTime() : 0
+}
 
 export const formatDateInput = (date?: string | Date | null): string => {
   if (!date) return ''

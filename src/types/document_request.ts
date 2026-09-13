@@ -15,7 +15,7 @@ export interface DocumentRequest {
   // Joined data from person_data table
   person_data?: PersonData | PersonData[] | null
   // Joined data from logs and links
-  approval_logs?: ApprovalLog[]
+  approval_logs?: ApprovalLog | ApprovalLog[] | null
   document_links?: DocumentLink[]
   request_general?: RequestGeneral | RequestGeneral[] | null
   request_general_documents?: RequestGeneral | RequestGeneral[] | null
@@ -63,17 +63,17 @@ export interface DocumentLink {
 }
 
 export interface RequestEducationRecords {
-  id: string
-  request_id: string
-  education_level: string
-  qualification: string
-  qualification_name: string
-  major_group: string
+  id: string | null
+  request_id: string | null
+  education_level: string | null
+  qualification: string | null
+  qualification_name: string | null
+  major_group: string | null
   minor_group?: string | null
-  institution: string
-  country: string
-  start_date: string
-  graduation_date: string
+  institution: string | null
+  country: string | null
+  start_date: string | null
+  graduation_date: string | null
   honor_type?: string | null
   is_used_for_first_appointment?: boolean | null
   is_highest_degree?: boolean | null
@@ -83,8 +83,8 @@ export interface RequestEducationRecords {
 }
 
 export interface RequestGeneral {
-  id: string
-  request_id: string
+  id: string | null
+  request_id: string | null
   salary_cert_qty?: number | null
   work_cert_qty?: number | null
   rights_auth_bank?: string | null
@@ -95,8 +95,8 @@ export interface RequestGeneral {
 }
 
 export interface RequestHistory {
-  id: string
-  request_id: string
+  id: string | null
+  request_id: string | null
   is_qualification_added?: boolean | null
   is_marriage_registered?: boolean | null
   is_divorce_registered?: boolean | null

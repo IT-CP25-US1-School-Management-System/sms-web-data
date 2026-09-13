@@ -191,6 +191,12 @@ const router = createRouter({
           component: () => import('@/views/web/documents_request/TrackDocument.vue'),
           meta: { requiresAuth: true, label: 'ติดตามคำร้อง' },
         },
+        {
+          path: 'track-documents/:id',
+          name: ROUTE_NAMES.TRACK_DOCUMENT_DETAIL,
+          component: () => import('@/views/web/documents_request/TrackDocumentDetail.vue'),
+          meta: { requiresAuth: true, label: 'รายละเอียดคำร้อง' },
+        },
       ],
     },
     {

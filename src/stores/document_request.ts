@@ -5,7 +5,7 @@ import {
   updateDatasetRow,
   deleteDatasetRow,
 } from '@/stores/dataset'
-import { MANAGE_APPROVAL_LOGS_DATASET, MANAGE_DATASETS } from '@/lib/constants'
+import { DATASET_GET, MANAGE_APPROVAL_LOGS_DATASET, MANAGE_DATASETS } from '@/lib/constants'
 import { defineStore } from 'pinia'
 import { ref, readonly } from 'vue'
 import { generateUUID } from '@/lib/helpers'
@@ -65,6 +65,18 @@ export async function getWebDocumentRequests(
       ...params,
       view: 'document_requests',
     },
+  )
+}
+
+export async function getTrackedDocumentRequestById(
+  requestId: string,
+): Promise<DatasetRowResponse<DocumentRequest>> {
+  return getDatasetRowByKey<DocumentRequest>(
+    DATASET_GET.DATASET_ID,
+    DATASET_GET.DATASET_VERSION_DOCUMENT_DETAIL,
+    requestId,
+    DATASET_GET.VIEW_DOCUMENT_DETAIL,
+    { page: 1, per_page: 20 },
   )
 }
 

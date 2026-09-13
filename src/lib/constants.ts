@@ -26,6 +26,7 @@ export const ROUTE_NAMES = {
   PA_DOCUMENT: 'การส่งเอกสาร PA',
   EVALUATION_PA: 'การประเมิน PA',
   TRACK_DOCUMENTS: 'ติดตามคำร้อง',
+  TRACK_DOCUMENT_DETAIL: 'รายละเอียดคำร้องของฉัน',
   EDUCATION: 'ข้อมูลการศึกษา',
   PROFESSIONAL_LICENSE: 'ใบประกอบวิชาชีพ',
   MANAGE_TEACHERS: 'ManageTeachers',
@@ -64,6 +65,8 @@ export const DATASET_SENSITIVITY = {
 export const DATASET_GET = {
   DATASET_ID: 'data_get_view',
   DATASET_VERSION: 'v1.0.6',
+  DATASET_VERSION_DOCUMENT_DETAIL: 'v1.1.6',
+  VIEW_DOCUMENT_DETAIL: 'get_document',
   DATASET_VERSION_LICENSE: 'v2.0.0',
   DATASET_VERSION_ACADEMIC_RANK: 'v2.1.2',
   DATASET_VERSION_CONTRACT_POSITION: 'v2.2.1',

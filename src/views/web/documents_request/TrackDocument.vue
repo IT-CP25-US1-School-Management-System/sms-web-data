@@ -1,183 +1,220 @@
 <script setup lang="ts">
+import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { Eye, FileX2, Loader2 } from 'lucide-vue-next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { usePagination } from '@/composables/usePagination'
-import { DATASET_GET } from '@/lib/constants'
-import { ChevronLeft, ChevronRight, FileX2 } from 'lucide-vue-next'
-import { computed, reactive } from 'vue'
-
-import { onMounted, ref, watch } from 'vue'
+import { Input } from '@/components/ui/input'
+import { usePagination, type PaginationData } from '@/composables/usePagination'
+import { DATASET_GET, ROUTE_NAMES } from '@/lib/constants'
+import { formatThaiBuddhistDateTime, getDateTimestamp } from '@/lib/helpers'
 import { getDatasetRows } from '@/stores/dataset'
-import { formatDateThaiInput, formatTime } from '@/lib/helpers'
+import type { DocumentRequest } from '@/types/document_request'
 
+type TrackDocumentsEnvelope = { document_requests?: DocumentRequest[] }
+
+const router = useRouter()
 const loading = ref(false)
-const statusData = ref<Record<string, any>[]>([])
-async function trackStatusData() {
+const error = ref('')
+const requests = ref<DocumentRequest[]>([])
+const perPageInput = ref(15)
+const pagination = ref<PaginationData>({ page: 1, per_page: 15, total_pages: 1, total_rows: 0 })
+const { getVisiblePages, getPaginationInfo, canPreviousPage, canNextPage } =
+  usePagination(pagination)
+
+const columns = [
+  { label: 'ประเภทคำร้อง', width: '38%' },
+  { label: 'สถานะ', width: '22%' },
+  { label: 'วันที่ส่งคำร้อง', width: '28%' },
+  { label: 'การดำเนินการ', width: '12%' },
+]
+
+const paginatedRequests = computed(() => {
+  const start = (pagination.value.page - 1) * pagination.value.per_page
+  return requests.value.slice(start, start + pagination.value.per_page)
+})
+
+async function load() {
   loading.value = true
+  error.value = ''
   try {
-    const response = await getDatasetRows(DATASET_GET.DATASET_ID, DATASET_GET.DATASET_VERSION, {
-      view: 'track_documents',
-      page: 1,
-      per_page: 50,
-    })
-    // response.data may be an array of items, or an array where the first element
-    // contains a `document_requests` property. Support both shapes and fallback
-    // to an empty array to avoid runtime errors.
-    statusData.value = response?.data?.[0]?.document_requests ?? response?.data ?? []
-  } catch (error: any) {
-    throw error
-  }
-  loading.value = false
-}
-
-onMounted(() => {
-  console.log('statusData')
-  trackStatusData()
-})
-
-/* ──────────────────── Types ──────────────────── */
-type DocumentStatus = 'กำลังดำเนินการ' | 'อนุมัติ' | 'ไม่อนุมัติ'
-
-/* ──────────────────── (example/mock data removed) ──────────────────── */
-
-/* ──────────────────── Status badge config ──────────────────── */
-const statusConfig: Record<DocumentStatus, { bg: string; text: string }> = {
-  กำลังดำเนินการ: { bg: 'bg-amber-400 hover:bg-amber-400', text: 'text-white' },
-  อนุมัติ: { bg: 'bg-green-500 hover:bg-green-500', text: 'text-white' },
-  ไม่อนุมัติ: { bg: 'bg-red-500 hover:bg-red-500', text: 'text-white' },
-}
-
-function getStatusClass(status: unknown) {
-  const cfg = statusConfig[status as DocumentStatus]
-  return [cfg?.bg ?? 'bg-gray-200', cfg?.text ?? 'text-black']
-}
-
-/* ──────────────────── Pagination ──────────────────── */
-const paginationData = reactive({
-  page: 1,
-  per_page: 10,
-  total_pages: 1,
-  total_rows: 0,
-})
-
-// keep pagination totals in sync when statusData changes
-watch(
-  statusData,
-  (val) => {
-    const total = Array.isArray(val) ? val.length : 0
-    paginationData.total_rows = total
-    paginationData.total_pages = Math.max(1, Math.ceil(total / paginationData.per_page))
-    // reset to first page when data changes
-    paginationData.page = 1
-  },
-  { immediate: true },
-)
-
-const { getVisiblePages, canPreviousPage, canNextPage } = usePagination(paginationData)
-
-const paginatedData = computed(() => {
-  const start = (paginationData.page - 1) * paginationData.per_page
-  return statusData.value.slice(start, start + paginationData.per_page)
-})
-
-function goToPage(page: number | string) {
-  if (typeof page === 'number') {
-    paginationData.page = page
+    const response = await getDatasetRows<DocumentRequest | TrackDocumentsEnvelope>(
+      DATASET_GET.DATASET_ID,
+      DATASET_GET.DATASET_VERSION,
+      { view: 'track_documents', page: 1, per_page: 100 },
+    )
+    const first = response.data[0]
+    const rows =
+      first && 'document_requests' in first && Array.isArray(first.document_requests)
+        ? first.document_requests
+        : (response.data as DocumentRequest[])
+    requests.value = [...rows].sort(
+      (a, b) => getDateTimestamp(b.created_at) - getDateTimestamp(a.created_at),
+    )
+    pagination.value.total_rows = requests.value.length
+    pagination.value.total_pages = Math.max(
+      1,
+      Math.ceil(requests.value.length / pagination.value.per_page),
+    )
+    if (pagination.value.page > pagination.value.total_pages)
+      pagination.value.page = pagination.value.total_pages
+  } catch (cause) {
+    const message = (cause as { response?: { data?: { message?: unknown } } })?.response?.data
+      ?.message
+    error.value = typeof message === 'string' ? message : 'ไม่สามารถโหลดข้อมูลคำร้องได้'
+    requests.value = []
+    pagination.value.total_rows = 0
+    pagination.value.total_pages = 1
+  } finally {
+    loading.value = false
   }
 }
+
+function changePerPage(event: Event) {
+  const input = event.target as HTMLInputElement
+  const value = Number(input.value)
+  const perPage = Number.isFinite(value) ? Math.max(1, Math.floor(value || 15)) : 15
+  perPageInput.value = perPage
+  input.value = String(perPage)
+  pagination.value.page = 1
+  pagination.value.per_page = perPage
+  pagination.value.total_pages = Math.max(1, Math.ceil(requests.value.length / perPage))
+}
+
+function openDetail(request: DocumentRequest) {
+  void router.push({ name: ROUTE_NAMES.TRACK_DOCUMENT_DETAIL, params: { id: request.id } })
+}
+
+onMounted(load)
 </script>
 
 <template>
-  <div class="mx-6 flex flex-col gap-4 pb-6">
-    <Card class="w-full gap-0 overflow-hidden pb-0">
-      <CardContent class="p-0">
-        <!-- Table -->
-        <div class="overflow-x-auto">
-          <table class="w-full text-sm">
-            <thead>
-              <tr class="bg-muted/40 border-b">
-                <th class="text-muted-foreground px-6 py-4 text-center font-semibold">
-                  ประเภทคำร้อง
+  <div class="mx-4 flex min-h-[520px] flex-col pb-6 sm:mx-6">
+    <div class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border">
+      <div class="flex min-h-0 flex-1 flex-col overflow-x-auto">
+        <div class="flex min-h-0 min-w-180 flex-1 flex-col">
+          <table class="w-full table-fixed text-sm [&_td]:px-4 [&_th]:px-4">
+            <colgroup>
+              <col v-for="column in columns" :key="column.label" :style="{ width: column.width }" />
+            </colgroup>
+            <thead class="bg-muted/50">
+              <tr>
+                <th
+                  v-for="column in columns"
+                  :key="column.label"
+                  class="py-3 text-center font-medium"
+                >
+                  {{ column.label }}
                 </th>
-                <th class="text-muted-foreground px-6 py-4 text-center font-semibold">สถานะ</th>
-                <th class="text-muted-foreground px-6 py-4 text-center font-semibold">เวลา</th>
               </tr>
             </thead>
-            <tbody v-if="paginatedData.length">
+            <tbody>
+              <tr v-if="loading">
+                <td colspan="4" class="py-10 text-center">
+                  <div class="flex items-center justify-center gap-2">
+                    <Loader2 class="h-5 w-5 animate-spin" />
+                    <span class="text-muted-foreground">กำลังโหลดข้อมูล...</span>
+                  </div>
+                </td>
+              </tr>
+              <tr v-else-if="error">
+                <td colspan="4" class="py-10 text-center">
+                  <p role="alert" class="text-destructive">{{ error }}</p>
+                  <Button variant="outline" class="mt-3" @click="load">ลองใหม่</Button>
+                </td>
+              </tr>
+              <tr v-else-if="!paginatedRequests.length">
+                <td colspan="4" class="py-12 text-center">
+                  <FileX2 class="text-muted-foreground mx-auto mb-3 h-10 w-10 opacity-50" />
+                  <p class="text-muted-foreground">ไม่พบข้อมูลคำร้อง</p>
+                </td>
+              </tr>
               <tr
-                v-for="(item, idx) in paginatedData"
-                :key="idx"
-                class="hover:bg-muted/20 border-b transition-colors last:border-b-0"
+                v-for="request in paginatedRequests"
+                v-else
+                :key="request.id"
+                class="hover:bg-muted/50 focus-visible:ring-ring cursor-pointer border-t transition-colors outline-none focus-visible:ring-2 focus-visible:ring-inset"
+                tabindex="0"
+                :aria-label="`ดูรายละเอียด ${request.document_type || 'คำร้อง'}`"
+                @click="openDetail(request)"
+                @keydown.enter="openDetail(request)"
+                @keydown.space.prevent="openDetail(request)"
               >
-                <td class="px-6 py-4 text-center">{{ item.document_type }}</td>
-                <td class="px-6 py-4 text-center">
+                <td class="py-3 text-center align-middle">{{ request.document_type || '-' }}</td>
+                <td class="py-3 text-center align-middle">
                   <Badge
-                    class="border-0 px-3 py-1 text-xs font-semibold"
-                    :class="getStatusClass(item.status)"
+                    :variant="
+                      request.status === 'ไม่อนุมัติ'
+                        ? 'destructive'
+                        : request.status === 'อนุมัติ'
+                          ? 'default'
+                          : 'secondary'
+                    "
                   >
-                    {{ item.status }}
+                    {{ request.status || 'กำลังดำเนินการ' }}
                   </Badge>
                 </td>
-                <td class="px-6 py-4 text-center">
-                  {{ formatDateThaiInput(item.created_at) }} : {{ formatTime(item.created_at) }}
+                <td class="py-3 text-center align-middle">
+                  {{ formatThaiBuddhistDateTime(request.created_at) || '-' }}
+                </td>
+                <td class="py-3 text-center align-middle">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    :aria-label="`ดูรายละเอียด ${request.document_type || 'คำร้อง'}`"
+                    @click.stop="openDetail(request)"
+                  >
+                    <Eye class="mr-2 h-4 w-4" />ดูรายละเอียด
+                  </Button>
                 </td>
               </tr>
             </tbody>
           </table>
-
-          <!-- Empty state -->
-          <div
-            v-if="!paginatedData.length"
-            class="text-muted-foreground flex flex-col items-center justify-center py-16"
-          >
-            <FileX2 class="mb-3 h-12 w-12 opacity-40" />
-            <p class="text-base font-medium">ไม่พบข้อมูลคำร้อง</p>
-            <p class="mt-1 text-sm">ยังไม่มีรายการคำร้องในขณะนี้</p>
-          </div>
         </div>
+      </div>
 
-        <!-- Pagination -->
-        <div
-          v-if="paginationData.total_rows > 0"
-          class="flex items-center justify-end gap-2 border-t px-6 py-4"
+      <div class="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t px-4 py-2">
+        <span class="text-muted-foreground mr-auto text-sm">{{ getPaginationInfo.text }}</span>
+        <label class="flex items-center gap-2 text-sm">
+          <span class="text-muted-foreground whitespace-nowrap">จำนวนต่อหน้า</span>
+          <Input
+            :model-value="perPageInput"
+            type="number"
+            min="1"
+            class="h-8 w-20"
+            :disabled="loading"
+            @change="changePerPage"
+          />
+        </label>
+        <Button
+          variant="ghost"
+          size="sm"
+          :disabled="loading || !canPreviousPage"
+          @click="pagination.page--"
         >
+          ก่อนหน้า
+        </Button>
+        <template v-for="(pageNumber, index) in getVisiblePages" :key="index">
           <Button
-            variant="ghost"
+            v-if="typeof pageNumber === 'number'"
+            :variant="pageNumber === pagination.page ? 'default' : 'ghost'"
             size="sm"
-            :disabled="!canPreviousPage"
-            class="gap-1"
-            @click="goToPage(paginationData.page - 1)"
+            :disabled="loading"
+            @click="pagination.page = pageNumber"
           >
-            <ChevronLeft class="h-4 w-4" />
-            Previous
+            {{ pageNumber }}
           </Button>
-
-          <template v-for="(page, pIdx) in getVisiblePages" :key="pIdx">
-            <span v-if="page === '...'" class="text-muted-foreground px-1">...</span>
-            <Button
-              v-else
-              size="sm"
-              :variant="page === paginationData.page ? 'default' : 'outline'"
-              class="h-8 min-w-8"
-              @click="goToPage(page)"
-            >
-              {{ page }}
-            </Button>
-          </template>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            :disabled="!canNextPage"
-            class="gap-1"
-            @click="goToPage(paginationData.page + 1)"
-          >
-            Next
-            <ChevronRight class="h-4 w-4" />
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+          <span v-else class="px-2">...</span>
+        </template>
+        <Button
+          variant="ghost"
+          size="sm"
+          :disabled="loading || !canNextPage"
+          @click="pagination.page++"
+        >
+          ถัดไป
+        </Button>
+      </div>
+    </div>
   </div>
 </template>

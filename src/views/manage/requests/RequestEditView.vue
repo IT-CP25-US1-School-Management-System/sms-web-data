@@ -8,6 +8,14 @@ import DocumentPreviewDialog from '@/components/DocumentPreviewDialog.vue'
 import DocumentFileRow from '@/components/DocumentFileRow.vue'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import { ROUTE_NAMES } from '@/lib/constants'
 import { documentRequestFullName } from '@/lib/documentRequest'
 import { formatThaiBuddhistDate, formatThaiBuddhistDateTime } from '@/lib/helpers'
@@ -40,13 +48,21 @@ const saving = ref(false)
 const error = ref('')
 const status = ref<DocumentRequest['status'] | ''>('')
 const initialStatus = ref<DocumentRequest['status'] | ''>('')
+const rejectionComment = ref('')
+const initialRejectionComment = ref('')
 const loadingDocumentResources = ref(false)
 const documentResources = ref<Record<string, FileDocument | null>>({})
 const previewDialogOpen = ref(false)
 const previewResource = ref<FileDocument | null>(null)
+const DEFAULT_REJECTION_COMMENT = 'เอกสารไม่สมบูรณ์'
 
 function firstRelation<T>(value: T | T[] | null | undefined): T | null {
   return Array.isArray(value) ? value[0] || null : value || null
+}
+
+function relationArray<T>(value: T | T[] | null | undefined): T[] {
+  if (!value) return []
+  return Array.isArray(value) ? value : [value]
 }
 
 const requestGeneralDetail = computed(
@@ -242,8 +258,20 @@ const groupedDocumentLinks = computed(() => {
     links,
   }))
 })
+const approvalLogs = computed(() =>
+  relationArray(request.value?.approval_logs).sort((a, b) =>
+    (b.created_at || '').localeCompare(a.created_at || ''),
+  ),
+)
 const isSaveDisabled = computed(
-  () => loading.value || saving.value || !status.value || status.value === initialStatus.value,
+  () =>
+    loading.value ||
+    saving.value ||
+    !status.value ||
+    (status.value === 'ไม่อนุมัติ' && !rejectionComment.value.trim()) ||
+    (status.value === initialStatus.value &&
+      (status.value !== 'ไม่อนุมัติ' ||
+        rejectionComment.value.trim() === initialRejectionComment.value.trim())),
 )
 
 function display(value: unknown): string | number {
@@ -254,6 +282,18 @@ function booleanLabel(value: boolean | null | undefined) {
   if (value === true) return 'ใช่'
   if (value === false) return 'ไม่ใช่'
   return '-'
+}
+
+function handleStatusChange(value: unknown) {
+  const previousStatus = status.value
+  status.value = String(value ?? '') as DocumentRequest['status'] | ''
+  if (
+    status.value === 'ไม่อนุมัติ' &&
+    previousStatus !== 'ไม่อนุมัติ' &&
+    !rejectionComment.value.trim()
+  ) {
+    rejectionComment.value = DEFAULT_REJECTION_COMMENT
+  }
 }
 
 async function fetchDocumentResources(links: DocumentLink[]) {
@@ -286,10 +326,20 @@ async function fetchRequest() {
   try {
     const id = String(route.params.id)
     const response = await getDocumentRequestById(id)
-    let data = response.data
-    if (data.document_type?.includes('การประเมินPA')) {
+    const manageData = response.data
+    let data = manageData
+    if (manageData.document_type?.includes('การประเมินPA')) {
       try {
-        data = (await getPAData(id)) as DocumentRequest
+        const paData = await getPAData(id)
+        data = {
+          ...manageData,
+          ...paData,
+          status: manageData.status,
+          approval_logs: manageData.approval_logs,
+          document_links: manageData.document_links?.length
+            ? manageData.document_links
+            : paData.document_links,
+        } as DocumentRequest
       } catch {
         // ใช้ข้อมูลคำร้องจากชุดข้อมูล Manage ต่อได้ หากชุดข้อมูล PA ยังไม่มีรายการนี้
       }
@@ -297,6 +347,18 @@ async function fetchRequest() {
     request.value = data
     status.value = data.status || 'กำลังดำเนินการ'
     initialStatus.value = status.value
+    const logsWithComments = relationArray(data.approval_logs)
+      .filter((log) => log.comment?.trim())
+      .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))[0]
+    const latestRejection = relationArray(data.approval_logs)
+      .filter((log) => log.action?.trim() === 'ไม่อนุมัติ' && log.comment?.trim())
+      .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))[0]
+    const existingComment =
+      latestRejection?.comment?.trim() ||
+      (status.value === 'ไม่อนุมัติ' ? logsWithComments?.comment?.trim() : '') ||
+      ''
+    rejectionComment.value = existingComment
+    initialRejectionComment.value = existingComment
     await fetchDocumentResources(data.document_links || [])
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : 'ไม่สามารถโหลดข้อมูลคำร้องเอกสารได้'
@@ -307,7 +369,15 @@ async function fetchRequest() {
 
 async function handleSave() {
   const item = request.value
-  if (!item || !status.value || status.value === initialStatus.value) return
+  if (!item || !status.value) return
+  const commentChanged =
+    status.value === 'ไม่อนุมัติ' &&
+    rejectionComment.value.trim() !== initialRejectionComment.value.trim()
+  if (status.value === initialStatus.value && !commentChanged) return
+  if (status.value === 'ไม่อนุมัติ' && !rejectionComment.value.trim()) {
+    toast.error('กรุณาระบุเหตุผลที่ไม่อนุมัติ')
+    return
+  }
   saving.value = true
   try {
     await updateDocumentRequest(item.id, {
@@ -327,7 +397,10 @@ async function handleSave() {
       request_id: item.id,
       approver_id: authStore.user?.id || '',
       action: status.value,
-      comment: `แก้ไขคำร้อง: เปลี่ยนสถานะจาก ${initialStatus.value || 'ไม่ระบุ'} เป็น ${status.value}`,
+      comment:
+        status.value === 'ไม่อนุมัติ'
+          ? rejectionComment.value.trim()
+          : `เปลี่ยนสถานะจาก ${initialStatus.value || 'ไม่ระบุ'} เป็น ${status.value}`,
     }
     await createApprovalLog(approvalLog)
     toast.success('บันทึกสถานะคำร้องเรียบร้อยแล้ว')
@@ -376,10 +449,12 @@ onMounted(fetchRequest)
           </p>
         </div>
         <Badge
-          :variant="request.status === 'ไม่อนุมัติ' ? 'destructive' : 'secondary'"
+          :variant="
+            status === 'ไม่อนุมัติ' ? 'destructive' : status === 'อนุมัติ' ? 'default' : 'secondary'
+          "
           class="shrink-0"
         >
-          {{ request.status || 'กำลังดำเนินการ' }}
+          {{ status || 'กำลังดำเนินการ' }}
         </Badge>
       </div>
 
@@ -405,14 +480,34 @@ onMounted(fetchRequest)
             <div class="border-b px-4 py-3 md:odd:border-r">
               <dt class="text-muted-foreground mb-2 text-sm">สถานะคำร้อง</dt>
               <dd>
-                <select
-                  v-model="status"
-                  class="border-input bg-background focus-visible:ring-ring h-9 w-full max-w-xs rounded-md border px-3 text-sm focus-visible:ring-1 focus-visible:outline-none"
-                >
-                  <option value="กำลังดำเนินการ">กำลังดำเนินการ</option>
-                  <option value="อนุมัติ">อนุมัติ</option>
-                  <option value="ไม่อนุมัติ">ไม่อนุมัติ</option>
-                </select>
+                <Select :model-value="status || undefined" @update:model-value="handleStatusChange">
+                  <SelectTrigger class="w-full max-w-xs" aria-label="สถานะคำร้อง">
+                    <SelectValue placeholder="เลือกสถานะคำร้อง" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="กำลังดำเนินการ">กำลังดำเนินการ</SelectItem>
+                    <SelectItem value="อนุมัติ">อนุมัติ</SelectItem>
+                    <SelectItem value="ไม่อนุมัติ">ไม่อนุมัติ</SelectItem>
+                  </SelectContent>
+                </Select>
+              </dd>
+            </div>
+            <div v-if="status === 'ไม่อนุมัติ'" class="border-b px-4 py-3">
+              <dt class="text-muted-foreground mb-2 text-sm">
+                เหตุผลที่ไม่อนุมัติ <span class="text-destructive">*</span>
+              </dt>
+              <dd>
+                <Textarea
+                  v-model="rejectionComment"
+                  rows="3"
+                  maxlength="1000"
+                  placeholder="ระบุเหตุผลที่ไม่อนุมัติ"
+                  aria-label="เหตุผลที่ไม่อนุมัติ"
+                  class="max-w-2xl resize-y"
+                />
+                <p class="text-muted-foreground mt-1 text-xs">
+                  ข้อความนี้จะบันทึกในประวัติการดำเนินการของคำร้อง
+                </p>
               </dd>
             </div>
           </dl>
@@ -438,6 +533,37 @@ onMounted(fetchRequest)
         >
           {{ detailUnavailableMessage }}
         </p>
+
+        <section v-if="approvalLogs.length" class="overflow-hidden rounded-lg border">
+          <h2 class="bg-muted border-b px-4 py-3 font-semibold">ประวัติการดำเนินการ</h2>
+          <div class="divide-y">
+            <div
+              v-for="log in approvalLogs"
+              :key="log.id"
+              class="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-start sm:justify-between"
+            >
+              <div class="min-w-0">
+                <Badge
+                  :variant="
+                    log.action === 'ไม่อนุมัติ'
+                      ? 'destructive'
+                      : log.action === 'อนุมัติ'
+                        ? 'default'
+                        : 'secondary'
+                  "
+                >
+                  {{ log.action }}
+                </Badge>
+                <p v-if="log.comment" class="mt-2 break-words whitespace-pre-wrap">
+                  {{ log.comment }}
+                </p>
+              </div>
+              <time class="text-muted-foreground shrink-0 text-sm">
+                {{ formatThaiBuddhistDateTime(log.created_at) || '-' }}
+              </time>
+            </div>
+          </div>
+        </section>
 
         <section class="overflow-hidden rounded-lg border">
           <h2 class="bg-muted border-b px-4 py-3 font-semibold">{{ attachmentTitle }}</h2>
