@@ -165,9 +165,9 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <SidebarProvider>
+  <SidebarProvider class="h-svh min-h-0 overflow-hidden">
     <AppSidebar />
-    <SidebarInset class="flex h-screen flex-col overflow-hidden">
+    <SidebarInset class="min-h-0 overflow-hidden">
       <!-- Header -->
       <!-- Header -->
       <header
