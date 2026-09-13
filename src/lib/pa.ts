@@ -92,6 +92,18 @@ export function checkPAFilterResults(requests: PARequest[], query: PAListQuery):
         )
       }
     }
+    if (query.departmentIds !== undefined) {
+      const departmentId = paRequestPerson(request)?.department_id
+      if (
+        departmentId === null ||
+        departmentId === undefined ||
+        !query.departmentIds.includes(Number(departmentId))
+      ) {
+        throw new PAFilterMismatchError(
+          'ระบบคืน department_id นอกกลุ่มสาระที่มีสิทธิ์ กรุณาตรวจสอบตัวกรองของชุดข้อมูล',
+        )
+      }
+    }
     if (query.status !== undefined && (request.status || 'กำลังดำเนินการ') !== query.status) {
       throw new PAFilterMismatchError(
         'ระบบคืนสถานะไม่ตรงกับตัวกรองที่เลือก กรุณาตรวจสอบตัวกรอง status ในชุดข้อมูล',
@@ -109,12 +121,25 @@ const paQuerySchema = z.object({
     .int()
     .refine((id) => subjectGroups.some((group) => group.id === id))
     .optional(),
+  departmentIds: z
+    .array(
+      z
+        .number()
+        .int()
+        .refine((id) => subjectGroups.some((group) => group.id === id)),
+    )
+    .min(1)
+    .transform((ids) => [...new Set(ids)])
+    .optional(),
   status: z.enum(['กำลังดำเนินการ', 'อนุมัติ', 'ไม่อนุมัติ']).optional(),
   search: z.string().trim().optional(),
 })
 
 export function buildPAQuery(input: PAListQuery): DatasetQueryParams {
   const query = paQuerySchema.parse(input)
+  if (query.departmentId !== undefined && query.departmentIds !== undefined) {
+    throw new Error('ระบุตัวกรองกลุ่มสาระได้เพียงรูปแบบเดียว')
+  }
   const where: { table_name: string; field: string; operator: string; value: string | number }[][] =
     [
       [
@@ -135,6 +160,16 @@ export function buildPAQuery(input: PAListQuery): DatasetQueryParams {
         value: query.departmentId,
       },
     ])
+  }
+  if (query.departmentIds !== undefined) {
+    where.push(
+      query.departmentIds.map((departmentId) => ({
+        table_name: 'person_data',
+        field: 'department_id',
+        operator: '=',
+        value: departmentId,
+      })),
+    )
   }
   if (query.status !== undefined) {
     where.push([
@@ -248,11 +283,7 @@ export function paFields(detail: PADetail): PAField[] {
     ['วันบรรจุ', formatThaiBuddhistDate(government?.government_entry_date)],
     ['วิทยฐานะปัจจุบัน', rank?.ranking_type],
     ['วันที่ได้รับแต่งตั้งวิทยฐานะปัจจุบัน', formatThaiBuddhistDate(rank?.awarded_date)],
-    [
-      'เงินเดือนปัจจุบัน',
-      government?.salary ??
-        latest(person.employment_contract || [], (item) => item.period_start)?.salary,
-    ],
+    ['เงินเดือนปัจจุบัน', assessment?.salary],
     ['เลขที่ใบอนุญาตประกอบวิชาชีพครู/ผู้บริหารสถานศึกษา', license?.license_no],
     ['วันหมดอายุใบอนุญาตประกอบวิชาชีพ', formatThaiBuddhistDate(license?.expiry_date)],
     [

@@ -21,13 +21,16 @@ import {
 } from '@/components/ui/select'
 import { ROUTE_NAMES } from '@/lib/constants'
 import { collectPAPages, paLoadError, paYearOptions } from '@/lib/pa'
-import { subjectGroups } from '@/lib/subjectGroups'
-import { getPADetail, getPAList, getPAPersonInfo } from '@/stores/pa'
-import type { PADetail, PAListFilters, PAListItem, PAPersonInfo, PAStatus } from '@/types/pa'
+import { subjectGroups, type SubjectGroup } from '@/lib/subjectGroups'
+import { getPADetail, getPAList, getWebPADetail, getWebPAList } from '@/stores/pa'
+import type { PADetail, PAListFilters, PAListItem, PAStatus } from '@/types/pa'
 
 const props = defineProps<{
   open: boolean
   initialFilters: PAListFilters
+  allowedDepartments?: SubjectGroup[]
+  fileRouteName?: string
+  dataSource?: 'manage' | 'web'
 }>()
 const emit = defineEmits<{ close: [] }>()
 const router = useRouter()
@@ -45,9 +48,22 @@ const namesPerPage = 6
 let generation = 0
 let initializing = false
 
+const subjectGroupOptions = computed(() => props.allowedDepartments ?? subjectGroups)
+const allowedDepartmentIds = computed(() => props.allowedDepartments?.map((group) => group.id))
+const scopedDepartmentIds = computed(() => {
+  if (props.allowedDepartments === undefined) return undefined
+  const selected = Number(department.value)
+  return department.value !== 'all' && allowedDepartmentIds.value?.includes(selected)
+    ? [selected]
+    : allowedDepartmentIds.value
+})
 const filters = computed<PAListFilters>(() => ({
   year: year.value === 'all' ? undefined : Number(year.value),
-  departmentId: department.value === 'all' ? undefined : Number(department.value),
+  departmentId:
+    props.allowedDepartments === undefined && department.value !== 'all'
+      ? Number(department.value)
+      : undefined,
+  departmentIds: scopedDepartmentIds.value,
   status: status.value === 'all' ? undefined : (status.value as PAStatus),
 }))
 const people = computed(() => {
@@ -72,9 +88,8 @@ async function loadSelection() {
   error.value = ''
   selectedItems.value = []
   try {
-    const rows = await collectPAPages((page) =>
-      getPAList({ ...filters.value, page, per_page: 100 }),
-    )
+    const getList = props.dataSource === 'web' ? getWebPAList : getPAList
+    const rows = await collectPAPages((page) => getList({ ...filters.value, page, per_page: 100 }))
     if (current === generation) {
       selectedItems.value = rows
       namePage.value = 1
@@ -95,9 +110,12 @@ watch(
     }
     initializing = true
     year.value = props.initialFilters.year ? String(props.initialFilters.year) : 'all'
+    const scopedSelection = props.initialFilters.departmentIds
     department.value = props.initialFilters.departmentId
       ? String(props.initialFilters.departmentId)
-      : 'all'
+      : scopedSelection?.length === 1 && subjectGroupOptions.value.length > 1
+        ? String(scopedSelection[0])
+        : 'all'
     status.value = props.initialFilters.status || 'all'
     await nextTick()
     initializing = false
@@ -115,17 +133,12 @@ function handleOpenChange(open: boolean) {
 async function exportExcel() {
   if (loading.value || exporting.value || error.value || !selectedItems.value.length) return
   exporting.value = true
-  const personInfo = new Map<string, PAPersonInfo>()
   try {
+    const getDetail = props.dataSource === 'web' ? getWebPADetail : getPADetail
     const details: PADetail[] = []
     for (const item of selectedItems.value) {
       progress.value = `${details.length + 1} / ${selectedItems.value.length}`
-      let info = personInfo.get(item.request.person_id)
-      if (!info) {
-        info = await getPAPersonInfo(item.request.person_id)
-        personInfo.set(item.request.person_id, info)
-      }
-      details.push(await getPADetail(item.request.id, item, info))
+      details.push(await getDetail(item.request.id, item, allowedDepartmentIds.value))
     }
     const [{ buildPAWorkbook }, XLSX] = await Promise.all([
       import('@/lib/paExport'),
@@ -135,8 +148,11 @@ async function exportExcel() {
       details,
       (id, category) =>
         new URL(
-          router.resolve({ name: ROUTE_NAMES.MANAGE_PA_FILES, params: { id }, query: { category } })
-            .href,
+          router.resolve({
+            name: props.fileRouteName || ROUTE_NAMES.MANAGE_PA_FILES,
+            params: { id },
+            query: { category },
+          }).href,
           window.location.origin,
         ).href,
     )
@@ -193,7 +209,7 @@ async function exportExcel() {
               <SelectContent>
                 <SelectItem value="all">ทุกกลุ่มสาระ</SelectItem>
                 <SelectItem
-                  v-for="group in subjectGroups"
+                  v-for="group in subjectGroupOptions"
                   :key="group.id"
                   :value="String(group.id)"
                 >

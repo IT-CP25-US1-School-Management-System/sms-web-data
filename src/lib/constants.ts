@@ -49,6 +49,9 @@ export const ROUTE_NAMES = {
   MANAGE_PA: 'ManagePA',
   MANAGE_PA_DETAIL: 'ManagePADetail',
   MANAGE_PA_FILES: 'ManagePAFiles',
+  WEB_PA: 'WebPA',
+  WEB_PA_DETAIL: 'WebPADetail',
+  WEB_PA_FILES: 'WebPAFiles',
 } as const
 
 export const DATASET_SENSITIVITY = {
@@ -102,6 +105,12 @@ export const REPORTING = {
   EXPORT_VERSION: 'v1.0.0',
 } as const
 
+export const PA_ASSESSMENT_DATASET = {
+  DATASET_ID: 'pa_assessment',
+  DATASET_VERSION: 'v1.2.0',
+  VIEW: 'pa_data',
+} as const
+
 export const DOCUMENT_EDIT = {
   DATASET_ID: 'document_create',
   DATASET_VERSION_DOCUMENT_LINK: 'v1.1.0',
@@ -131,6 +140,7 @@ export const MANAGE_DATASETS = {
   DATASET_VERSION_TRAINING: 'v13.0.0',
   DATASET_VERSION_DOCUMENT_LINK: 'v0.0.0',
   DATASET_VERSION_DOCUMENT_REQUEST: 'v3.0.2',
+  DATASET_VERSION_DOCUMENT_REQUEST_WEB: 'v3.1.0',
   VIEW_POSITION_HISTORY: 'governments',
   VIEW_CONTRACT_POSITION: 'history_position',
   VIEW_EMPLOYMENT: 'employments',

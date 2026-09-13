@@ -31,6 +31,7 @@ import {
   ChevronRight,
   Notebook,
   TicketSlash,
+  ClipboardCheck,
 } from 'lucide-vue-next'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -41,6 +42,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { getTeacherById } from '@/stores/teachers'
 import { getDatasetRows } from '@/stores/dataset'
 import { getImgInitials } from '@/lib/helpers'
+import { hasPAWebRole } from '@/lib/paAccess'
 
 interface MenuChild {
   id: string
@@ -56,6 +58,7 @@ interface MenuItem {
   icon: any
   routeName: string | null
   children: MenuChild[] | null
+  showCondition?: () => boolean
 }
 
 const router = useRouter()
@@ -244,6 +247,14 @@ const menuConfig: {
         },
       ],
     },
+    {
+      id: 'pa-results',
+      label: 'การประเมิน PA',
+      icon: ClipboardCheck,
+      routeName: ROUTE_NAMES.WEB_PA,
+      children: null,
+      showCondition: () => hasPAWebRole(authStore.user?.roles),
+    },
     // ตัวอย่างการใช้ children - uncomment เมื่อต้องการใช้
     // {
     //   id: "example-with-children",
@@ -279,6 +290,9 @@ const menuConfig: {
 }
 
 const collapsibleStates = ref<Record<string, boolean>>({})
+const visibleMainMenu = computed(() =>
+  menuConfig.main.filter((item) => !item.showCondition || item.showCondition()),
+)
 const initializeCollapsibleStates = () => {
   const states: Record<string, boolean> = {}
   menuConfig.main.forEach((item: MenuItem) => {
@@ -367,7 +381,7 @@ const handleLogout = async () => {
       <SidebarGroup>
         <SidebarGroupLabel>เมนูหลัก</SidebarGroupLabel>
         <SidebarMenu>
-          <template v-for="menuItem in menuConfig.main" :key="menuItem.id">
+          <template v-for="menuItem in visibleMainMenu" :key="menuItem.id">
             <SidebarMenuItem
               v-if="
                 !menuItem.children ||

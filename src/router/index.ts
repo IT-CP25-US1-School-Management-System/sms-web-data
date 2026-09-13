@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { ROUTE_NAMES } from '@/lib/constants'
 import { rememberPALoginReturn } from '@/lib/paLoginReturn'
+import { hasPAWebRole } from '@/lib/paAccess'
 import { getTeacherById, useTeacherStore } from '@/stores/teachers'
 
 const validateTeacherIdGuard = async (to: any) => {
@@ -196,6 +197,24 @@ const router = createRouter({
       path: '/manage',
       redirect: { name: ROUTE_NAMES.MANAGE_TEACHERS },
       meta: { requiresAuth: true, adminOnly: true },
+    },
+    {
+      path: '/pa-results',
+      name: ROUTE_NAMES.WEB_PA,
+      component: () => import('@/views/web/pa/PAListView.vue'),
+      meta: { requiresAuth: true, webOnly: true, paRoleRequired: true },
+    },
+    {
+      path: '/pa-results/:id',
+      name: ROUTE_NAMES.WEB_PA_DETAIL,
+      component: () => import('@/views/web/pa/PADetailView.vue'),
+      meta: { requiresAuth: true, webOnly: true, paRoleRequired: true },
+    },
+    {
+      path: '/pa-results/:id/files',
+      name: ROUTE_NAMES.WEB_PA_FILES,
+      component: () => import('@/views/web/pa/PAFilesView.vue'),
+      meta: { requiresAuth: true, webOnly: true, paRoleRequired: true },
     },
     {
       path: '/manage/teachers',
@@ -400,6 +419,11 @@ router.beforeEach(async (to, _from, next) => {
 
     // Non-admin trying to access admin-only routes → redirect to /personal
     if (!isAdmin && to.meta.adminOnly) {
+      next({ name: ROUTE_NAMES.PERSONAL_DETAILS })
+      return
+    }
+
+    if (to.meta.paRoleRequired && !hasPAWebRole(authStore.user?.roles)) {
       next({ name: ROUTE_NAMES.PERSONAL_DETAILS })
       return
     }

@@ -12,19 +12,27 @@ export type PAStatus = Exclude<DocumentRequest['status'], null | undefined>
 
 export interface PAAssessment extends Omit<RequestCommitteePA, 'subject_group'> {
   department_id?: number | string | null
-  subject_group?: string
+  subject_group?: string | null
 }
 
 export interface PARequest extends Omit<DocumentRequest, 'person_data'> {
   department_id?: number | string | null
   person_data?: RequestPersonData | RequestPersonData[] | null
-  req_committee_pa?: PAAssessment[]
-  request_committee_pa?: PAAssessment[]
+  req_committee_pa?: PAAssessment | PAAssessment[] | null
+  request_committee_pa?: PAAssessment | PAAssessment[] | null
+}
+
+export interface PAData extends PARequest {
+  academic_rank?: PAAcademicRank | PAAcademicRank[] | null
+  education_records?: EducationRecord | EducationRecord[] | null
+  governments?: Government | Government[] | null
+  professional_licenses?: ProfessionalLicense | ProfessionalLicense[] | null
 }
 
 export interface PAListFilters {
   year?: number
   departmentId?: number
+  departmentIds?: number[]
   status?: PAStatus
   search?: string
 }

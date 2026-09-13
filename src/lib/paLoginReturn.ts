@@ -6,6 +6,9 @@ const PA_ROUTES: readonly string[] = [
   ROUTE_NAMES.MANAGE_PA,
   ROUTE_NAMES.MANAGE_PA_DETAIL,
   ROUTE_NAMES.MANAGE_PA_FILES,
+  ROUTE_NAMES.WEB_PA,
+  ROUTE_NAMES.WEB_PA_DETAIL,
+  ROUTE_NAMES.WEB_PA_FILES,
 ]
 
 export function rememberPALoginReturn(name: unknown, fullPath: string) {

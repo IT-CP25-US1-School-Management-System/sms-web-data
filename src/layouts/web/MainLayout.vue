@@ -11,7 +11,17 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar'
-import { Home, Users, User, FileClock, Notebook, TicketSlash, FileKey } from 'lucide-vue-next'
+import {
+  Home,
+  Users,
+  User,
+  FileClock,
+  Notebook,
+  TicketSlash,
+  FileKey,
+  ClipboardCheck,
+  FileText,
+} from 'lucide-vue-next'
 import AppSidebar from './AppSidebar.vue'
 import ModeToggle from '@/components/ModeToggle.vue'
 
@@ -87,6 +97,28 @@ const currentBreadcrumbs = computed(() => {
       to: { name: ROUTE_NAMES.SUBMIT_DOCUMENTS },
       isLast: true,
     })
+  } else if (
+    [ROUTE_NAMES.WEB_PA, ROUTE_NAMES.WEB_PA_DETAIL, ROUTE_NAMES.WEB_PA_FILES].some(
+      (name) => name === routeName,
+    )
+  ) {
+    breadcrumbs.push({
+      label: 'การประเมิน PA',
+      icon: ClipboardCheck,
+      to: { name: ROUTE_NAMES.WEB_PA },
+      isLast: routeName === ROUTE_NAMES.WEB_PA,
+    })
+    if (routeName !== ROUTE_NAMES.WEB_PA) {
+      breadcrumbs.push({
+        label: 'รายละเอียดการประเมิน PA',
+        icon: FileText,
+        to: { name: ROUTE_NAMES.WEB_PA_DETAIL, params: { id: route.params.id } },
+        isLast: routeName === ROUTE_NAMES.WEB_PA_DETAIL,
+      })
+    }
+    if (routeName === ROUTE_NAMES.WEB_PA_FILES) {
+      breadcrumbs.push({ label: 'ดาวน์โหลดไฟล์', icon: FileText, to: null, isLast: true })
+    }
   } else {
     breadcrumbs.push({
       label: routeName,

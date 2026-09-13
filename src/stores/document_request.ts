@@ -14,6 +14,7 @@ import type { DocumentRequest, ApprovalLog } from '@/types/document_request'
 
 const DOCUMENT_REQUESTS_DATASET_ID = MANAGE_DATASETS.DATASET_ID
 const DOCUMENT_REQUESTS_DATASET_VERSION = MANAGE_DATASETS.DATASET_VERSION_DOCUMENT_REQUEST
+const DOCUMENT_REQUESTS_WEB_DATASET_VERSION = MANAGE_DATASETS.DATASET_VERSION_DOCUMENT_REQUEST_WEB
 const APPROVAL_LOGS_DATASET_ID = MANAGE_APPROVAL_LOGS_DATASET.DATASET_ID
 const APPROVAL_LOGS_VERSION = MANAGE_APPROVAL_LOGS_DATASET.DATASET_VERSION
 /**
@@ -47,6 +48,19 @@ export async function getDocumentRequests(
   return getDatasetRows<DocumentRequest>(
     DOCUMENT_REQUESTS_DATASET_ID,
     DOCUMENT_REQUESTS_DATASET_VERSION,
+    {
+      ...params,
+      view: 'document_requests',
+    },
+  )
+}
+
+export async function getWebDocumentRequests(
+  params?: DatasetQueryParams,
+): Promise<DatasetListResponse<DocumentRequest>> {
+  return getDatasetRows<DocumentRequest>(
+    DOCUMENT_REQUESTS_DATASET_ID,
+    DOCUMENT_REQUESTS_WEB_DATASET_VERSION,
     {
       ...params,
       view: 'document_requests',

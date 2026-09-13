@@ -9,7 +9,7 @@ import DocumentPreviewDialog from '@/components/DocumentPreviewDialog.vue'
 import { Button } from '@/components/ui/button'
 import { ROUTE_NAMES } from '@/lib/constants'
 import { PA_FILE_GROUPS, paRequestPerson } from '@/lib/pa'
-import { getPAFiles, getPARequest } from '@/stores/pa'
+import { getPAData, getPAFiles } from '@/stores/pa'
 import { downloadDocumentFile } from '@/stores/api'
 import type { PAFile, PARequest } from '@/types/pa'
 import type { FileDocument } from '@/types/document'
@@ -40,7 +40,7 @@ async function load() {
   files.value = []
   request.value = null
   try {
-    const result = await getPARequest(String(route.params.id))
+    const result = await getPAData(String(route.params.id))
     const attachments = await getPAFiles(result)
     if (current === generation) {
       request.value = result
