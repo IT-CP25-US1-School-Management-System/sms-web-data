@@ -20,8 +20,8 @@ import { z } from 'zod'
 import { toast } from 'vue-sonner'
 import { generateUUID } from '@/lib/helpers'
 import { useAuthStore } from '@/stores/auth'
-import { createDatasetRow } from '@/stores/dataset'
-import { createFileDocument } from '@/stores/document'
+import { createDatasetRow, deleteDatasetRow } from '@/stores/dataset'
+import { createFileDocument, deleteFileDocument } from '@/stores/document'
 import type { CreateFileDocumentParams, FileDocument } from '@/types/document'
 import type { DocumentLink, DocumentRequest, RequestCommitteePA } from '@/types/document_request'
 import { DOCUMENT_EDIT } from '@/lib/constants'
@@ -70,25 +70,30 @@ function hourSchema(requiredMessage: string) {
   return z
     .union([z.string(), z.number()])
     .refine(
-      (value) => value !== '' && Number.isFinite(Number(value)) && Number(value) >= 0,
+      (value) =>
+        String(value).trim() !== '' && Number.isFinite(Number(value)) && Number(value) >= 0,
       requiredMessage,
     )
+}
+
+function requiredText(message: string) {
+  return z.string().trim().min(1, message)
 }
 
 const validationSchema = computed(() => {
   return toTypedSchema(
     z.object({
-      subject_group: z.string().min(1, 'กลุ่มสาระ จำเป็นต้องเลือก'),
-      teaching_level_1: z.string().min(1, 'ปฏิบัติการสอนชั้น/ระดับ จำเป็นต้องกรอก'),
-      subject_name: z.string().min(1, 'รายวิชา จำเป็นต้องกรอก'),
+      subject_group: requiredText('กลุ่มสาระ จำเป็นต้องเลือก'),
+      teaching_level_1: requiredText('ปฏิบัติการสอนชั้น/ระดับ จำเป็นต้องกรอก'),
+      subject_name: requiredText('รายวิชา จำเป็นต้องกรอก'),
       salary: hourSchema('เงินเดือนปัจจุบัน จำเป็นต้องกรอก'),
       teaching_hours_per_week: hourSchema('การสอนตามตารางสอน จำเป็นต้องกรอก'),
       support_hours_per_week: hourSchema('งานส่งเสริมและสนับสนุนการจัดการเรียนรู้ จำเป็นต้องกรอก'),
       dev_quality_hours_per_week: hourSchema('งานพัฒนาคุณภาพการศึกษา จำเป็นต้องกรอก'),
       policy_hours_per_week: hourSchema('งานตอบสนองนโยบายและจุดเน้น จำเป็นต้องกรอก'),
-      committee_name_1: z.string().min(1, 'คนที่ 1 จำเป็นต้องกรอก'),
-      committee_name_2: z.string().min(1, 'คนที่ 2 จำเป็นต้องกรอก'),
-      committee_name_3: z.string().min(1, 'คนที่ 3 จำเป็นต้องกรอก'),
+      committee_name_1: requiredText('คนที่ 1 จำเป็นต้องกรอก'),
+      committee_name_2: requiredText('คนที่ 2 จำเป็นต้องกรอก'),
+      committee_name_3: requiredText('คนที่ 3 จำเป็นต้องกรอก'),
       'pa2-pa1-count': z.number().min(1, 'PA1 จำเป็นต้องแนบไฟล์'),
       'pa2-eval1-count': z.number().min(1, 'PA2 กรรมการคนที่ 1 จำเป็นต้องแนบไฟล์'),
       'pa2-eval2-count': z.number().min(1, 'PA2 กรรมการคนที่ 2 จำเป็นต้องแนบไฟล์'),
@@ -194,6 +199,7 @@ function resetEvaluationPAForm() {
   committee_name_1.value = ''
   committee_name_2.value = ''
   committee_name_3.value = ''
+  documentRequest.value.id = ''
   fileMap.value = {}
   fileSizeErrors.value = {}
 
@@ -273,7 +279,7 @@ async function createDocumentType() {
   }
 }
 
-async function uploadFile() {
+async function uploadFile(uploadedFiles: { documentKey: string; category: string }[] = []) {
   const files = getSelectedFiles()
   const params: CreateFileDocumentParams = {
     path: 'file-req',
@@ -283,8 +289,6 @@ async function uploadFile() {
   }
 
   try {
-    const uploadedFiles: { documentKey: string; category: string }[] = []
-
     for (const { file, field } of files) {
       const response = await createFileDocument<FileDocument>(file, params)
       if (!response.data?.resource_id) {
@@ -358,20 +362,55 @@ async function createDocumentDetail(values: Record<string, any>) {
   }
 }
 
+async function rollbackIncompleteRequest(
+  uploadedFiles: { documentKey: string }[],
+  requestCreated: boolean,
+) {
+  let requestDeleted = !requestCreated
+
+  if (requestCreated && documentRequest.value.id) {
+    try {
+      await deleteDatasetRow(
+        DOCUMENT_EDIT.DATASET_ID,
+        DOCUMENT_EDIT.DATASET_VERSION_DOCUMENT_REQUEST,
+        documentRequest.value.id,
+      )
+      requestDeleted = true
+      documentRequest.value.id = ''
+    } catch (rollbackError) {
+      console.error('Document request rollback error:', rollbackError)
+    }
+  }
+
+  if (requestDeleted && uploadedFiles.length) {
+    const cleanupResults = await Promise.allSettled(
+      uploadedFiles.map((file) => deleteFileDocument(file.documentKey)),
+    )
+    cleanupResults.forEach((result) => {
+      if (result.status === 'rejected') {
+        console.error('PA file rollback error:', result.reason)
+      }
+    })
+  }
+}
+
 async function onSubmit(values: Record<string, any>) {
   isSubmitting.value = true
+  const uploadedFiles: { documentKey: string; category: string }[] = []
+  let requestCreated = false
 
   try {
+    await uploadFile(uploadedFiles)
     await createDocumentType()
-    const uploadedKeys = await uploadFile()
-    await storeFile(uploadedKeys)
+    requestCreated = true
     await createDocumentDetail(values)
+    await storeFile(uploadedFiles)
     resetEvaluationPAForm()
 
     toast.success('ยื่นคำร้องสำเร็จ', { position: 'bottom-right' })
-  } catch (_error) {
-    // แต่ละฟังก์ชันจัดการ error toast ของตัวเองแล้ว
-    toast.error(`เกิดข้อผิดพลาด: ${_error}`, {
+  } catch {
+    await rollbackIncompleteRequest(uploadedFiles, requestCreated)
+    toast.error('ยื่นคำร้องไม่สำเร็จ กรุณาตรวจสอบข้อมูลแล้วลองใหม่', {
       position: 'bottom-right',
     })
   } finally {
@@ -423,8 +462,15 @@ async function submitPA2Form() {
     await formRef.value?.validateField?.(fieldName)
   }
 
-  const formElement = document.getElementById('pa-evaluation-form') as HTMLFormElement | null
-  formElement?.requestSubmit()
+  const result = await formRef.value?.validate?.()
+  if (!result?.valid) {
+    toast.error('กรุณากรอกข้อมูลและแนบเอกสารที่จำเป็นให้ครบถ้วน', {
+      position: 'bottom-right',
+    })
+    return
+  }
+
+  await onSubmit((result.values || {}) as Record<string, any>)
 }
 </script>
 <template>
