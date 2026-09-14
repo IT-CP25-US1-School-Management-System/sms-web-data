@@ -8,8 +8,9 @@ import {
   DATASET_GET,
   DOCUMENT_DELETE,
   DOCUMENT_EDIT,
+  MANAGE_DROPDOWN_DATASETS,
 } from '@/lib/constants'
-import { formatDateInput, generateUUID } from '@/lib/helpers'
+import { formatDateInput, generateUUID, sortDropdownOptionsByThaiLabel } from '@/lib/helpers'
 import {
   normalizeInnovationStudent,
   planInnovationStudentChanges,
@@ -71,10 +72,22 @@ type CreateFormSection = {
   subFields?: CreateFormField[]
   subEntryFieldName?: string
 }
+type DepartmentRow = {
+  id?: number | string
+  department_id?: number | string
+  departments_id?: number | string
+  subject_group_id?: number | string
+  subject_groups_id?: number | string
+  department_name_th?: string
+  departments_name_th?: string
+  subject_group_name?: string
+  subject_groups_name?: string
+  name?: string
+}
 
 const INNOVATION_GET_VIEW = 'innovation_get'
 const INNOVATION_EDIT_VIEW = 'innovations_update'
-const INNOVATION_ENTITY_TABLE = 'profession-license'
+const INNOVATION_ENTITY_TABLE = 'innovations'
 const INNOVATION_FILE_FIELDS = ['photo-file', 'certificate-file'] as const
 const INNOVATION_DATE_FIELDS = ['start_date', 'end_date'] as const
 
@@ -110,6 +123,7 @@ const innovationData = ref<InnovationFormValue[]>([])
 const documentLinksByInnovation = ref<Record<string, DocumentLinkRow[]>>({})
 const formRenderKey = ref(0)
 const innovationPersonId = ref('')
+const departmentOptions = ref<{ label: string; value: string }[]>([])
 
 const confirmModal = ref(false)
 const action = ref('update')
@@ -200,23 +214,24 @@ const innovationFields: CreateFormSection[][] = [
           name: 'student_name',
           label: 'ชื่อนักเรียน',
           type: 'text',
-          required: true,
+          required: false,
           placeholder: '',
         },
-        { name: 'class_level', label: 'ชั้น', type: 'text', required: true, placeholder: '' },
-        { name: 'class_room', label: 'ห้อง', type: 'text', required: true, placeholder: '' },
+        { name: 'class_level', label: 'ชั้น', type: 'text', required: false, placeholder: '' },
+        { name: 'class_room', label: 'ห้อง', type: 'text', required: false, placeholder: '' },
       ],
     },
     {
       topic: 'ข้อมูลผู้ครูที่ดูแล',
       content: [
-        { name: 'supervisor', label: 'ครูผู้ดูแล', type: 'text', required: true, placeholder: '' },
+        { name: 'supervisor', label: 'ครูผู้ดูแล', type: 'text', required: false, placeholder: '' },
         {
           name: 'subject_group',
           label: 'กลุ่มสาระการเรียนรู้',
-          type: 'text',
-          required: true,
-          placeholder: '',
+          type: 'select',
+          required: false,
+          placeholder: 'เลือกกลุ่มสาระการเรียนรู้',
+          options: departmentOptions.value,
         },
         {
           name: 'photo-file',
@@ -224,7 +239,7 @@ const innovationFields: CreateFormSection[][] = [
           type: 'file',
           accept: '.jpg,.jpeg,.png',
           multiple: true,
-          required: true,
+          required: false,
         },
         {
           name: 'certificate-file',
@@ -232,7 +247,7 @@ const innovationFields: CreateFormSection[][] = [
           type: 'file',
           accept: '.pdf,.jpg,.png',
           multiple: true,
-          required: true,
+          required: false,
         },
       ],
     },
@@ -292,10 +307,90 @@ function buildInnovationSaveValues(index: number, values?: InnovationFormValue) 
   }
 }
 
+function readInnovationStudentsFromDom(index: number) {
+  if (typeof document === 'undefined') {
+    return cloneInnovationStudents(innovationStudentEntries.value[index])
+  }
+
+  const formElement = document.getElementById(`form-${index}`)
+  if (!formElement) {
+    return cloneInnovationStudents(innovationStudentEntries.value[index])
+  }
+
+  const previousStudents = cloneInnovationStudents(innovationStudentEntries.value[index])
+  const rowElements = Array.from(
+    formElement.querySelectorAll('div.mt-3.flex.items-end.gap-4'),
+  ).filter((element) => element.querySelectorAll('input').length >= 3)
+
+  if (!rowElements.length) return previousStudents
+
+  return rowElements
+    .map((rowElement, rowIndex) => {
+      const textInputs = Array.from(rowElement.querySelectorAll('input')).slice(
+        0,
+        3,
+      ) as HTMLInputElement[]
+      const previousStudent = previousStudents[rowIndex] || {}
+
+      return {
+        ...previousStudent,
+        student_name: textInputs[0]?.value?.trim() || '',
+        class_level: textInputs[1]?.value?.trim() || '',
+        class_room: textInputs[2]?.value?.trim() || '',
+      }
+    })
+    .filter((student) => student.student_name || student.class_level || student.class_room)
+}
+
 function normalizeInnovationFiles(value: unknown): InnovationFileItem[] {
   if (!value) return []
   if (Array.isArray(value)) return value as InnovationFileItem[]
   return [value as InnovationFileItem]
+}
+
+function mapDropdownOptions<T extends Record<string, any>>(
+  rows: T[],
+  valueKeys: string[],
+  labelKeys: string[],
+) {
+  const options = rows
+    .map((row) => {
+      const value = valueKeys.map((key) => row[key]).find((candidate) => candidate != null)
+      const label = labelKeys.map((key) => row[key]).find((candidate) => candidate != null)
+      if (value == null || label == null) return null
+      return { label: String(label), value: String(value) }
+    })
+    .filter((option): option is { label: string; value: string } => Boolean(option))
+
+  return sortDropdownOptionsByThaiLabel(options)
+}
+
+async function fetchDepartmentOptions() {
+  try {
+    for (const viewName of ['departments', 'department', 'subject_groups', 'subject_group']) {
+      const response = await getDatasetRows<DepartmentRow>(
+        MANAGE_DROPDOWN_DATASETS.DATASET_ID,
+        MANAGE_DROPDOWN_DATASETS.DATASET_VERSION_DEPARTMENTS,
+        { page: 1, per_page: 100, view: viewName },
+      )
+      const options = mapDropdownOptions(
+        response.data || [],
+        ['id', 'department_id', 'departments_id', 'subject_group_id', 'subject_groups_id'],
+        [
+          'department_name_th',
+          'departments_name_th',
+          'subject_group_name',
+          'subject_groups_name',
+          'name',
+        ],
+      )
+      if (!options.length) continue
+      departmentOptions.value.splice(0, departmentOptions.value.length, ...options)
+      return
+    }
+  } catch (error) {
+    console.error('Failed to load innovation department options:', error)
+  }
 }
 
 function isExistingInnovationFile(file: InnovationFileItem): file is ExistingInnovationFile {
@@ -485,8 +580,7 @@ async function getInnovationData() {
     )
 
     const { records, allDocumentLinks } = extractInnovationResponse(response.data)
-    innovationPersonId.value =
-      (response.data?.[0] as Record<string, any> | undefined)?.person_id || ''
+    innovationPersonId.value = records[0]?.person_id || authStore.user?.id || ''
     documentLinksByInnovation.value = Object.fromEntries(
       records
         .filter((record) => Boolean(record.id))
@@ -578,7 +672,12 @@ async function updateInnovationStudent(recordId: string, payload: Record<string,
 }
 
 async function deleteInnovationStudent(studentId: string) {
-  return deleteDatasetRow(DATASET_CONFIG.DATASET_ID, DATASET_CONFIG.DATASET_STUDENTS, studentId)
+  return deleteDatasetRow(
+    DELETE_CONFIG.DATASET_ID,
+    DELETE_CONFIG.DATASET_VERSION_STUDENTS,
+    studentId,
+    DELETE_CONFIG.VIEW_NAME_STUDENTS,
+  )
 }
 
 async function createInnovationData(payload: Record<string, any>) {
@@ -619,7 +718,7 @@ async function storeInnovationFiles(
         entity_table: INNOVATION_ENTITY_TABLE,
         entity_id: record.id || '',
         purpose: buildInnovationPurpose(record, fileField),
-        person_id: teacherStore.personId || '',
+        person_id: record.person_id || '',
         created_at: new Date().toISOString(),
       },
       DOCUMENT_CREATE_CONFIG.VIEW_NAME,
@@ -670,10 +769,12 @@ async function persistInnovationStudents(
 
 async function persistInnovation(index: number, values: InnovationFormValue) {
   const currentRecord = innovationData.value[index]
+  const existingRecordId = currentRecord?.id || values.id
+  const persistedRecord = currentRecord || (existingRecordId ? values : undefined)
   const personId = resolveInnovationPersonId(values, currentRecord)
-  const payload = buildInnovationPayload(values, currentRecord, personId)
-  const currentLinks = currentRecord?.id
-    ? documentLinksByInnovation.value[currentRecord.id] || []
+  const payload = buildInnovationPayload(values, persistedRecord, personId)
+  const currentLinks = existingRecordId
+    ? documentLinksByInnovation.value[existingRecordId] || []
     : []
 
   const removedLinks = INNOVATION_FILE_FIELDS.flatMap((fileField) => {
@@ -703,7 +804,7 @@ async function persistInnovation(index: number, values: InnovationFormValue) {
   let createdDocumentLinks: DocumentLinkRow[] = []
 
   try {
-    if (!currentRecord?.id) {
+    if (!existingRecordId) {
       const createdRecord = await createInnovationData(payload)
       createdRecordId = createdRecord.data?.id || ''
       await persistInnovationStudents(values, createdRecordId || payload.id, personId)
@@ -715,7 +816,12 @@ async function persistInnovation(index: number, values: InnovationFormValue) {
           createdDocumentLinks.push(
             ...(await storeInnovationFiles(
               uploadedKeys,
-              { ...createdRecord.data, ...payload, id: createdRecordId },
+              {
+                ...payload,
+                ...createdRecord.data,
+                id: createdRecordId,
+                person_id: createdRecord.data?.person_id || payload.person_id,
+              },
               fileField,
             )),
           )
@@ -728,8 +834,8 @@ async function persistInnovation(index: number, values: InnovationFormValue) {
     }
 
     if (!hasFileChanges) {
-      await updateInnovationData(currentRecord.id, payload)
-      await persistInnovationStudents(values, currentRecord.id, personId, currentRecord)
+      await updateInnovationData(existingRecordId, payload)
+      await persistInnovationStudents(values, existingRecordId, personId, persistedRecord)
       toast.success('บันทึกข้อมูลผลงานและนวัตกรรมสำเร็จ', { position: 'bottom-right' })
       await getInnovationData()
       return
@@ -742,15 +848,20 @@ async function persistInnovation(index: number, values: InnovationFormValue) {
         createdDocumentLinks.push(
           ...(await storeInnovationFiles(
             uploadedKeys,
-            { ...currentRecord, ...payload, id: currentRecord.id },
+            {
+              ...payload,
+              ...persistedRecord,
+              id: existingRecordId,
+              person_id: persistedRecord?.person_id || payload.person_id,
+            },
             fileField,
           )),
         )
       }
     }
 
-    await updateInnovationData(currentRecord.id, payload)
-    await persistInnovationStudents(values, currentRecord.id, personId, currentRecord)
+    await updateInnovationData(existingRecordId, payload)
+    await persistInnovationStudents(values, existingRecordId, personId, persistedRecord)
 
     if (removedLinks.length) {
       await deleteInnovationDocumentLinks(removedLinks)
@@ -837,6 +948,7 @@ function requestInnovationStudentSave(index: number) {
 */
 function handleSave(index: number, values: Record<string, any>) {
   if (busyEntries.value[index]) return
+  innovationStudentEntries.value[index] = readInnovationStudentsFromDom(index)
   const mergedValues = buildInnovationSaveValues(index, values as InnovationFormValue)
   pendingAction.value = { type: 'save', index, values: mergedValues }
   action.value = innovationData.value[index]?.id ? 'update' : 'add'
@@ -916,6 +1028,7 @@ function handleDelete(index: number, recordId?: string) {
 }
 
 onMounted(() => {
+  void fetchDepartmentOptions()
   getInnovationData()
 })
 </script>
