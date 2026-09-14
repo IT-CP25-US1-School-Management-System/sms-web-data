@@ -13,7 +13,7 @@ describe('request detail', () => {
       request_committee_pa: {
         id: 'pa-1',
         request_id: 'request-1',
-        subject_group: 'math',
+        subject_group: '2',
         subject_name: 'คณิตศาสตร์',
         salary: 1111,
         teaching_level_1: 'ม.4',

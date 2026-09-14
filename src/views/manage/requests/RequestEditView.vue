@@ -206,7 +206,7 @@ function paDetailSection(pa: RequestCommitteePA): DetailSection {
     fields: [
       {
         label: 'กลุ่มสาระการเรียนรู้',
-        value: getSubjectGroupName(pa.subject_group) || display(pa.subject_group),
+        value: getSubjectGroupName(pa.subject_group) || 'ไม่ระบุกลุ่มสาระการเรียนรู้',
       },
       { label: 'ปฏิบัติการสอนชั้น/ระดับ', value: display(pa.teaching_level_1) },
       { label: 'รายวิชา', value: display(pa.subject_name) },

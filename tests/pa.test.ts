@@ -254,7 +254,12 @@ describe('PA reports', () => {
     expect(paSubjectGroup({ ...detail().request, department_id: 999 })).toBe(
       'ไม่ระบุกลุ่มสาระการเรียนรู้',
     )
-    expect(paSubjectGroup(detail().request, detail().assessment)).toBe('คณิตศาสตร์')
+    expect(paSubjectGroup(detail().request, detail('request-1', '2').assessment)).toBe(
+      'กลุ่มสาระฯคณิตศาสตร์',
+    )
+    expect(paSubjectGroup(detail().request, detail('request-1', 'math').assessment)).toBe(
+      'ไม่ระบุกลุ่มสาระการเรียนรู้',
+    )
   })
   test('limits web PA access to departments assigned by roles', () => {
     expect(hasPAWebRole(['teacher', 'pa-thai'])).toBe(true)
@@ -266,6 +271,15 @@ describe('PA reports', () => {
     expect(() => assertPADepartmentAccess(thaiRequest, [1, 8])).not.toThrow()
     expect(() => assertPADepartmentAccess(thaiRequest, [8])).toThrow('ไม่มีสิทธิ์')
     expect(() => assertPADepartmentAccess(detail().request, [1])).toThrow('ไม่มีสิทธิ์')
+    expect(() =>
+      assertPADepartmentAccess(
+        {
+          ...detail().request,
+          request_committee_pa: { ...detail().assessment, subject_group: '8' },
+        },
+        [8],
+      ),
+    ).not.toThrow()
   })
   test('sends all authorized departments as one OR filter group', () => {
     const query = buildPAQuery({ page: 1, per_page: 15, departmentIds: [8, 1, 8] })

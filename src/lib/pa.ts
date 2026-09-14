@@ -224,11 +224,14 @@ export function buildPAQuery(input: PAListQuery): DatasetQueryParams {
 
 export function paSubjectGroup(request: PARequest, assessment?: PAAssessment | null): string {
   const departmentId =
-    paRequestPerson(request)?.department_id ?? request.department_id ?? assessment?.department_id
+    paRequestPerson(request)?.department_id ??
+    request.department_id ??
+    assessment?.department_id ??
+    assessment?.subject_group
   if (departmentId !== null && departmentId !== undefined && departmentId !== '') {
     return getSubjectGroupName(departmentId) || 'ไม่ระบุกลุ่มสาระการเรียนรู้'
   }
-  return assessment?.subject_group?.trim() || 'ไม่ระบุกลุ่มสาระการเรียนรู้'
+  return 'ไม่ระบุกลุ่มสาระการเรียนรู้'
 }
 
 // Legacy uploads have the same purpose. Only recognize explicit category markers;

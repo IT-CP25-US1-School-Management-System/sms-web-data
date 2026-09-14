@@ -44,7 +44,7 @@ function bankLabel(value: string | null | undefined) {
 }
 
 function subjectGroupLabel(value: string | null | undefined) {
-  return value ? getSubjectGroupName(value) || value : '-'
+  return getSubjectGroupName(value) || 'ไม่ระบุกลุ่มสาระการเรียนรู้'
 }
 
 export function requestOverviewFields(request: DocumentRequest): RequestDetailField[] {

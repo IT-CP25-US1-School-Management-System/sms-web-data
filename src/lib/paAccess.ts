@@ -43,11 +43,22 @@ export function paRequestDepartmentId(
   request: PARequest,
   assessment?: PAAssessment | null,
 ): number | null {
+  const requestAssessment =
+    assessment ??
+    (Array.isArray(request.request_committee_pa)
+      ? request.request_committee_pa[0]
+      : request.request_committee_pa) ??
+    (Array.isArray(request.req_committee_pa)
+      ? request.req_committee_pa[0]
+      : request.req_committee_pa)
   const raw =
-    paRequestPerson(request)?.department_id ?? request.department_id ?? assessment?.department_id
+    paRequestPerson(request)?.department_id ??
+    request.department_id ??
+    requestAssessment?.department_id ??
+    requestAssessment?.subject_group
   if (raw === null || raw === undefined || raw === '') return null
   const id = Number(raw)
-  return Number.isInteger(id) ? id : null
+  return Number.isInteger(id) && subjectGroups.some((group) => group.id === id) ? id : null
 }
 
 export class PAAccessError extends Error {}
