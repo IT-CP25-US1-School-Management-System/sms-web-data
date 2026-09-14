@@ -4,6 +4,12 @@ import SkeletonCard from '@/components/SkeletonCard.vue'
 import CreateForm from '@/components/form/CreateForm.vue'
 import { MANAGE_DATASETS, MANAGE_DROPDOWN_DATASETS } from '@/lib/constants'
 import { formatDateInput, generateUUID, sortDropdownOptionsByThaiLabel } from '@/lib/helpers'
+import {
+  normalizeInnovationStudent,
+  planInnovationStudentChanges,
+  uniqueInnovationStudents,
+  type InnovationStudentRow,
+} from '@/lib/innovationStudents'
 import { useAuthStore } from '@/stores/auth'
 import { useTeacherStore } from '@/stores/teachers'
 import { createFileDocument, deleteFileDocument, getFileDocumentRows } from '@/stores/document'
@@ -29,22 +35,7 @@ type ExistingInnovationFile = {
   document_link_id?: string
 }
 type InnovationFileItem = File | ExistingInnovationFile
-type InnovationStudentAwardRow = {
-  id?: string
-  innovation_id?: string
-  student_name?: string
-  class_level?: string
-  class_room?: string
-  created_at?: string | null
-  updated_at?: string | null
-  innovation_student_awards_id?: string
-  innovation_student_awards_innovation_id?: string
-  innovation_student_awards_student_name?: string
-  innovation_student_awards_class_level?: string
-  innovation_student_awards_class_room?: string
-  innovation_student_awards_created_at?: string | null
-  innovation_student_awards_updated_at?: string | null
-}
+type InnovationStudentAwardRow = InnovationStudentRow
 type InnovationRow = Record<string, any> & {
   id?: string
   person_id?: string
@@ -302,9 +293,9 @@ function readInnovationStudentsFromDom(index: number) {
   }
 
   const previousStudents = cloneInnovationStudents(innovationStudentEntries.value[index])
-  const rowElements = Array.from(formElement.querySelectorAll('div.mt-3.flex.items-end.gap-4')).filter(
-    (element) => element.querySelectorAll('input').length >= 3,
-  )
+  const rowElements = Array.from(
+    formElement.querySelectorAll('div.mt-3.flex.items-end.gap-4'),
+  ).filter((element) => element.querySelectorAll('input').length >= 3)
 
   if (!rowElements.length) {
     return previousStudents
@@ -312,7 +303,10 @@ function readInnovationStudentsFromDom(index: number) {
 
   return rowElements
     .map((rowElement, rowIndex) => {
-      const textInputs = Array.from(rowElement.querySelectorAll('input')).slice(0, 3) as HTMLInputElement[]
+      const textInputs = Array.from(rowElement.querySelectorAll('input')).slice(
+        0,
+        3,
+      ) as HTMLInputElement[]
       const previousStudent = previousStudents[rowIndex] || {}
 
       return {
@@ -408,27 +402,22 @@ function matchesInnovationFileField(link: DocumentLinkRow, fileField: string) {
 }
 
 function formatInnovationStudentAwardRecord(student: InnovationStudentAwardRow) {
-  return {
-    ...student,
-    id: student.id || student.innovation_student_awards_id,
-    innovation_id: student.innovation_id || student.innovation_student_awards_innovation_id,
-    student_name: student.student_name || student.innovation_student_awards_student_name || '',
-    class_level: student.class_level || student.innovation_student_awards_class_level || '',
-    class_room: student.class_room || student.innovation_student_awards_class_room || '',
-    created_at: student.created_at || student.innovation_student_awards_created_at || null,
-    updated_at: student.updated_at || student.innovation_student_awards_updated_at || null,
-  }
+  return normalizeInnovationStudent(student)
 }
 
 function formatInnovationRecord(
   record: InnovationRow,
   fetchedStudents?: InnovationStudentAwardRow[],
 ) {
-  const innovationStudents = Array.isArray(fetchedStudents)
-    ? fetchedStudents.map((student) => formatInnovationStudentAwardRecord(student))
-    : Array.isArray(record.innovation_student_awards)
-      ? record.innovation_student_awards.map((student) => formatInnovationStudentAwardRecord(student))
-      : []
+  const innovationStudents = uniqueInnovationStudents(
+    Array.isArray(fetchedStudents)
+      ? fetchedStudents.map((student) => formatInnovationStudentAwardRecord(student))
+      : Array.isArray(record.innovation_student_awards)
+        ? record.innovation_student_awards.map((student) =>
+            formatInnovationStudentAwardRecord(student),
+          )
+        : [],
+  )
 
   return {
     ...record,
@@ -479,26 +468,24 @@ function buildInnovationPayload(
   }
 }
 
-function buildInnovationStudentPayloads(
-  values: InnovationFormValue,
+function buildInnovationStudentPayload(
+  student: InnovationStudentAwardRow,
   innovationId: string,
   personId: string,
-  currentRecord?: InnovationRow,
+  isExisting: boolean,
 ) {
   const now = new Date().toISOString()
 
-  return Array.isArray(values.innovation_student_awards)
-    ? values.innovation_student_awards.map((student) => ({
-        id: student.id || generateUUID(),
-        innovation_id: innovationId,
-        person_id: personId,
-        student_name: student.student_name || '',
-        class_level: student.class_level || '',
-        class_room: student.class_room || '',
-        created_at: student.created_at || now,
-        updated_at: currentRecord?.id ? now : null,
-      }))
-    : []
+  return {
+    id: student.id || generateUUID(),
+    innovation_id: innovationId,
+    person_id: personId,
+    student_name: student.student_name || '',
+    class_level: student.class_level || '',
+    class_room: student.class_room || '',
+    created_at: student.created_at || now,
+    updated_at: isExisting ? now : null,
+  }
 }
 
 function resolveInnovationPersonId(values: InnovationFormValue, currentRecord?: InnovationRow) {
@@ -763,37 +750,23 @@ async function persistInnovationStudents(
   personId: string,
   currentRecord?: InnovationRow,
 ) {
-  const sourceStudents = Array.isArray(values.innovation_student_awards)
-    ? values.innovation_student_awards
-    : []
-  const existingStudentIds = new Set(
-    (currentRecord?.innovation_student_awards || [])
-      .map((student) => student.id)
-      .filter((studentId): studentId is string => Boolean(studentId)),
-  )
-  const keptStudentIds = new Set(
-    sourceStudents
-      .map((student) => student.id)
-      .filter((studentId): studentId is string => Boolean(studentId)),
-  )
-  const studentPayloads = buildInnovationStudentPayloads(
-    values,
-    innovationId,
-    personId,
-    currentRecord,
+  const changes = planInnovationStudentChanges(
+    currentRecord?.innovation_student_awards,
+    values.innovation_student_awards,
   )
 
-  for (const [index, studentPayload] of studentPayloads.entries()) {
-    if (currentRecord?.id && sourceStudents[index]?.id) {
-      await updateInnovationStudent(studentPayload.id, studentPayload)
-      continue
-    }
-
+  for (const student of changes.create) {
+    const studentPayload = buildInnovationStudentPayload(student, innovationId, personId, false)
     await createInnovationStudent(studentPayload)
   }
 
-  for (const studentId of existingStudentIds) {
-    if (keptStudentIds.has(studentId)) continue
+  for (const student of changes.update) {
+    if (!student.id) continue
+    const studentPayload = buildInnovationStudentPayload(student, innovationId, personId, true)
+    await updateInnovationStudent(student.id, studentPayload)
+  }
+
+  for (const studentId of changes.deleteIds) {
     await deleteInnovationStudent(studentId)
   }
 }
