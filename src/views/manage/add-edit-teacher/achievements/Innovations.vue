@@ -179,6 +179,13 @@ const innovationFields: CreateFormSection[][] = [
             { label: 'ระดับนานาชาติ', value: 'ระดับนานาชาติ' },
           ],
         },
+        {
+          name: 'award_name',
+          label: 'ชื่อรางวัล',
+          type: 'text',
+          required: false,
+          placeholder: 'เช่น รางวัลชนะเลิศ',
+        },
       ],
     },
     {
@@ -248,6 +255,7 @@ function createEmptyInnovationForm(): InnovationFormValue {
   return {
     academic_year: '',
     achievement_level: '',
+    award_name: '',
     project_title: '',
     start_date: '',
     end_date: '',
@@ -453,6 +461,10 @@ function buildInnovationPayload(
   return {
     academic_year: values.academic_year || currentRecord?.academic_year || '',
     achievement_level: values.achievement_level || currentRecord?.achievement_level || null,
+    award_name:
+      typeof values.award_name === 'string'
+        ? values.award_name.trim() || null
+        : currentRecord?.award_name || null,
     created_at: createdAt,
     document_links: currentRecord?.document_links || values.document_links || [],
     end_date: values.end_date ? formatDateInput(values.end_date) : null,
