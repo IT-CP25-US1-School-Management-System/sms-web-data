@@ -37,8 +37,28 @@ describe('request detail', () => {
     expect(
       Object.fromEntries(section?.fields.map((field) => [field.label, field.value]) || []),
     ).toMatchObject({
-      กลุ่มสาระ: 'คณิตศาสตร์',
+      กลุ่มสาระการเรียนรู้: 'กลุ่มสาระฯคณิตศาสตร์',
       เงินเดือนปัจจุบัน: '1111',
     })
+  })
+
+  test('shows a subject group saved with the shared department id', () => {
+    const request: DocumentRequest = {
+      id: 'request-2',
+      person_id: 'person-2',
+      document_type: 'การประเมินPA',
+      status: 'กำลังดำเนินการ',
+      created_at: '2026-09-14T10:00:00Z',
+      request_committee_pa: {
+        id: 'pa-2',
+        request_id: 'request-2',
+        subject_group: '12',
+      },
+    }
+
+    const section = requestDetailSection(request)
+    expect(section?.fields.find((field) => field.label === 'กลุ่มสาระการเรียนรู้')?.value).toBe(
+      'บุคลากรทางการศึกษา',
+    )
   })
 })

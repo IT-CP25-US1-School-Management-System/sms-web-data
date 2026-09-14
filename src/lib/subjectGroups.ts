@@ -19,6 +19,21 @@ export const subjectGroups: SubjectGroup[] = [
   { id: 12, name: 'บุคลากรทางการศึกษา' },
 ]
 
+const legacySubjectGroupIds: Record<string, number> = {
+  thai: 1,
+  math: 2,
+  science: 3,
+  social: 4,
+  foreign: 5,
+  career: 6,
+  health: 7,
+  art: 8,
+}
+
 export function getSubjectGroupName(departmentId: number | string | null | undefined) {
-  return subjectGroups.find((group) => group.id === Number(departmentId))?.name
+  if (departmentId === null || departmentId === undefined || departmentId === '') return undefined
+
+  const value = String(departmentId).trim()
+  const resolvedId = legacySubjectGroupIds[value] ?? Number(value)
+  return subjectGroups.find((group) => group.id === resolvedId)?.name
 }

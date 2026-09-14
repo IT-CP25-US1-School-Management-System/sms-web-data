@@ -26,6 +26,7 @@ import type { CreateFileDocumentParams, FileDocument } from '@/types/document'
 import type { DocumentLink, DocumentRequest, RequestCommitteePA } from '@/types/document_request'
 import { DOCUMENT_EDIT } from '@/lib/constants'
 import { PA_UPLOAD_FIELDS, preparePAUploadFile, type PAUploadKey } from '@/lib/paUpload'
+import { subjectGroups } from '@/lib/subjectGroups'
 
 const fileMap = ref<Record<string, File[]>>({})
 const fileInputRefs = ref<Record<string, HTMLInputElement | null>>({})
@@ -80,10 +81,15 @@ function requiredText(message: string) {
   return z.string().trim().min(1, message)
 }
 
+const subjectGroupIds = new Set(subjectGroups.map((group) => String(group.id)))
+
 const validationSchema = computed(() => {
   return toTypedSchema(
     z.object({
-      subject_group: requiredText('กลุ่มสาระ จำเป็นต้องเลือก'),
+      subject_group: requiredText('กลุ่มสาระการเรียนรู้ จำเป็นต้องเลือก').refine(
+        (value) => subjectGroupIds.has(value),
+        'กลุ่มสาระการเรียนรู้ไม่ถูกต้อง',
+      ),
       teaching_level_1: requiredText('ปฏิบัติการสอนชั้น/ระดับ จำเป็นต้องกรอก'),
       subject_name: requiredText('รายวิชา จำเป็นต้องกรอก'),
       salary: hourSchema('เงินเดือนปัจจุบัน จำเป็นต้องกรอก'),
@@ -121,17 +127,6 @@ const initialValues = computed(() => ({
   'pa2-eval3-count': fileMap.value['pa2-eval3']?.length || 0,
   'pa3-count': fileMap.value['pa3']?.length || 0,
 }))
-
-const groupSubjectOptions = [
-  { label: 'ภาษาไทย', value: 'thai' },
-  { label: 'คณิตศาสตร์', value: 'math' },
-  { label: 'วิทยาศาสตร์และเทคโนโลยี', value: 'science' },
-  { label: 'สังคมศึกษา ศาสนาและวัฒนธรรม', value: 'social' },
-  { label: 'ศิลปะ', value: 'art' },
-  { label: 'สุขศึกษาและพลศึกษา', value: 'health' },
-  { label: 'การงานอาชีพ', value: 'career' },
-  { label: 'ภาษาต่างประเทศ', value: 'foreign' },
-]
 
 function handleFileSelect(event: Event, key: PAUploadKey, multiple = false) {
   const input = event.target as HTMLInputElement
@@ -491,7 +486,7 @@ async function submitPA2Form() {
           <div class="mb-4 grid grid-cols-1 items-end gap-4 sm:grid-cols-2 xl:grid-cols-3">
             <VeeField name="subject_group" v-slot="{ field, errors }">
               <Field :data-invalid="!!errors.length">
-                <FieldLabel>กลุ่มสาระ <span class="text-red-500">*</span></FieldLabel>
+                <FieldLabel>กลุ่มสาระการเรียนรู้ <span class="text-red-500">*</span></FieldLabel>
                 <Select
                   :model-value="field.value as string"
                   @update:model-value="
@@ -505,8 +500,12 @@ async function submitPA2Form() {
                     <SelectValue placeholder="เลือก" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem v-for="g in groupSubjectOptions" :key="g.value" :value="g.value">
-                      {{ g.label }}
+                    <SelectItem
+                      v-for="group in subjectGroups"
+                      :key="group.id"
+                      :value="String(group.id)"
+                    >
+                      {{ group.name }}
                     </SelectItem>
                   </SelectContent>
                 </Select>

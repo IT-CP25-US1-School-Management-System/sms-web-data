@@ -1,4 +1,5 @@
 import { formatThaiBuddhistDate, formatThaiBuddhistDateTime } from '@/lib/helpers'
+import { getSubjectGroupName } from '@/lib/subjectGroups'
 import type { ApprovalLog, DocumentRequest, RequestCommitteePA } from '@/types/document_request'
 
 export type RequestDetailField = { label: string; value: string | number }
@@ -43,17 +44,7 @@ function bankLabel(value: string | null | undefined) {
 }
 
 function subjectGroupLabel(value: string | null | undefined) {
-  const labels: Record<string, string> = {
-    thai: 'ภาษาไทย',
-    math: 'คณิตศาสตร์',
-    science: 'วิทยาศาสตร์และเทคโนโลยี',
-    social: 'สังคมศึกษา ศาสนาและวัฒนธรรม',
-    art: 'ศิลปะ',
-    health: 'สุขศึกษาและพลศึกษา',
-    career: 'การงานอาชีพ',
-    foreign: 'ภาษาต่างประเทศ',
-  }
-  return value ? labels[value] || value : '-'
+  return value ? getSubjectGroupName(value) || value : '-'
 }
 
 export function requestOverviewFields(request: DocumentRequest): RequestDetailField[] {
@@ -83,7 +74,7 @@ function paSection(pa: RequestCommitteePA): RequestDetailSection {
   return {
     title: 'รายละเอียดการประเมิน PA',
     fields: [
-      { label: 'กลุ่มสาระ', value: subjectGroupLabel(pa.subject_group) },
+      { label: 'กลุ่มสาระการเรียนรู้', value: subjectGroupLabel(pa.subject_group) },
       { label: 'ปฏิบัติการสอนชั้น/ระดับ', value: requestDisplay(pa.teaching_level_1) },
       { label: 'รายวิชา', value: requestDisplay(pa.subject_name) },
       { label: 'เงินเดือนปัจจุบัน', value: requestDisplay(pa.salary) },

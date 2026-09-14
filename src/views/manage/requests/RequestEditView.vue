@@ -20,6 +20,7 @@ import { ROUTE_NAMES } from '@/lib/constants'
 import { documentRequestFullName } from '@/lib/documentRequest'
 import { formatThaiBuddhistDate, formatThaiBuddhistDateTime } from '@/lib/helpers'
 import { classifyPAFile, PA_FILE_GROUPS } from '@/lib/pa'
+import { getSubjectGroupName } from '@/lib/subjectGroups'
 import { useAuthStore } from '@/stores/auth'
 import { getFileDocumentRows } from '@/stores/document'
 import {
@@ -203,7 +204,10 @@ function paDetailSection(pa: RequestCommitteePA): DetailSection {
   return {
     title: 'รายละเอียดการประเมิน PA',
     fields: [
-      { label: 'กลุ่มสาระ', value: display(pa.subject_group) },
+      {
+        label: 'กลุ่มสาระการเรียนรู้',
+        value: getSubjectGroupName(pa.subject_group) || display(pa.subject_group),
+      },
       { label: 'ปฏิบัติการสอนชั้น/ระดับ', value: display(pa.teaching_level_1) },
       { label: 'รายวิชา', value: display(pa.subject_name) },
       { label: 'เงินเดือนปัจจุบัน', value: display(pa.salary) },
